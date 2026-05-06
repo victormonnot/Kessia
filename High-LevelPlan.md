@@ -2,15 +2,35 @@
 
 This section maps the major phases of the **Kessia** capstone project from team formation to final delivery. The project runs over **~12 weeks**, from the start of team formation (April 27, 2026) to the final presentation (July 17, 2026).
 
+---
+
+### Visual Timeline
+
+> **[→ Open Gantt Chart](gantt.html)** — interactive week-by-week schedule, open in browser
+
+---
+
+### Team
+
+| Name | Role |
+|------|------|
+| Soumia Taoui | Product Owner & Project Sponsor |
+| Victor Monnot | Frontend Lead / co-developer |
+| Yasi Philippe Hübner | Backend Lead / co-developer |
+
+**Soumia Taoui** commissioned the project and owns the product vision. She participates in coordination and validation at each stage: reviewing deliverables, approving scope decisions, and providing domain feedback. She does not contribute code but is a required sign-off on all major milestones.
+
+---
+
 ### Project Stages Overview
 
-| Stage | Phase | Period | Status |
-|-------|-------|--------|--------|
-| 1 | Idea Development | Apr 27 – May 3 (Week 1) | Completed |
-| 2 | Project Planning | Apr 27 – May 3 (Week 1) | Completed |
-| 3 | Technical Documentation | May 4 – May 25 (Weeks 2–4) | In progress |
-| 4 | MVP Development | May 26 – Jul 5 (Weeks 5–10) | Upcoming |
-| 5 | Project Closure | Jul 6 – Jul 17 (Weeks 11–12) | Upcoming |
+| Stage | Phase | Period |
+|-------|-------|--------|
+| 1 | Idea Development | Apr 27 – May 3 (Week 1) |
+| 2 | Project Planning | Apr 27 – May 3 (Week 1) |
+| 3 | Technical Documentation | May 4 – May 25 (Weeks 2–4) |
+| 4 | MVP Development | May 26 – Jul 5 (Weeks 5–10) |
+| 5 | Project Closure | Jul 6 – Jul 17 (Weeks 11–12) |
 
 ### Timeline & Key Milestones
 
@@ -35,9 +55,7 @@ This section maps the major phases of the **Kessia** capstone project from team 
 - **May 4 – May 25:** Portfolio Project — Technical Documentation
 - **Jul 17:** Final project deadline & presentation
 
-### Task Split (Victor & Yasi)
-
-Since we are a 2-person team, work is split by feature/layer ownership while keeping pair-work moments for risky or cross-cutting parts.
+### Task Split
 
 **Stage 3 — Technical Documentation (May 4 – May 25)**
 
@@ -46,6 +64,7 @@ Since we are a 2-person team, work is split by feature/layer ownership while kee
 | Victor | User stories, user flows, wireframes, ethics & risks section (ICMJE / COPE) |
 | Yasi | Tech stack rationale, system architecture diagram, ERD / database schema, deployment plan |
 | Both | Final review pass, README integration, MVP scope validation |
+| Soumia | Reviews and validates all deliverables, approves scope before Tech Doc submission (May 25) |
 
 **Stage 4 — MVP Development (May 26 – Jul 5)**
 
@@ -54,6 +73,7 @@ Since we are a 2-person team, work is split by feature/layer ownership while kee
 | Victor (frontend lead) | React app setup (Vite + Tailwind), routing, sign-up/login UI, listings browse page, service detail page, order placement form, API integration |
 | Yasi (backend lead) | Django project setup, PostgreSQL schema, dual-role auth & user models, listings & orders models, admin tooling, deployment (Railway/Render) |
 | Both | Integration points (order notification flow), seed data, manual QA, bug-fixing sprints |
+| Soumia | Sprint-end feature validation, acceptance criteria review, raises change requests if scope needs adjustment |
 
 **Stage 5 — Project Closure (Jul 6 – Jul 17)**
 
@@ -62,10 +82,12 @@ Since we are a 2-person team, work is split by feature/layer ownership while kee
 | Victor | Demo script, slide deck (product sections), presentation rehearsal |
 | Yasi | Final deployment, demo data, slide deck (technical sections) |
 | Both | Final dry-runs, retrospective, repo & documentation cleanup |
+| Soumia | Final product sign-off, validates demo scenario, attends dry-run and final presentation |
 
 ### Working Cadence
 
-- **Weekly sync:** Monday — review last week, plan current week, update Trello board
-- **Mid-week check-in:** Thursday — unblock issues, adjust scope if needed
+- **Weekly sync:** Monday — Victor, Yasi + Soumia review last week, plan current week, update Trello board
+- **Mid-week check-in:** Thursday — Victor & Yasi unblock issues, adjust scope if needed
+- **Milestone reviews:** End of each stage — Soumia validates deliverables before the team moves forward
 - **Tooling:** Trello (tasks), GitHub (code + PR reviews), shared Google Drive (docs)
 - **Branching:** feature branches → PR review by the other teammate before merge to `main`
