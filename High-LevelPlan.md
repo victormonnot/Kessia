@@ -20,7 +20,7 @@ This section maps the major phases of the **Kessia** capstone project from team 
 | 2 | May 4 – May 10 | Technical Documentation | User stories, user flows, wireframes (low-fi), tech stack justification |
 | 3 | May 11 – May 17 | Technical Documentation | ERD / database schema, URL routing plan, system architecture diagram |
 | 4 | May 18 – May 25 | Technical Documentation | API/REST endpoints contract (frontend ↔ backend), risks & ethics doc finalized, **Tech Doc submission (May 25)** |
-| 5 | May 26 – May 31 | MVP Development | Project bootstrap (FastAPI + PostgreSQL backend, React + Tailwind frontend), auth scaffolding, dual-role user model |
+| 5 | May 26 – May 31 | MVP Development | Project bootstrap (Django + PostgreSQL backend, React + Tailwind frontend), auth scaffolding, dual-role user model |
 | 6 | Jun 1 – Jun 7 | MVP Development | Sign-up flows (medical pro / writer), profile basics, admin tooling (e.g. SQLAdmin) |
 | 7 | Jun 8 – Jun 14 | MVP Development | Service listings CRUD (writers create/edit/delete), public listings page |
 | 8 | Jun 15 – Jun 21 | MVP Development | Service detail page, order placement form, notification logic |
@@ -52,7 +52,7 @@ Since we are a 2-person team, work is split by feature/layer ownership while kee
 | Owner | Responsibilities |
 |-------|------------------|
 | Victor (frontend lead) | React app setup (Vite + Tailwind), routing, sign-up/login UI, listings browse page, service detail page, order placement form, API integration |
-| Yasi (backend lead) | FastAPI project setup, PostgreSQL schema, dual-role auth & user models, listings & orders models, admin tooling, deployment (Railway/Render) |
+| Yasi (backend lead) | Django project setup, PostgreSQL schema, dual-role auth & user models, listings & orders models, admin tooling, deployment (Railway/Render) |
 | Both | Integration points (order notification flow), seed data, manual QA, bug-fixing sprints |
 
 **Stage 5 — Project Closure (Jul 6 – Jul 17)**
