@@ -14,7 +14,7 @@
 
 ## Tech Stack
 
-- **Backend**: Fast API (Python). Chosen for its built-in multi-role authentication, robust ORM, and admin panel — the latter will be especially useful when the badge validation workflow is added later.
+- **Backend**: Django (Python). Chosen for its built-in multi-role authentication, robust ORM, and admin panel — the latter will be especially useful when the badge validation workflow is added later.
 - **Frontend**: React with Tailwind CSS for styling.
 - **Database**: PostgreSQL.
 - **Hosting**: Railway or Render (to be confirmed at deployment stage).
@@ -35,7 +35,7 @@
 
 ### Criteria Defined
 - Potential impact for end users (time saved for clinicians, opportunity created for writers).
-- Technical alignment with the chosen stack (Fast API, React Tailwind CSS, HTMX, PostgreSQL).
+- Technical alignment with the chosen stack (Django, React Tailwind CSS, PostgreSQL).
 - Achievability for a 2-person student team within the project timeframe.
 - Scalability toward a real SaaS model after the project.
 
