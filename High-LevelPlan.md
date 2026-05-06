@@ -6,7 +6,49 @@ This section maps the major phases of the **Kessia** capstone project from team 
 
 ### Visual Timeline
 
-> **[→ Open Gantt Chart](gantt.html)** — interactive week-by-week schedule, open in browser
+```mermaid
+gantt
+    title Kessia – Project Timeline (Apr 27 → Jul 17, 2026)
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+
+    section Stage 1 & 2 — Idea & Planning
+    Team formation and roles              :2026-04-27, 2026-05-04
+    Brainstorming and idea evaluation     :2026-04-27, 2026-05-04
+    MVP scope and problem statement       :2026-04-27, 2026-05-04
+    Project charter                       :2026-04-27, 2026-05-04
+
+    section Stage 3 — Technical Documentation
+    User stories and user flows           :2026-05-04, 2026-05-11
+    Wireframes low-fidelity               :2026-05-04, 2026-05-11
+    Tech stack rationale                  :2026-05-04, 2026-05-11
+    ERD and database schema               :2026-05-11, 2026-05-18
+    System architecture diagram           :2026-05-11, 2026-05-18
+    URL routing plan                      :2026-05-11, 2026-05-18
+    API and REST endpoints contract       :2026-05-18, 2026-05-26
+    Ethics and risks document             :2026-05-18, 2026-05-26
+    Final review and README               :2026-05-18, 2026-05-26
+    Tech Doc Submission                   :milestone, 2026-05-25, 0d
+
+    section Stage 4 — MVP Development
+    Django and PostgreSQL bootstrap       :2026-05-26, 2026-06-01
+    React and Tailwind app setup          :2026-05-26, 2026-06-01
+    Sign-up flows and dual-role model     :2026-06-01, 2026-06-08
+    Profile basics and admin tooling      :2026-06-01, 2026-06-08
+    Service listings CRUD                 :2026-06-08, 2026-06-15
+    Public listings browse page           :2026-06-08, 2026-06-15
+    Service detail page                   :2026-06-15, 2026-06-22
+    Order placement and notification      :2026-06-15, 2026-06-22
+    End-to-end integration and seed data  :2026-06-22, 2026-06-29
+    Bug fixing QA and deployment          :2026-06-29, 2026-07-06
+
+    section Stage 5 — Project Closure
+    Demo script and slide deck            :2026-07-06, 2026-07-13
+    Final deployment and demo data        :2026-07-06, 2026-07-13
+    Dry-run presentations                 :2026-07-06, 2026-07-13
+    Repo cleanup and retrospective        :2026-07-13, 2026-07-18
+    Final Presentation                    :milestone, 2026-07-17, 0d
+```
 
 ---
 
