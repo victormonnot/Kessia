@@ -6,7 +6,7 @@ This section maps the major phases of the **Kessia** capstone project from team 
 
 ### Visual Timeline
 
-![Kessia Project Gantt Chart](Gantt Chart Kessia Project.png)
+![Kessia Project Gantt Chart](Gantt_Chart_Kessia_Project.png)
 
 ---
 
