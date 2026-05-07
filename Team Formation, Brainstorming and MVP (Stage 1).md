@@ -3,14 +3,15 @@
 ## 0. Team Formation
 
 - **Team Members**:
-  - Yasi Philippe Hübner
-  - Victor Monnot
-- **Initial Meeting**: Team members introduced themselves, shared backgrounds, technical strengths, and interests in healthcare and product design.
-- **Roles Assigned**: Victor Monnot has been nominated as temporary Project Manager to coordinate the first stage.
+  - Soumia Taoui — Product Owner & Project Sponsor
+  - Yasi Philippe Hübner — Backend Lead / co-developer
+  - Victor Monnot — Frontend Lead / co-developer
+- **Initial Meeting**: Team members introduced themselves, shared backgrounds, technical strengths, and interests in healthcare and product design. Soumia Taoui presented the project brief and confirmed the scope and constraints.
+- **Roles Assigned**: Victor Monnot has been nominated as temporary Project Manager to coordinate the first stage. Soumia Taoui holds the Product Owner role for the duration of the project — she owns the product vision, validates deliverables at each milestone, and provides domain and coordination input throughout.
 - **Team Norms**:
   - Communication via Discord.
   - Task management with GitHub Projects.
-  - Weekly sync meeting every Monday.
+  - Weekly sync meeting every Monday (Victor, Yasi & Soumia).
 
 ## Tech Stack
 
@@ -107,7 +108,7 @@ The features below are split into two scopes: what is mandatory to deliver a wor
 - **Potential Impact**: Saves hours of writing time for clinicians while creating a structured income channel for qualified scientific writers — both sides benefit, and academic publishing potentially gets more case studies and reviews that would otherwise never be written.
 
 ### Team Overview
-- Formed a 2-person team with clear communication norms.
+- Formed a 3-person team: Product Owner (Soumia Taoui) and two co-developers (Victor & Yasi), with clear communication norms and role boundaries.
 - Followed a structured brainstorming and evaluation process before committing to scope.
 - Defined a clear MVP and a prioritized post-MVP roadmap to avoid scope creep.
 
