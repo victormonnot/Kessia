@@ -3,9 +3,8 @@
 ## 0.1 User Stories
 
 Kessia has three actor types:
-- **User** — any registered account (default state after sign-up)
 - **Writer** — a user who has activated writer mode on their account
-- **Doctor / Institution** — a user browsing and ordering services
+- **Doctor / Institution** — a user browsing and ordering services (default state after sign-up)
 - **Admin** — platform operator
 
 Stories are prioritized with **MoSCoW** against the MVP defined in Stage 1.
