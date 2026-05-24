@@ -412,24 +412,24 @@ sequenceDiagram
     FE->>BE: POST /api/v1/auth/register/
     BE->>DB: INSERT INTO users_user
     DB-->>BE: User row created
-    BE-->>FE: { user, access_token, refresh_token }
-    FE->>FE: Zustand stores tokens; user redirected to catalog
+    BE-->>FE: Returns user object plus access and refresh tokens
+    FE->>FE: Zustand stores tokens, user redirected to catalog
 
-    Note over User,DB: Later — Login
+    Note over User,DB: Later - Login
 
     User->>FE: Fills login form (email, password)
     FE->>BE: POST /api/v1/auth/login/
-    BE->>DB: SELECT user WHERE email = ? ; check password hash
+    BE->>DB: SELECT user by email, verify password hash
     DB-->>BE: User record
-    BE-->>FE: { access_token, refresh_token }
-    FE->>FE: Zustand updates store; user redirected
+    BE-->>FE: Returns access and refresh tokens
+    FE->>FE: Zustand updates store, user redirected
 
     Note over FE,BE: Silent token refresh (access expires after 15 min)
-    FE->>BE: Any request → 401 Unauthorized
-    FE->>BE: POST /api/v1/auth/refresh/  { refresh_token }
-    BE->>DB: Validate & blacklist old refresh token; issue new pair
+    FE->>BE: Protected request comes back as 401 Unauthorized
+    FE->>BE: POST /api/v1/auth/refresh/ with refresh token
+    BE->>DB: Validate and blacklist old refresh token, issue new pair
     DB-->>BE: OK
-    BE-->>FE: { new_access_token, new_refresh_token }
+    BE-->>FE: Returns new access and refresh tokens
     FE->>BE: Retries original request with new token
 ```
 
@@ -453,26 +453,26 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     Doctor->>FE: Opens /listings page
-    FE->>BE: GET /api/v1/listings/  [no auth required]
-    BE->>DB: SELECT listings WHERE is_published=true (+ optional filters)
+    FE->>BE: GET /api/v1/listings/ (no auth required)
+    BE->>DB: SELECT published listings with optional filters
     DB-->>BE: Listing rows
-    BE-->>FE: [ { id, title, specialty, price, turnaround_days, writer_name }, … ]
+    BE-->>FE: Returns list of listing cards (title, specialty, price, turnaround)
     FE->>FE: Renders ListingCard grid
 
     Doctor->>FE: Clicks a listing card
-    FE->>BE: GET /api/v1/listings/{id}/
-    BE->>DB: SELECT listing + writer info
+    FE->>BE: GET /api/v1/listings/id/
+    BE->>DB: SELECT listing with writer info
     DB-->>BE: Listing detail row
-    BE-->>FE: { id, title, description, writer { bio, … }, price, … }
-    FE->>FE: Renders ListingDetail page with "Place Order" button
+    BE-->>FE: Returns full listing detail with writer bio and price
+    FE->>FE: Renders ListingDetail page with Place Order button
 
-    Doctor->>FE: Clicks "Place Order" → fills PlaceOrderModal
-    FE->>BE: POST /api/v1/orders/  { listing: id, message: "…" }
-    Note over BE: JWT validated; listing ownership ≠ doctor; is_published=true
-    BE->>DB: INSERT INTO orders_order  (status=pending)
+    Doctor->>FE: Clicks Place Order and fills PlaceOrderModal
+    FE->>BE: POST /api/v1/orders/ with listing id and optional message
+    Note over BE: JWT validated, listing not owned by doctor, is_published true
+    BE->>DB: INSERT INTO orders_order with status pending
     DB-->>BE: Order row
-    BE-->>FE: { id, listing, doctor, status: "pending", … }
-    FE->>FE: React Query invalidates orders; modal closes; toast shown
+    BE-->>FE: Returns order detail with status pending
+    FE->>FE: React Query invalidates orders cache, modal closes
 ```
 
 **Explanation**
@@ -494,43 +494,43 @@ sequenceDiagram
     participant BE as Django API
     participant DB as PostgreSQL
 
-    Doctor->>FE: Fills RequestFormPage (title, specialty, deadline, budget)
-    FE->>BE: POST /api/v1/requests/  { title, specialty, deadline, budget, description }
-    BE->>DB: INSERT INTO requests_request  (status=open)
+    Doctor->>FE: Fills RequestFormPage with title, specialty, deadline and budget
+    FE->>BE: POST /api/v1/requests/ with title, specialty, deadline, budget
+    BE->>DB: INSERT INTO requests_request with status open
     DB-->>BE: Request row
-    BE-->>FE: Request detail JSON
-    FE->>FE: Redirects Doctor to /requests/{id}
+    BE-->>FE: Returns request detail
+    FE->>FE: Redirects Doctor to request detail page
 
     Note over Writer,DB: Writer browses the board
 
     Writer->>FE: Opens /requests
-    FE->>BE: GET /api/v1/requests/  [no auth required]
-    BE->>DB: SELECT open requests + proposals_count
+    FE->>BE: GET /api/v1/requests/ (no auth required)
+    BE->>DB: SELECT open requests with proposals count
     DB-->>BE: Request rows
-    BE-->>FE: Request list JSON
+    BE-->>FE: Returns request list
     FE->>FE: Renders RequestCard board
 
-    Writer->>FE: Opens RequestDetail page → fills ProposalForm
-    FE->>BE: POST /api/v1/requests/{id}/proposals/  { message, price }
-    Note over BE: is_writer=true; unique constraint enforced
-    BE->>DB: INSERT INTO requests_proposal  (status=pending)
+    Writer->>FE: Opens RequestDetail page and fills ProposalForm
+    FE->>BE: POST /api/v1/requests/id/proposals/ with message and price
+    Note over BE: is_writer true, unique constraint enforced
+    BE->>DB: INSERT INTO requests_proposal with status pending
     DB-->>BE: Proposal row
-    BE-->>FE: Proposal JSON
+    BE-->>FE: Returns proposal detail
     FE->>FE: Writer sees their pending proposal
 
     Note over Doctor,DB: Doctor reviews and accepts
 
-    Doctor->>FE: Opens RequestDetail → sees proposals list
-    FE->>BE: GET /api/v1/requests/{id}/proposals/
-    BE->>DB: SELECT proposals WHERE request_id=?
-    DB-->>BE: Proposal rows (full list for request owner)
-    BE-->>FE: Proposals JSON
-    Doctor->>FE: Clicks "Accept" on a proposal
-    FE->>BE: PATCH /api/v1/proposals/{id}/  { status: "accepted" }
+    Doctor->>FE: Opens RequestDetail and views proposals list
+    FE->>BE: GET /api/v1/requests/id/proposals/
+    BE->>DB: SELECT proposals for this request
+    DB-->>BE: Full proposal list for request owner
+    BE-->>FE: Returns proposals list
+    Doctor->>FE: Clicks Accept on a proposal
+    FE->>BE: PATCH /api/v1/proposals/id/ with status accepted
     Note over BE: IsProposalRequestOwner check passes
-    BE->>DB: UPDATE requests_proposal SET status='accepted'
+    BE->>DB: UPDATE requests_proposal SET status to accepted
     DB-->>BE: Updated row
-    BE-->>FE: Updated proposal JSON
+    BE-->>FE: Returns updated proposal
     FE->>FE: ProposalRow updates status badge
 ```
 
