@@ -470,21 +470,15 @@ sequenceDiagram
 
     Doctor->>FE: Posts a writing request
     FE->>BE: POST /requests/
-    BE->>DB: Insert request with status open
+    BE->>DB: Insert request
     DB-->>BE: Request created
     BE-->>FE: Request confirmed
 
-    Writer->>FE: Browses requests and submits a proposal
+    Writer->>FE: Opens request and submits a proposal
     FE->>BE: POST /requests/id/proposals/
-    BE->>DB: Insert proposal with status pending
+    BE->>DB: Insert proposal
     DB-->>BE: Proposal created
     BE-->>FE: Proposal confirmed
-
-    Doctor->>FE: Accepts the proposal
-    FE->>BE: PATCH /proposals/id/ with status accepted
-    BE->>DB: Update proposal status
-    DB-->>BE: Updated
-    BE-->>FE: Proposal accepted
 ```
 
 **Explanation**
