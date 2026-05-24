@@ -404,33 +404,16 @@ Three critical user flows cover the main paths through the MVP.
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as React Frontend
+    participant FE as Frontend
     participant BE as Django API
     participant DB as PostgreSQL
 
-    User->>FE: Fills registration form (email, password, name)
-    FE->>BE: POST /api/v1/auth/register/
-    BE->>DB: INSERT INTO users_user
-    DB-->>BE: User row created
-    BE-->>FE: Returns user object plus access and refresh tokens
-    FE->>FE: Zustand stores tokens, user redirected to catalog
-
-    Note over User,DB: Later - Login
-
-    User->>FE: Fills login form (email, password)
-    FE->>BE: POST /api/v1/auth/login/
-    BE->>DB: SELECT user by email, verify password hash
-    DB-->>BE: User record
-    BE-->>FE: Returns access and refresh tokens
-    FE->>FE: Zustand updates store, user redirected
-
-    Note over FE,BE: Silent token refresh (access expires after 15 min)
-    FE->>BE: Protected request comes back as 401 Unauthorized
-    FE->>BE: POST /api/v1/auth/refresh/ with refresh token
-    BE->>DB: Validate and blacklist old refresh token, issue new pair
-    DB-->>BE: OK
-    BE-->>FE: Returns new access and refresh tokens
-    FE->>BE: Retries original request with new token
+    User->>FE: Fills registration or login form
+    FE->>BE: POST /auth/register/ or /auth/login/
+    BE->>DB: Check or create user
+    DB-->>BE: User data
+    BE-->>FE: Access token + refresh token
+    FE->>FE: Token stored, user redirected
 ```
 
 **Explanation**
@@ -448,31 +431,22 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Doctor
-    participant FE as React Frontend
+    participant FE as Frontend
     participant BE as Django API
     participant DB as PostgreSQL
 
-    Doctor->>FE: Opens /listings page
-    FE->>BE: GET /api/v1/listings/ (no auth required)
-    BE->>DB: SELECT published listings with optional filters
+    Doctor->>FE: Opens listings page
+    FE->>BE: GET /listings/
+    BE->>DB: Fetch published listings
     DB-->>BE: Listing rows
-    BE-->>FE: Returns list of listing cards (title, specialty, price, turnaround)
-    FE->>FE: Renders ListingCard grid
+    BE-->>FE: Listing cards
+    FE->>FE: Renders catalog
 
-    Doctor->>FE: Clicks a listing card
-    FE->>BE: GET /api/v1/listings/id/
-    BE->>DB: SELECT listing with writer info
-    DB-->>BE: Listing detail row
-    BE-->>FE: Returns full listing detail with writer bio and price
-    FE->>FE: Renders ListingDetail page with Place Order button
-
-    Doctor->>FE: Clicks Place Order and fills PlaceOrderModal
-    FE->>BE: POST /api/v1/orders/ with listing id and optional message
-    Note over BE: JWT validated, listing not owned by doctor, is_published true
-    BE->>DB: INSERT INTO orders_order with status pending
-    DB-->>BE: Order row
-    BE-->>FE: Returns order detail with status pending
-    FE->>FE: React Query invalidates orders cache, modal closes
+    Doctor->>FE: Clicks Place Order
+    FE->>BE: POST /orders/ with listing id
+    BE->>DB: Insert order with status pending
+    DB-->>BE: Order created
+    BE-->>FE: Order confirmed
 ```
 
 **Explanation**
@@ -490,48 +464,27 @@ sequenceDiagram
 sequenceDiagram
     actor Doctor
     actor Writer
-    participant FE as React Frontend
+    participant FE as Frontend
     participant BE as Django API
     participant DB as PostgreSQL
 
-    Doctor->>FE: Fills RequestFormPage with title, specialty, deadline and budget
-    FE->>BE: POST /api/v1/requests/ with title, specialty, deadline, budget
-    BE->>DB: INSERT INTO requests_request with status open
-    DB-->>BE: Request row
-    BE-->>FE: Returns request detail
-    FE->>FE: Redirects Doctor to request detail page
+    Doctor->>FE: Posts a writing request
+    FE->>BE: POST /requests/
+    BE->>DB: Insert request with status open
+    DB-->>BE: Request created
+    BE-->>FE: Request confirmed
 
-    Note over Writer,DB: Writer browses the board
+    Writer->>FE: Browses requests and submits a proposal
+    FE->>BE: POST /requests/id/proposals/
+    BE->>DB: Insert proposal with status pending
+    DB-->>BE: Proposal created
+    BE-->>FE: Proposal confirmed
 
-    Writer->>FE: Opens /requests
-    FE->>BE: GET /api/v1/requests/ (no auth required)
-    BE->>DB: SELECT open requests with proposals count
-    DB-->>BE: Request rows
-    BE-->>FE: Returns request list
-    FE->>FE: Renders RequestCard board
-
-    Writer->>FE: Opens RequestDetail page and fills ProposalForm
-    FE->>BE: POST /api/v1/requests/id/proposals/ with message and price
-    Note over BE: is_writer true, unique constraint enforced
-    BE->>DB: INSERT INTO requests_proposal with status pending
-    DB-->>BE: Proposal row
-    BE-->>FE: Returns proposal detail
-    FE->>FE: Writer sees their pending proposal
-
-    Note over Doctor,DB: Doctor reviews and accepts
-
-    Doctor->>FE: Opens RequestDetail and views proposals list
-    FE->>BE: GET /api/v1/requests/id/proposals/
-    BE->>DB: SELECT proposals for this request
-    DB-->>BE: Full proposal list for request owner
-    BE-->>FE: Returns proposals list
-    Doctor->>FE: Clicks Accept on a proposal
-    FE->>BE: PATCH /api/v1/proposals/id/ with status accepted
-    Note over BE: IsProposalRequestOwner check passes
-    BE->>DB: UPDATE requests_proposal SET status to accepted
-    DB-->>BE: Updated row
-    BE-->>FE: Returns updated proposal
-    FE->>FE: ProposalRow updates status badge
+    Doctor->>FE: Accepts the proposal
+    FE->>BE: PATCH /proposals/id/ with status accepted
+    BE->>DB: Update proposal status
+    DB-->>BE: Updated
+    BE-->>FE: Proposal accepted
 ```
 
 **Explanation**
