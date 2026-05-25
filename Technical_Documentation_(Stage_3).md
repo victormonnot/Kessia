@@ -376,7 +376,7 @@ Three environments: **local** (Docker Compose), **staging** (Railway/Render), **
 
 | Technology | Why we chose it |
 |------------|-----------------|
-| **Django + DRF** | Built-in admin panel, mature ORM, and DRF covers auth, serializers, permissions, filtering, and pagination out of the box. The team has prior Django experience from Holberton (HBNB project). |
+| **Django + DRF** | Built-in admin panel, mature ORM, and DRF covers auth, serializers, permissions, filtering, and pagination out of the box. |
 | **SimpleJWT** | Short-lived access tokens (15 min) with rotating refresh tokens minimise the risk of token theft. The blacklist module handles secure logout. |
 | **React + Vite** | Component model fits a role-conditional UI (doctor vs. writer views). Vite is significantly faster than CRA and has built-in Vitest support. |
 | **Tailwind CSS** | Utility-first styling allows fast iteration directly in JSX without managing separate stylesheets. |
