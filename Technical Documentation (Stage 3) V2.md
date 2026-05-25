@@ -4,48 +4,103 @@
 
 ## Table of Contents
 
-1. [System Architecture](#1-system-architecture)
-2. [Components, Classes & Database Design](#2-components-classes--database-design)
-3. [Sequence Diagrams](#3-sequence-diagrams)
-4. [API & Methods](#4-api--methods)
-5. [SCM & QA Strategy](#5-scm--qa-strategy)
-6. [Technical Justifications](#6-technical-justifications)
+1. [User Stories](#1-user-stories)
+2. [System Architecture](#2-system-architecture)
+3. [Components, Classes & Database Design](#3-components-classes--database-design)
+4. [Sequence Diagrams](#4-sequence-diagrams)
+5. [API & Methods](#5-api--methods)
+6. [SCM & QA Strategy](#6-scm--qa-strategy)
+7. [Technical Justifications](#7-technical-justifications)
 
 ---
 
-## 1. System Architecture
+## 1. User Stories
+
+Kessia has three actor types: **Writer** (activated writer mode), **Doctor / Institution** (default after sign-up), and **Admin** (platform operator). Stories are prioritized using **MoSCoW**.
+
+### Must Have
+
+| Area | Story |
+|------|-------|
+| Auth | As a visitor, I want to sign up with email and password. |
+| Auth | As a registered user, I want to log in and out. |
+| Auth | As a user, I want to activate writer mode to unlock listing creation. |
+| Listings | As a writer, I want to create a listing with title, description, specialty, deliverable type, price, and turnaround. |
+| Listings | As a writer, I want to edit or delete my listings. |
+| Browse | As a doctor, I want to browse all published listings. |
+| Browse | As a doctor, I want to filter listings by specialty and deliverable type. |
+| Browse | As a doctor, I want to view a full service detail page including writer info. |
+| Orders | As a doctor, I want to place an order from a service page. |
+| Orders | As a doctor, I want to see my order ID and status after placing an order. |
+| Orders | As a writer, I want to accept, decline, or mark an order as delivered. |
+| Orders | As a doctor, I want to see the status of my orders (pending / accepted / declined / delivered). |
+| Orders | As a writer, I want to see all orders linked to my listings with their statuses. |
+| Requests | As a doctor, I want to post a writing request with topic, specialty, deadline, and budget. |
+| Requests | As a writer, I want to browse open requests and submit a proposal. |
+| UI | As any user, I want the platform to work on mobile. |
+
+### Should Have
+
+| Area | Story |
+|------|-------|
+| Dashboard | As a doctor, I want a dashboard showing all my orders and their statuses. |
+| Dashboard | As a writer, I want a dashboard showing my listings and incoming orders. |
+| Profile | As a doctor, I want to view a writer's public profile (bio, specialties, active listings). |
+| Profile | As a writer, I want a public profile page to present my background and services. |
+| Admin | As an admin, I want to view all registered users and their roles. |
+| Admin | As an admin, I want to deactivate or remove a listing that violates platform terms. |
+| Payments | As a doctor, I want to pay securely through the platform via Stripe. |
+| Payments | As a writer, I want payments held in escrow and released upon delivery confirmation. |
+| Messaging | As a doctor, I want to message a writer after placing an order. |
+| Messaging | As a writer, I want to reply to client messages within the platform. |
+| Badges | As a writer, I want to request a verified specialty badge by submitting my credentials. |
+| Badges | As a doctor, I want to see verified badges on writer profiles and listings. |
+| Badges | As an admin, I want to review badge requests and approve or reject them. |
+
+### Could Have
+
+| Area | Story |
+|------|-------|
+| Notifications | As any user, I want email notifications for key events (order placed, accepted, delivered). |
+
+### Won't Have (v1)
+
+- **International scaling** — i18n, multi-currency, and tax compliance are deferred until the model is validated.
+
+---
+
+### Mockup Screens
+
+| Screen | Key Elements |
+|--------|-------------|
+| Landing | Value proposition, sign-up CTA |
+| Registration | Email, password, profile fields, role selection |
+| Login | Email + password |
+| Listings Catalog | Listing cards (specialty, price, turnaround), filter sidebar |
+| Service Detail | Full listing, writer info panel, "Place Order" CTA |
+| Order Confirmation | Order summary, status badge |
+| Writer Dashboard | Listings table, incoming orders with status + actions |
+| Doctor Dashboard | Placed orders table with status tracking |
+| Create / Edit Listing | Title, description, specialty, deliverable type, price, turnaround |
+
+> Wireframes are available in [MockupV1.html](MockupV1.html).
+
+---
+
+## 2. System Architecture
 
 Kessia is a three-tier application: a React SPA on the client, a Django REST API in the middle, and a PostgreSQL database for persistence. The full stack runs locally via Docker Compose.
 
-```mermaid
-flowchart TD
-    Browser["React SPA\n(Vite + Tailwind)"]
-    API["Django REST API\n(DRF + SimpleJWT)"]
-    Auth["Auth App"]
-    List["Listings App"]
-    Ord["Orders App"]
-    Req["Requests Board"]
-    DB["PostgreSQL 16"]
-
-    Browser -- "HTTPS / JSON" --> API
-    API --> Auth
-    API --> List
-    API --> Ord
-    API --> Req
-    Auth --> DB
-    List --> DB
-    Ord --> DB
-    Req --> DB
-```
+![System Architecture Diagram](<Architecture Diagram.png>)
 
 **Data flow in short:**
-Client sends a request with a JWT token → Django validates it and runs the business logic → the ORM reads or writes PostgreSQL → the result is serialised to JSON and returned to the frontend.
+Client sends a request with a JWT token → Django validates it and routes to the correct app → the ORM reads or writes PostgreSQL → the result is serialised to JSON and returned to the frontend.
 
 ---
 
-## 2. Components, Classes & Database Design
+## 3. Components, Classes & Database Design
 
-### 2.1 Frontend Pages
+### 3.1 Frontend Pages
 
 | Page | Route | Access | Purpose |
 |------|-------|--------|---------|
@@ -62,11 +117,11 @@ Client sends a request with a JWT token → Django validates it and runs the bus
 
 **Key UI components:** `ListingCard`, `ListingFilters`, `PlaceOrderModal`, `RequestCard`, `ProposalForm`, `OrderRow`, `StatusBadge`, `ProtectedRoute`, `WriterRoute`.
 
-**State management:** Zustand stores auth tokens, TanStack React Query handles server data caching, Axios manages HTTP requests with automatic JWT refresh on 401.
+**State management:** Zustand stores auth tokens, TanStack React Query handles server data caching, Axios manages HTTP with automatic JWT refresh on 401.
 
 ---
 
-### 2.2 Backend Apps (Django)
+### 3.2 Backend Apps (Django)
 
 | App | Models | Responsibility |
 |-----|--------|----------------|
@@ -75,19 +130,19 @@ Client sends a request with a JWT token → Django validates it and runs the bus
 | `orders` | `Order` | Order placement and status transitions |
 | `requests_board` | `Request`, `Proposal` | Reverse marketplace: doctors post, writers respond |
 
-**User model fields:** `email` (unique login), `first_name`, `last_name`, `bio`, `is_writer` (role flag), `is_staff`, `date_joined`.
+**User** — `email` (unique), `first_name`, `last_name`, `bio`, `is_writer` (role flag), `is_staff`, `date_joined`.
 
-**Listing model fields:** `writer` (FK), `title`, `description`, `specialty`, `deliverable_type`, `price`, `turnaround_days`, `is_published`.
+**Listing** — `writer` (FK), `title`, `description`, `specialty`, `deliverable_type`, `price`, `turnaround_days`, `is_published`.
 
-**Order model fields:** `listing` (FK, protected), `doctor` (FK), `status` (`pending → accepted | declined → delivered`), `message`.
+**Order** — `listing` (FK, protected), `doctor` (FK), `status` (`pending → accepted | declined → delivered`), `message`.
 
-**Request model fields:** `doctor` (FK), `title`, `description`, `specialty`, `deadline`, `budget`, `status` (`open | closed`).
+**Request** — `doctor` (FK), `title`, `description`, `specialty`, `deadline`, `budget`, `status` (`open | closed`).
 
-**Proposal model fields:** `request` (FK), `writer` (FK), `message`, `price`, `status` (`pending → accepted | rejected`). One proposal per writer per request enforced at DB level.
+**Proposal** — `request` (FK), `writer` (FK), `message`, `price`, `status` (`pending → accepted | rejected`). One proposal per writer per request enforced at DB level.
 
 ---
 
-### 2.3 Database Schema
+### 3.3 Database Schema
 
 ```mermaid
 erDiagram
@@ -149,9 +204,9 @@ erDiagram
 
 ---
 
-## 3. Sequence Diagrams
+## 4. Sequence Diagrams
 
-### 3.1 Registration & Login
+### 4.1 Registration & Login
 
 ```mermaid
 sequenceDiagram
@@ -172,7 +227,7 @@ The access token expires after 15 minutes. Axios silently refreshes it in the ba
 
 ---
 
-### 3.2 Browse Listings & Place an Order
+### 4.2 Browse Listings & Place an Order
 
 ```mermaid
 sequenceDiagram
@@ -199,7 +254,7 @@ The catalog is public (no login required). Filters by specialty and deliverable 
 
 ---
 
-### 3.3 Post a Request & Submit a Proposal
+### 4.3 Post a Request & Submit a Proposal
 
 ```mermaid
 sequenceDiagram
@@ -222,13 +277,13 @@ sequenceDiagram
     BE-->>FE: Proposal confirmed
 ```
 
-The requests board is public. Only writers can submit proposals. The doctor then reviews proposals and accepts or rejects them from their dashboard.
+The requests board is public. Only writers can submit proposals. The doctor then reviews and accepts or rejects from their dashboard.
 
 ---
 
-## 4. API & Methods
+## 5. API & Methods
 
-### 4.1 External APIs
+### 5.1 External APIs
 
 No external API is used in the MVP. Planned integrations:
 
@@ -238,9 +293,9 @@ No external API is used in the MVP. Planned integrations:
 | SendGrid / Mailgun | Email notifications | Could Have |
 | Twilio | SMS notifications | Could Have |
 
-### 4.2 Internal Endpoints
+### 5.2 Internal Endpoints
 
-All endpoints are prefixed `/api/v1/`. All payloads are JSON. Protected routes require `Authorization: Bearer <token>`. Interactive docs available at `/api/docs/` (Swagger UI).
+All endpoints are prefixed `/api/v1/`. All payloads are JSON. Protected routes require `Authorization: Bearer <token>`. Interactive docs at `/api/docs/` (Swagger UI).
 
 #### Auth & Users
 
@@ -286,9 +341,9 @@ All endpoints are prefixed `/api/v1/`. All payloads are JSON. Protected routes r
 
 ---
 
-## 5. SCM & QA Strategy
+## 6. SCM & QA Strategy
 
-### 5.1 Source Control
+### 6.1 Source Control
 
 Repository on GitHub. Branching model:
 
@@ -301,7 +356,7 @@ Repository on GitHub. Branching model:
 
 Commits follow the Conventional Commits convention (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
 
-### 5.2 Testing
+### 6.2 Testing
 
 | Layer | Tool | What is covered |
 |-------|------|-----------------|
@@ -311,13 +366,13 @@ Commits follow the Conventional Commits convention (`feat:`, `fix:`, `docs:`, `r
 | Manual API testing | Postman | Auth flows, edge cases |
 | Code quality | ESLint + Prettier (frontend) | Linting and formatting |
 
-### 5.3 Deployment
+### 6.3 Deployment
 
 Three environments: **local** (Docker Compose), **staging** (Railway/Render), **production** (Railway/Render). A GitHub Actions CI pipeline runs tests on every push to `dev` and blocks merges on failure. Deployment to staging is automatic on merge to `main`; promotion to production is manual after a smoke test.
 
 ---
 
-## 6. Technical Justifications
+## 7. Technical Justifications
 
 | Technology | Why we chose it |
 |------------|-----------------|
