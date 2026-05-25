@@ -1,0 +1,112 @@
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
+from apps.listings.permissions import IsWriter
+
+from .models import Proposal, Request
+from .permissions import (
+    IsProposalRequestOwner,
+    IsProposalWriter,
+    IsRequestOwner,
+)
+from .serializers import (
+    ProposalCreateSerializer,
+    ProposalSerializer,
+    ProposalUpdateSerializer,
+    RequestDetailSerializer,
+    RequestListSerializer,
+    RequestWriteSerializer,
+)
+
+
+class RequestViewSet(viewsets.ModelViewSet):
+    filterset_fields = ("specialty", "status")
+    search_fields = ("title", "description")
+    ordering_fields = ("created_at", "deadline", "budget")
+    ordering = ("-created_at",)
+
+    def get_queryset(self):
+        qs = (
+            Request.objects.select_related("doctor")
+            .annotate(proposals_count=Count("proposals"))
+        )
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return RequestListSerializer
+        if self.action in {"create", "update", "partial_update"}:
+            return RequestWriteSerializer
+        return RequestDetailSerializer
+
+    def get_permissions(self):
+        if self.action in {"list", "retrieve"}:
+            return [AllowAny()]
+        if self.action == "create":
+            return [IsAuthenticated()]
+        if self.action in {"update", "partial_update", "destroy"}:
+            return [IsAuthenticated(), IsRequestOwner()]
+        return [IsAuthenticated()]
+
+    @action(
+        detail=True,
+        methods=("get", "post"),
+        url_path="proposals",
+        permission_classes=(IsAuthenticated,),
+    )
+    def proposals(self, request, pk=None):
+        request_obj = self.get_object()
+        if request.method == "GET":
+            qs = Proposal.objects.filter(request=request_obj).select_related("writer")
+            if request_obj.doctor_id != request.user.id:
+                qs = qs.filter(writer=request.user)
+            return Response(ProposalSerializer(qs, many=True).data)
+
+        # POST: writer creates a proposal
+        if not request.user.is_writer:
+            return Response(
+                {"detail": "Only writers can submit proposals."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = ProposalCreateSerializer(
+            data=request.data,
+            context={"request": request, "request_obj": request_obj},
+        )
+        serializer.is_valid(raise_exception=True)
+        proposal = serializer.save()
+        return Response(ProposalSerializer(proposal).data, status=status.HTTP_201_CREATED)
+
+
+class ProposalViewSet(
+    mixins.DestroyModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = Proposal.objects.select_related("request", "writer")
+    http_method_names = ("patch", "delete", "head", "options")
+
+    def get_serializer_class(self):
+        return ProposalUpdateSerializer
+
+    def get_permissions(self):
+        if self.action == "destroy":
+            return [IsAuthenticated(), IsWriter(), IsProposalWriter()]
+        # update / partial_update
+        return [IsAuthenticated(), IsProposalRequestOwner()]
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        partial = kwargs.pop("partial", False)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        instance.refresh_from_db()
+        return Response(ProposalSerializer(instance).data)
+
+
+def get_proposal_or_404(pk):
+    return get_object_or_404(Proposal, pk=pk)

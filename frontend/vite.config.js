@@ -1,0 +1,22 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "node:path";
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(process.cwd(), "src"),
+    },
+  },
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    watch: {
+      // Polling is friendlier inside docker bind-mounts on WSL2.
+      usePolling: true,
+      interval: 300,
+    },
+  },
+});
