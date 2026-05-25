@@ -83,7 +83,7 @@ Kessia has three actor types: **Writer** (activated writer mode), **Doctor / Ins
 | Doctor Dashboard | Placed orders table with status tracking |
 | Create / Edit Listing | Title, description, specialty, deliverable type, price, turnaround |
 
-> Wireframes are available in [MockupV1.html](MockupV1.html).
+> Wireframes are available at [MockupV1.html](https://victormonnot.github.io/Kessia/MockupV1.html).
 
 ---
 
