@@ -1,0 +1,11 @@
+Bonjour {{ order.writer.get_full_name|default:order.writer.email }},
+
+Vous avez reçu une nouvelle commande{% if order.listing %} pour « {{ order.listing.title }} »{% endif %}.
+
+Montant convenu : {{ order.amount }} {{ order.currency }}
+Message du médecin : {{ order.message|default:"(aucun)" }}
+
+Connectez-vous pour l'accepter ou la refuser :
+{{ frontend_url }}/dashboard/writer
+
+— L'équipe Kessia

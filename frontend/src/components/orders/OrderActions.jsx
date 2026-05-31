@@ -1,0 +1,164 @@
+import { useRef, useState } from "react";
+
+import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
+import Textarea from "@/components/ui/Textarea";
+import { ordersApi } from "@/api/orders";
+import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
+
+// Buttons available per role and current status. Delivery (writer) and download
+// (doctor) are handled separately below because they aren't plain transitions.
+const TRANSITIONS = {
+  writer: {
+    pending: [
+      { label: "Accepter", next: "accepted", variant: "primary" },
+      { label: "Refuser", next: "declined", variant: "outline" },
+    ],
+    accepted: [{ label: "Démarrer", next: "in_progress", variant: "outline" }],
+  },
+  doctor: {
+    pending: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
+    accepted: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
+    in_progress: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
+    delivered: [
+      { label: "Confirmer la réception", next: "completed", variant: "primary" },
+    ],
+  },
+};
+
+function errorText(err) {
+  const detail = err?.response?.data?.detail ?? err?.response?.data;
+  if (!detail) return "Une erreur est survenue.";
+  return typeof detail === "string" ? detail : JSON.stringify(detail);
+}
+
+export default function OrderActions({ order, role }) {
+  const update = useUpdateOrderStatus();
+  const upload = useUploadDeliverable();
+  const [error, setError] = useState(null);
+  const [deliverOpen, setDeliverOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const fileRef = useRef(null);
+
+  const transitions = TRANSITIONS[role]?.[order.status] || [];
+  const canDeliver =
+    role === "writer" && ["accepted", "in_progress"].includes(order.status);
+  const canDownload =
+    role === "doctor" &&
+    ["delivered", "completed"].includes(order.status) &&
+    (order.deliverables?.length || 0) > 0;
+
+  const busy = update.isPending || upload.isPending;
+
+  const runTransition = (status) => {
+    setError(null);
+    update.mutate(
+      { id: order.id, status },
+      { onError: (e) => setError(errorText(e)) },
+    );
+  };
+
+  const submitDelivery = async () => {
+    setError(null);
+    const file = fileRef.current?.files?.[0];
+    if (!file) {
+      setError("Veuillez sélectionner un fichier.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    if (note) formData.append("note", note);
+    try {
+      await upload.mutateAsync({ id: order.id, formData });
+      setDeliverOpen(false);
+      setNote("");
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
+  const download = async (deliverable) => {
+    setError(null);
+    try {
+      const blob = await ordersApi.downloadDeliverable(order.id, deliverable.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = deliverable.filename || "livrable";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex flex-wrap justify-end gap-2">
+        {transitions.map((t) => (
+          <Button
+            key={t.next}
+            size="sm"
+            variant={t.variant}
+            disabled={busy}
+            onClick={() => runTransition(t.next)}
+          >
+            {t.label}
+          </Button>
+        ))}
+        {canDeliver && (
+          <Button size="sm" disabled={busy} onClick={() => setDeliverOpen(true)}>
+            Livrer le travail
+          </Button>
+        )}
+        {canDownload &&
+          order.deliverables.map((d) => (
+            <Button key={d.id} size="sm" variant="outline" onClick={() => download(d)}>
+              Télécharger
+            </Button>
+          ))}
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <Modal
+        open={deliverOpen}
+        onClose={() => setDeliverOpen(false)}
+        title="Livrer le travail finalisé"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setDeliverOpen(false)}
+              disabled={upload.isPending}
+            >
+              Annuler
+            </Button>
+            <Button onClick={submitDelivery} disabled={upload.isPending}>
+              {upload.isPending ? "Envoi…" : "Livrer"}
+            </Button>
+          </>
+        }
+      >
+        <label className="mb-1 block text-sm font-medium text-neutral-700">Fichier</label>
+        <input
+          ref={fileRef}
+          type="file"
+          className="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-2 file:text-white hover:file:bg-primary-700"
+        />
+        <div className="mt-3">
+          <Textarea
+            label="Note (facultatif)"
+            name="note"
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      </Modal>
+    </div>
+  );
+}

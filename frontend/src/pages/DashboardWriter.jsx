@@ -6,7 +6,7 @@ import Card from "@/components/ui/Card";
 import OrderRow from "@/components/orders/OrderRow";
 import Tabs from "@/components/layout/Tabs";
 import { useListings, useDeleteListing } from "@/hooks/useListings";
-import { useOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
+import { useOrders } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 
 function MyListingsTab() {
@@ -64,13 +64,13 @@ function MyListingsTab() {
 }
 
 function OrdersReceivedTab() {
-  const { data, isLoading } = useOrders();
-  const update = useUpdateOrderStatus();
+  const { data, isLoading, isError } = useOrders();
   const user = useAuthStore((s) => s.user);
 
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  const orders =
-    data?.results?.filter((o) => o.listing?.writer === user?.id) || [];
+  if (isError)
+    return <p className="text-red-600">Impossible de charger les commandes.</p>;
+  const orders = data?.results?.filter((o) => o.writer?.id === user?.id) || [];
 
   return (
     <Card>
@@ -80,7 +80,7 @@ function OrdersReceivedTab() {
         <table className="w-full">
           <thead>
             <tr className="text-left text-xs uppercase text-neutral-500">
-              <th className="px-3 py-2">Annonce</th>
+              <th className="px-3 py-2">Commande</th>
               <th className="px-3 py-2">Médecin</th>
               <th className="px-3 py-2">Statut</th>
               <th className="px-3 py-2" />
@@ -88,12 +88,7 @@ function OrdersReceivedTab() {
           </thead>
           <tbody>
             {orders.map((o) => (
-              <OrderRow
-                key={o.id}
-                order={o}
-                role="writer"
-                onAction={(id, status) => update.mutate({ id, status })}
-              />
+              <OrderRow key={o.id} order={o} role="writer" />
             ))}
           </tbody>
         </table>

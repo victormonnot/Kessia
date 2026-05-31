@@ -1,21 +1,37 @@
+import os
+
 from rest_framework import serializers
 
 from apps.listings.serializers import ListingListSerializer
 from apps.users.serializers import UserPublicSerializer
 
-from .models import Order
+from .models import Deliverable, Order
+from .services import can_transition, role_for
 
-# pending -> accepted | declined ; accepted -> delivered. Anything else: 400.
-_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    Order.Status.PENDING: {Order.Status.ACCEPTED, Order.Status.DECLINED},
-    Order.Status.ACCEPTED: {Order.Status.DELIVERED},
-}
+
+class DeliverableSerializer(serializers.ModelSerializer):
+    filename = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Deliverable
+        fields = ("id", "filename", "note", "uploaded_at")
+        read_only_fields = fields
+
+    def get_filename(self, obj: Deliverable) -> str:
+        return os.path.basename(obj.file.name)
+
+
+class DeliverableUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Deliverable
+        fields = ("file", "note")
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     listing = ListingListSerializer(read_only=True)
     doctor = UserPublicSerializer(read_only=True)
     writer = UserPublicSerializer(read_only=True)
+    deliverables = DeliverableSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -30,6 +46,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "amount",
             "currency",
             "payment_status",
+            "deliverables",
             "created_at",
             "updated_at",
         )
@@ -44,9 +61,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     def validate_listing(self, listing):
         request = self.context["request"]
         if listing.writer_id == request.user.id:
-            raise serializers.ValidationError("You cannot order your own listing.")
+            raise serializers.ValidationError("Vous ne pouvez pas commander votre propre annonce.")
         if not listing.is_published:
-            raise serializers.ValidationError("This listing is not currently published.")
+            raise serializers.ValidationError("Cette annonce n'est pas disponible actuellement.")
         return listing
 
     def create(self, validated_data):
@@ -65,10 +82,18 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
         fields = ("status",)
 
     def validate_status(self, new_status: str) -> str:
-        current = self.instance.status
-        allowed = _ALLOWED_TRANSITIONS.get(current, set())
-        if new_status not in allowed:
+        order = self.instance
+        user = self.context["request"].user
+
+        # Delivery is performed by uploading the finished work, not by PATCH.
+        if new_status == Order.Status.DELIVERED:
             raise serializers.ValidationError(
-                f"Cannot transition from '{current}' to '{new_status}'."
+                "La livraison se fait en téléversant le travail finalisé."
+            )
+
+        role = role_for(order, user)
+        if not can_transition(order, new_status, role):
+            raise serializers.ValidationError(
+                "Cette action n'est pas autorisée pour le statut actuel de la commande."
             )
         return new_status

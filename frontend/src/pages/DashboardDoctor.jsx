@@ -11,9 +11,11 @@ import { useActivateWriter } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 
 function MyOrdersTab() {
-  const { data, isLoading } = useOrders();
+  const { data, isLoading, isError } = useOrders();
   const user = useAuthStore((s) => s.user);
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+  if (isError)
+    return <p className="text-red-600">Impossible de charger les commandes.</p>;
   const orders = data?.results?.filter((o) => o.doctor?.id === user?.id) || [];
   if (orders.length === 0) {
     return (

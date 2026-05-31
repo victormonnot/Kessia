@@ -1,0 +1,5 @@
+Bonjour {{ order.writer.get_full_name|default:order.writer.email }},
+
+La commande{% if order.listing %} « {{ order.listing.title }} »{% endif %} a été annulée par le médecin.
+
+— L'équipe Kessia

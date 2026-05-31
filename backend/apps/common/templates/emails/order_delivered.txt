@@ -1,0 +1,8 @@
+Bonjour {{ order.doctor.get_full_name|default:order.doctor.email }},
+
+Le rédacteur a livré votre commande{% if order.listing %} « {{ order.listing.title }} »{% endif %}.
+
+Connectez-vous pour télécharger le travail et confirmer la réception :
+{{ frontend_url }}/dashboard/doctor
+
+— L'équipe Kessia

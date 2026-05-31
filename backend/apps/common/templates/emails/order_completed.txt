@@ -1,0 +1,7 @@
+Bonjour {{ order.writer.get_full_name|default:order.writer.email }},
+
+Le médecin a confirmé la réception de la commande{% if order.listing %} « {{ order.listing.title }} »{% endif %}. Elle est désormais finalisée.
+
+Montant : {{ order.amount }} {{ order.currency }}
+
+— L'équipe Kessia

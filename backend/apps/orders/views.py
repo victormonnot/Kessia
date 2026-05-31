@@ -1,15 +1,24 @@
+import os
+
 from django.db.models import Q
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Order
-from .permissions import IsOrderParticipant, IsOrderWriter
+from .permissions import IsOrderParticipant
 from .serializers import (
+    DeliverableSerializer,
+    DeliverableUploadSerializer,
     OrderCreateSerializer,
     OrderDetailSerializer,
     OrderUpdateSerializer,
 )
+from .services import notify_order_event, notify_status_change
 
 
 class OrderViewSet(
@@ -19,16 +28,20 @@ class OrderViewSet(
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
-    filterset_fields = ("status",)
+    filterset_fields = ("status", "payment_status")
     ordering_fields = ("created_at",)
     ordering = ("-created_at",)
     http_method_names = ("get", "post", "patch", "head", "options")
 
     def get_queryset(self):
         user = self.request.user
-        return Order.objects.select_related(
-            "listing", "listing__writer", "doctor", "writer", "proposal"
-        ).filter(Q(doctor=user) | Q(writer=user))
+        return (
+            Order.objects.select_related(
+                "listing", "listing__writer", "doctor", "writer", "proposal"
+            )
+            .prefetch_related("deliverables")
+            .filter(Q(doctor=user) | Q(writer=user))
+        )
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -38,9 +51,7 @@ class OrderViewSet(
         return OrderDetailSerializer
 
     def get_permissions(self):
-        if self.action in {"update", "partial_update"}:
-            return [IsAuthenticated(), IsOrderWriter()]
-        if self.action == "retrieve":
+        if self.action in {"update", "partial_update", "retrieve"}:
             return [IsAuthenticated(), IsOrderParticipant()]
         return [IsAuthenticated()]
 
@@ -48,6 +59,7 @@ class OrderViewSet(
         create_serializer = self.get_serializer(data=request.data)
         create_serializer.is_valid(raise_exception=True)
         order = create_serializer.save()
+        notify_order_event(order, "order_placed")
         return Response(OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -57,4 +69,67 @@ class OrderViewSet(
         update_serializer.is_valid(raise_exception=True)
         update_serializer.save()
         instance.refresh_from_db()
+        notify_status_change(instance)
         return Response(OrderDetailSerializer(instance).data)
+
+    @action(
+        detail=True,
+        methods=("get", "post"),
+        url_path="deliverables",
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def deliverables(self, request, pk=None):
+        order = self.get_object()
+
+        if request.method == "GET":
+            qs = order.deliverables.all()
+            return Response(DeliverableSerializer(qs, many=True).data)
+
+        # POST: only the writer delivers, and only from accepted/in_progress.
+        if order.writer_id != request.user.id:
+            return Response(
+                {"detail": "Seul le rédacteur peut livrer le travail."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if order.status not in {Order.Status.ACCEPTED, Order.Status.IN_PROGRESS}:
+            return Response(
+                {"detail": "Vous ne pouvez livrer que pour une commande acceptée ou en cours."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        upload = DeliverableUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        deliverable = upload.save(order=order)
+
+        order.status = Order.Status.DELIVERED
+        order.save(update_fields=["status", "updated_at"])
+        notify_status_change(order)
+
+        return Response(
+            DeliverableSerializer(deliverable).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=("get",),
+        url_path=r"deliverables/(?P<deliverable_id>[^/.]+)/download",
+    )
+    def download_deliverable(self, request, pk=None, deliverable_id=None):
+        order = self.get_object()
+        deliverable = get_object_or_404(order.deliverables, pk=deliverable_id)
+
+        # The doctor can only download once the work has been delivered; the
+        # writer (who uploaded it) may always retrieve their own file.
+        is_doctor = request.user.id == order.doctor_id
+        if is_doctor and order.status not in {Order.Status.DELIVERED, Order.Status.COMPLETED}:
+            return Response(
+                {"detail": "Le livrable n'est pas encore disponible."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return FileResponse(
+            deliverable.file.open("rb"),
+            as_attachment=True,
+            filename=os.path.basename(deliverable.file.name),
+        )

@@ -135,3 +135,10 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:5173",
     cast=Csv(),
 )
+
+# Public URL of the SPA, used to build links in notification emails.
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+
+# Sender address for transactional emails. The actual backend is set per
+# environment (console in dev, SMTP/provider in prod).
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kessia <no-reply@kessia.local>")
