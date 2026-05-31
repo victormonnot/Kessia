@@ -5,30 +5,26 @@ export const useAuthStore = create(
   persist(
     (set) => ({
       accessToken: null,
-      refreshToken: null,
       user: null,
 
-      setAuth: ({ access, refresh, user }) =>
-        set({
-          accessToken: access ?? null,
-          refreshToken: refresh ?? null,
-          user: user ?? null,
-        }),
+      setAuth: ({ access, user }) =>
+        set((state) => ({
+          accessToken: access ?? state.accessToken,
+          user: user ?? state.user,
+        })),
 
       setAccessToken: (accessToken) => set({ accessToken }),
 
       setUser: (user) => set({ user }),
 
-      clear: () => set({ accessToken: null, refreshToken: null, user: null }),
+      clear: () => set({ accessToken: null, user: null }),
     }),
     {
       name: "kessia-auth",
-      // localStorage only persists refreshToken + user; accessToken is short-lived
-      // so we re-derive it from refresh on reload via the interceptor.
-      partialize: (state) => ({
-        refreshToken: state.refreshToken,
-        user: state.user,
-      }),
+      // The refresh token now lives in an httpOnly cookie and the access token
+      // stays in memory only. We persist just `user` for instant UI on reload;
+      // a silent refresh re-derives the access token from the cookie at startup.
+      partialize: (state) => ({ user: state.user }),
     },
   ),
 );

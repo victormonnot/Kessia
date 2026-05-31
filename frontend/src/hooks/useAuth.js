@@ -5,11 +5,11 @@ import { useAuthStore } from "@/store/authStore";
 
 export function useCurrentUser() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const refreshToken = useAuthStore((s) => s.refreshToken);
   return useQuery({
     queryKey: ["currentUser"],
     queryFn: authApi.me,
-    enabled: Boolean(accessToken || refreshToken),
+    // Enabled once a silent refresh (or login) has populated the access token.
+    enabled: Boolean(accessToken),
   });
 }
 
@@ -19,7 +19,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: ({ email, password }) => authApi.login(email, password),
     onSuccess: async (data) => {
-      setAuth({ access: data.access, refresh: data.refresh });
+      setAuth({ access: data.access });
       const me = await authApi.me();
       useAuthStore.getState().setUser(me);
       qc.setQueryData(["currentUser"], me);
@@ -33,24 +33,21 @@ export function useRegister() {
   return useMutation({
     mutationFn: authApi.register,
     onSuccess: (data) => {
-      setAuth({ access: data.access, refresh: data.refresh, user: data.user });
+      setAuth({ access: data.access, user: data.user });
       qc.setQueryData(["currentUser"], data.user);
     },
   });
 }
 
 export function useLogout() {
-  const refreshToken = useAuthStore((s) => s.refreshToken);
   const clear = useAuthStore((s) => s.clear);
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      if (refreshToken) {
-        try {
-          await authApi.logout(refreshToken);
-        } catch {
-          // ignore; we clear local state anyway
-        }
+      try {
+        await authApi.logout();
+      } catch {
+        // Ignore: we clear local state regardless.
       }
     },
     onSettled: () => {

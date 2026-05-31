@@ -4,9 +4,18 @@ import { useAuthStore } from "@/store/authStore";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
+const CSRF_COOKIE = "kessia_csrf";
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp(`(^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 export const api = axios.create({
   baseURL,
   headers: { "Content-Type": "application/json" },
+  // Send the httpOnly refresh cookie on auth calls (cross-origin in prod).
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -14,24 +23,30 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Double-submit CSRF: echo the JS-readable cookie back as a header so the
+  // cookie-authenticated auth endpoints (refresh, logout) accept the request.
+  const csrf = getCookie(CSRF_COOKIE);
+  if (csrf) {
+    config.headers["X-CSRFToken"] = csrf;
+  }
   return config;
 });
 
 let refreshPromise = null;
 
-async function refreshAccessToken() {
-  const { refreshToken } = useAuthStore.getState();
-  if (!refreshToken) {
-    throw new Error("No refresh token");
-  }
-  const { data } = await axios.post(`${baseURL}/auth/refresh/`, {
-    refresh: refreshToken,
-  });
+// Exchange the httpOnly refresh cookie for a fresh access token. No token is
+// read from JS — the browser sends the cookie automatically.
+export async function refreshAccessToken() {
+  const csrf = getCookie(CSRF_COOKIE);
+  const { data } = await axios.post(
+    `${baseURL}/auth/refresh/`,
+    {},
+    {
+      withCredentials: true,
+      headers: csrf ? { "X-CSRFToken": csrf } : {},
+    },
+  );
   useAuthStore.getState().setAccessToken(data.access);
-  // simplejwt with ROTATE_REFRESH_TOKENS returns a new refresh too
-  if (data.refresh) {
-    useAuthStore.setState({ refreshToken: data.refresh });
-  }
   return data.access;
 }
 

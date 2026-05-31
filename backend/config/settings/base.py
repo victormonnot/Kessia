@@ -135,6 +135,22 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:5173",
     cast=Csv(),
 )
+# The refresh token lives in a cookie, so XHR must send credentials cross-origin.
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:5173",
+    cast=Csv(),
+)
+
+# Auth cookies: the refresh token is stored in an httpOnly cookie (not readable
+# by JS, mitigating XSS token theft); a separate JS-readable CSRF cookie backs a
+# double-submit check on the cookie-authenticated auth endpoints. SameSite=Lax
+# is fine in dev (same site); cross-site prod deployments need
+# AUTH_COOKIE_SAMESITE=None and AUTH_COOKIE_SECURE=True.
+AUTH_COOKIE_SECURE = config("AUTH_COOKIE_SECURE", default=False, cast=bool)
+AUTH_COOKIE_SAMESITE = config("AUTH_COOKIE_SAMESITE", default="Lax")
 
 # Public URL of the SPA, used to build links in notification emails.
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
