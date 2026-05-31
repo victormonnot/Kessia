@@ -26,10 +26,9 @@ class OrderViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        return (
-            Order.objects.select_related("listing", "listing__writer", "doctor")
-            .filter(Q(doctor=user) | Q(listing__writer=user))
-        )
+        return Order.objects.select_related(
+            "listing", "listing__writer", "doctor", "writer", "proposal"
+        ).filter(Q(doctor=user) | Q(writer=user))
 
     def get_serializer_class(self):
         if self.action == "create":

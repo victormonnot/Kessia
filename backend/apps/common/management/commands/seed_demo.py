@@ -165,6 +165,8 @@ class Command(BaseCommand):
                     listing=cardio_listing,
                     doctor=doctor,
                     defaults={
+                        "writer": cardio_listing.writer,
+                        "amount": cardio_listing.price,
                         "status": Order.Status.ACCEPTED,
                         "message": (
                             "Bonjour Alice, j'aurais besoin d'une revue sur "

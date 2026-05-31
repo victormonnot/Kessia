@@ -30,14 +30,14 @@ export default function RequestFormPage() {
   };
 
   if (isEdit && isLoading) {
-    return <p className="px-4 py-8 text-neutral-500">Loading…</p>;
+    return <p className="px-4 py-8 text-neutral-500">Chargement…</p>;
   }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Card>
         <h1 className="mb-6 text-2xl font-semibold text-neutral-900">
-          {isEdit ? "Edit request" : "Post a request"}
+          {isEdit ? "Modifier la demande" : "Publier une demande"}
         </h1>
         <RequestForm
           initial={existing}

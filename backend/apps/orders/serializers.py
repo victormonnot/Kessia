@@ -15,15 +15,21 @@ _ALLOWED_TRANSITIONS: dict[str, set[str]] = {
 class OrderDetailSerializer(serializers.ModelSerializer):
     listing = ListingListSerializer(read_only=True)
     doctor = UserPublicSerializer(read_only=True)
+    writer = UserPublicSerializer(read_only=True)
 
     class Meta:
         model = Order
         fields = (
             "id",
             "listing",
+            "proposal",
             "doctor",
+            "writer",
             "status",
             "message",
+            "amount",
+            "currency",
+            "payment_status",
             "created_at",
             "updated_at",
         )
@@ -44,7 +50,12 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         return listing
 
     def create(self, validated_data):
+        # Snapshot the writer and the agreed price at order time; never trust the
+        # live listing price later in the engagement's lifecycle.
+        listing = validated_data["listing"]
         validated_data["doctor"] = self.context["request"].user
+        validated_data["writer"] = listing.writer
+        validated_data["amount"] = listing.price
         return super().create(validated_data)
 
 

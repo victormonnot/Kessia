@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.urls import reverse
 
@@ -17,6 +19,34 @@ def test_doctor_can_place_order(auth_client, user):
     )
     assert response.status_code == 201
     assert Order.objects.filter(doctor=user, listing=listing).count() == 1
+
+
+def test_order_snapshots_writer_and_amount(auth_client, user):
+    listing = ListingFactory(price=Decimal("420.00"))
+    response = auth_client.post(
+        reverse("order-list"),
+        {"listing": listing.id, "message": "Snapshot please"},
+        format="json",
+    )
+    assert response.status_code == 201
+    order = Order.objects.get(doctor=user, listing=listing)
+    assert order.writer_id == listing.writer_id
+    assert order.amount == Decimal("420.00")
+    assert order.payment_status == Order.PaymentStatus.UNPAID
+    assert order.currency == "EUR"
+
+
+def test_amount_snapshot_survives_later_price_change(auth_client, user):
+    listing = ListingFactory(price=Decimal("300.00"))
+    auth_client.post(
+        reverse("order-list"),
+        {"listing": listing.id, "message": "Lock the price"},
+        format="json",
+    )
+    listing.price = Decimal("999.00")
+    listing.save(update_fields=["price"])
+    order = Order.objects.get(doctor=user, listing=listing)
+    assert order.amount == Decimal("300.00")
 
 
 def test_cannot_order_own_listing(writer_auth_client, writer_user):

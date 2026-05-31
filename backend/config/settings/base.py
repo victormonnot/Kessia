@@ -89,6 +89,14 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Media / file storage. Deliverable files use Django's storage abstraction:
+# local FileSystemStorage in dev/test, S3-compatible (django-storages) in prod
+# (Railway/Render filesystems are ephemeral — overridden in config/settings/prod.py).
+# Deliverable downloads are always served through an access-gated DRF view, never
+# from a public URL.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # REST framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
