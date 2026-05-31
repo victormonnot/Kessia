@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.listings",
     "apps.orders",
     "apps.requests_board",
+    "apps.payments",
 ]
 
 MIDDLEWARE = [
@@ -158,3 +159,11 @@ FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 # Sender address for transactional emails. The actual backend is set per
 # environment (console in dev, SMTP/provider in prod).
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kessia <no-reply@kessia.local>")
+
+# Stripe Connect (test mode). The platform charges the doctor, holds the funds,
+# and on completion transfers (amount - commission) to the writer's connected
+# account. Keys are blank in dev/test; tests mock the Stripe SDK entirely.
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = config("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
+KESSIA_PLATFORM_FEE_PERCENT = config("KESSIA_PLATFORM_FEE_PERCENT", default=15, cast=int)

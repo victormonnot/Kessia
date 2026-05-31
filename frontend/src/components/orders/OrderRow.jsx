@@ -1,5 +1,6 @@
 import OrderActions from "@/components/orders/OrderActions";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { PAYMENT_STATUS_LABELS } from "@/lib/choices";
 
 function counterpartyName(order, role) {
   const u = role === "writer" ? order.doctor : order.writer;
@@ -23,6 +24,11 @@ export default function OrderRow({ order, role }) {
       </td>
       <td className="px-3 py-3">
         <StatusBadge status={order.status} />
+        {order.payment_status && order.payment_status !== "unpaid" && (
+          <div className="mt-1 text-xs text-neutral-500">
+            {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
+          </div>
+        )}
       </td>
       <td className="px-3 py-3 text-right">
         <OrderActions order={order} role={role} />

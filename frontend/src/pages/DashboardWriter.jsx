@@ -7,6 +7,7 @@ import OrderRow from "@/components/orders/OrderRow";
 import Tabs from "@/components/layout/Tabs";
 import { useListings, useDeleteListing } from "@/hooks/useListings";
 import { useOrders } from "@/hooks/useOrders";
+import { useConnectStatus, useOnboard } from "@/hooks/usePayments";
 import { useAuthStore } from "@/store/authStore";
 
 function MyListingsTab() {
@@ -111,6 +112,45 @@ function MyProposalsTab() {
   );
 }
 
+function PaymentsTab() {
+  const { data, isLoading, isError } = useConnectStatus();
+  const onboard = useOnboard();
+
+  const startOnboarding = async () => {
+    const { url } = await onboard.mutateAsync();
+    window.location.href = url;
+  };
+
+  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+  if (isError)
+    return <p className="text-red-600">Impossible de charger le statut des paiements.</p>;
+
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-medium text-neutral-900">Recevoir vos paiements</h2>
+      {data?.payouts_enabled ? (
+        <p className="text-green-700">
+          Votre compte Stripe est configuré : vous pouvez recevoir le versement de vos commandes.
+        </p>
+      ) : (
+        <>
+          <p className="text-neutral-600">
+            Configurez votre compte de paiement Stripe pour recevoir le versement de vos
+            commandes (commission plateforme de 15 % déduite, versement à la finalisation).
+          </p>
+          <Button onClick={startOnboarding} disabled={onboard.isPending}>
+            {onboard.isPending
+              ? "Redirection…"
+              : data?.has_account
+                ? "Continuer la configuration"
+                : "Configurer les paiements"}
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function DashboardWriter() {
   const user = useAuthStore((s) => s.user);
   return (
@@ -133,6 +173,11 @@ export default function DashboardWriter() {
               key: "proposals",
               label: "Mes propositions",
               render: () => <MyProposalsTab />,
+            },
+            {
+              key: "payments",
+              label: "Paiements",
+              render: () => <PaymentsTab />,
             },
           ]}
         />

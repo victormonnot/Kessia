@@ -70,6 +70,12 @@ class OrderViewSet(
         update_serializer.save()
         instance.refresh_from_db()
         notify_status_change(instance)
+        # Move money on terminal transitions (release on completed, refund on
+        # declined/cancelled-after-payment). Guarded by payment_status, so it's
+        # a no-op for unpaid orders. Lazy import avoids an app load-order cycle.
+        from apps.payments.services import on_order_status_changed
+
+        on_order_status_changed(instance)
         return Response(OrderDetailSerializer(instance).data)
 
     @action(
@@ -85,15 +91,16 @@ class OrderViewSet(
             qs = order.deliverables.all()
             return Response(DeliverableSerializer(qs, many=True).data)
 
-        # POST: only the writer delivers, and only from accepted/in_progress.
+        # POST: only the writer delivers, and only once the order is paid and in
+        # progress (payment moves accepted -> in_progress).
         if order.writer_id != request.user.id:
             return Response(
                 {"detail": "Seul le rédacteur peut livrer le travail."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if order.status not in {Order.Status.ACCEPTED, Order.Status.IN_PROGRESS}:
+        if order.status != Order.Status.IN_PROGRESS:
             return Response(
-                {"detail": "Vous ne pouvez livrer que pour une commande acceptée ou en cours."},
+                {"detail": "Vous ne pouvez livrer qu'une commande payée et en cours."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

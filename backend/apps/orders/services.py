@@ -17,6 +17,10 @@ WRITER = "writer"
 DOCTOR = "doctor"
 
 # from_status -> {to_status: actor allowed to perform the transition}
+# `accepted -> in_progress` is system-driven (it happens when the doctor's
+# payment is confirmed; see payments.services.mark_payment_held), so it is not
+# an actor transition here. `-> delivered` is reached only by uploading the
+# finished work (see the deliverables endpoint), never by a plain status PATCH.
 ORDER_TRANSITIONS: dict[str, dict[str, str]] = {
     Order.Status.PENDING: {
         Order.Status.ACCEPTED: WRITER,
@@ -24,12 +28,9 @@ ORDER_TRANSITIONS: dict[str, dict[str, str]] = {
         Order.Status.CANCELLED: DOCTOR,
     },
     Order.Status.ACCEPTED: {
-        Order.Status.IN_PROGRESS: WRITER,
-        Order.Status.DELIVERED: WRITER,
         Order.Status.CANCELLED: DOCTOR,
     },
     Order.Status.IN_PROGRESS: {
-        Order.Status.DELIVERED: WRITER,
         Order.Status.CANCELLED: DOCTOR,
     },
     Order.Status.DELIVERED: {

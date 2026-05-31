@@ -3,18 +3,20 @@ import { useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Textarea from "@/components/ui/Textarea";
+import PaymentModal from "@/components/payments/PaymentModal";
 import { ordersApi } from "@/api/orders";
 import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
 
-// Buttons available per role and current status. Delivery (writer) and download
-// (doctor) are handled separately below because they aren't plain transitions.
+// Plain status transitions per role/status. Paying (doctor, on accepted),
+// delivering (writer, on in_progress) and downloading (doctor) are handled
+// separately below because they aren't plain status PATCHes. The writer no
+// longer "starts" work — the doctor's payment moves accepted -> in_progress.
 const TRANSITIONS = {
   writer: {
     pending: [
       { label: "Accepter", next: "accepted", variant: "primary" },
       { label: "Refuser", next: "declined", variant: "outline" },
     ],
-    accepted: [{ label: "Démarrer", next: "in_progress", variant: "outline" }],
   },
   doctor: {
     pending: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
@@ -37,12 +39,17 @@ export default function OrderActions({ order, role }) {
   const upload = useUploadDeliverable();
   const [error, setError] = useState(null);
   const [deliverOpen, setDeliverOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const [note, setNote] = useState("");
   const fileRef = useRef(null);
 
   const transitions = TRANSITIONS[role]?.[order.status] || [];
-  const canDeliver =
-    role === "writer" && ["accepted", "in_progress"].includes(order.status);
+  const canPay =
+    role === "doctor" &&
+    order.status === "accepted" &&
+    !["held", "released"].includes(order.payment_status);
+  const canDeliver = role === "writer" && order.status === "in_progress";
+  const awaitingPayment = role === "writer" && order.status === "accepted";
   const canDownload =
     role === "doctor" &&
     ["delivered", "completed"].includes(order.status) &&
@@ -109,6 +116,14 @@ export default function OrderActions({ order, role }) {
             {t.label}
           </Button>
         ))}
+        {canPay && (
+          <Button size="sm" disabled={busy} onClick={() => setPayOpen(true)}>
+            Payer
+          </Button>
+        )}
+        {awaitingPayment && (
+          <span className="text-xs text-neutral-500">En attente du paiement du médecin</span>
+        )}
         {canDeliver && (
           <Button size="sm" disabled={busy} onClick={() => setDeliverOpen(true)}>
             Livrer le travail
@@ -159,6 +174,8 @@ export default function OrderActions({ order, role }) {
         </div>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </Modal>
+
+      <PaymentModal order={order} open={payOpen} onClose={() => setPayOpen(false)} />
     </div>
   );
 }
