@@ -114,3 +114,33 @@ def test_writer_can_withdraw_own_proposal(writer_auth_client, writer_user):
     response = writer_auth_client.delete(reverse("proposal-detail", args=[proposal.id]))
     assert response.status_code == 204
     assert not Proposal.objects.filter(id=proposal.id).exists()
+
+
+def test_requests_mine_filter(auth_client, user):
+    RequestFactory(doctor=user)
+    RequestFactory()  # someone else's request
+    response = auth_client.get(reverse("request-list"), {"mine": "true"})
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
+def test_proposals_list_scopes_to_involved_users(user, writer_user):
+    from rest_framework.test import APIClient
+
+    doctor_client = APIClient()
+    doctor_client.force_authenticate(user)
+    writer_client = APIClient()
+    writer_client.force_authenticate(writer_user)
+
+    own_request = RequestFactory(doctor=user)
+    ProposalFactory(request=own_request, writer=writer_user)
+    ProposalFactory()  # unrelated proposal on someone else's request
+
+    # The doctor sees the proposal on their own request.
+    as_doctor = doctor_client.get(reverse("proposal-list"))
+    assert as_doctor.status_code == 200
+    assert as_doctor.json()["count"] == 1
+
+    # The writer sees their own proposal.
+    as_writer = writer_client.get(reverse("proposal-list"))
+    assert as_writer.json()["count"] == 1

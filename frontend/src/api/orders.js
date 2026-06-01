@@ -7,6 +7,8 @@ export const ordersApi = {
 
   retrieve: (id) => api.get(`/orders/${id}/`).then((r) => r.data),
 
+  earnings: () => api.get("/orders/earnings/").then((r) => r.data),
+
   updateStatus: (id, status) =>
     api.patch(`/orders/${id}/`, { status }).then((r) => r.data),
 

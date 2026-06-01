@@ -12,6 +12,8 @@ export const requestsApi = {
 };
 
 export const proposalsApi = {
+  // Proposals the current user is involved in (own as writer, or on own requests).
+  list: () => api.get("/proposals/").then((r) => r.data),
   update: (id, payload) => api.patch(`/proposals/${id}/`, payload).then((r) => r.data),
   remove: (id) => api.delete(`/proposals/${id}/`).then((r) => r.data),
 };

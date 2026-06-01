@@ -4,19 +4,18 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import StatusBadge from "@/components/ui/StatusBadge";
 import OrderRow from "@/components/orders/OrderRow";
+import ProposalRow from "@/components/requests/ProposalRow";
 import Tabs from "@/components/layout/Tabs";
 import { useOrders } from "@/hooks/useOrders";
-import { useRequests } from "@/hooks/useRequests";
+import { useRequests, useAllProposals, useDecideProposal } from "@/hooks/useRequests";
 import { useActivateWriter } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 
 function MyOrdersTab() {
-  const { data, isLoading, isError } = useOrders();
-  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError } = useOrders({ role: "doctor" });
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError)
-    return <p className="text-red-600">Impossible de charger les commandes.</p>;
-  const orders = data?.results?.filter((o) => o.doctor?.id === user?.id) || [];
+  if (isError) return <p className="text-red-600">Impossible de charger les commandes.</p>;
+  const orders = data?.results || [];
   if (orders.length === 0) {
     return (
       <Card>
@@ -35,7 +34,7 @@ function MyOrdersTab() {
       <table className="w-full">
         <thead>
           <tr className="text-left text-xs uppercase text-neutral-500">
-            <th className="px-3 py-2">Annonce</th>
+            <th className="px-3 py-2">Commande</th>
             <th className="px-3 py-2">Rédacteur</th>
             <th className="px-3 py-2">Statut</th>
             <th />
@@ -52,10 +51,10 @@ function MyOrdersTab() {
 }
 
 function MyRequestsTab() {
-  const user = useAuthStore((s) => s.user);
-  const { data, isLoading } = useRequests({ page_size: 100 });
+  const { data, isLoading, isError } = useRequests({ mine: true });
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  const mine = data?.results?.filter((r) => r.doctor?.id === user?.id) || [];
+  if (isError) return <p className="text-red-600">Impossible de charger vos demandes.</p>;
+  const mine = data?.results || [];
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
@@ -86,12 +85,53 @@ function MyRequestsTab() {
 }
 
 function ProposalsReceivedTab() {
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError } = useAllProposals();
+  const decide = useDecideProposal();
+
+  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+  if (isError) return <p className="text-red-600">Impossible de charger les propositions.</p>;
+
+  // Proposals on the doctor's own requests (i.e. not authored by the doctor).
+  const received = (data?.results || []).filter((p) => p.writer?.id !== user?.id);
+  if (received.length === 0) {
+    return (
+      <Card>
+        <p className="text-neutral-500">Aucune proposition reçue pour le moment.</p>
+      </Card>
+    );
+  }
+
+  // Group by request so the doctor sees offers per request.
+  const groups = received.reduce((acc, p) => {
+    const key = p.request;
+    (acc[key] ||= { title: p.request_title, items: [] }).items.push(p);
+    return acc;
+  }, {});
+
   return (
-    <Card>
-      <p className="text-neutral-500">
-        Ouvrez l'une de vos demandes pour consulter les propositions reçues.
-      </p>
-    </Card>
+    <div className="space-y-4">
+      {Object.entries(groups).map(([requestId, group]) => (
+        <Card key={requestId}>
+          <Link
+            to={`/requests/${requestId}`}
+            className="font-medium text-neutral-900 hover:underline"
+          >
+            {group.title}
+          </Link>
+          <div className="mt-2">
+            {group.items.map((p) => (
+              <ProposalRow
+                key={p.id}
+                proposal={p}
+                canDecide
+                onDecide={(id, status) => decide.mutate({ id, status })}
+              />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
 
@@ -103,9 +143,7 @@ export default function DashboardDoctor() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Tableau de bord médecin</h1>
-          <p className="text-neutral-600">
-            Bon retour, {user?.first_name || user?.email}.
-          </p>
+          <p className="text-neutral-600">Bon retour, {user?.first_name || user?.email}.</p>
         </div>
         {!user?.is_writer && (
           <Button

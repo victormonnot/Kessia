@@ -63,12 +63,14 @@ class RequestWriteSerializer(serializers.ModelSerializer):
 
 class ProposalSerializer(serializers.ModelSerializer):
     writer = UserPublicSerializer(read_only=True)
+    request_title = serializers.CharField(source="request.title", read_only=True)
 
     class Meta:
         model = Proposal
         fields = (
             "id",
             "request",
+            "request_title",
             "writer",
             "message",
             "price",

@@ -3,22 +3,22 @@ import { Link } from "react-router-dom";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import StatusBadge from "@/components/ui/StatusBadge";
 import OrderRow from "@/components/orders/OrderRow";
 import Tabs from "@/components/layout/Tabs";
 import { useListings, useDeleteListing } from "@/hooks/useListings";
-import { useOrders } from "@/hooks/useOrders";
+import { useOrders, useEarnings } from "@/hooks/useOrders";
+import { useAllProposals } from "@/hooks/useRequests";
 import { useConnectStatus, useOnboard } from "@/hooks/usePayments";
 import { useAuthStore } from "@/store/authStore";
 
 function MyListingsTab() {
-  const user = useAuthStore((s) => s.user);
-  // Pas de filtre "mine" côté API pour l'instant — on récupère tout et on filtre côté client.
-  const { data, isLoading } = useListings({ page_size: 100 });
+  const { data, isLoading, isError } = useListings({ mine: true });
   const remove = useDeleteListing();
 
-  const mine = data?.results?.filter((l) => l.writer === user?.id) || [];
-
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+  if (isError) return <p className="text-red-600">Impossible de charger vos annonces.</p>;
+  const listings = data?.results || [];
 
   return (
     <div className="space-y-3">
@@ -27,12 +27,12 @@ function MyListingsTab() {
           <Button>+ Nouvelle annonce</Button>
         </Link>
       </div>
-      {mine.length === 0 && (
+      {listings.length === 0 && (
         <Card>
           <p className="text-neutral-500">Vous n'avez pas encore publié d'annonces.</p>
         </Card>
       )}
-      {mine.map((l) => (
+      {listings.map((l) => (
         <Card key={l.id} className="flex items-center justify-between gap-3">
           <div>
             <Link to={`/listings/${l.id}`} className="font-medium text-neutral-900">
@@ -65,13 +65,10 @@ function MyListingsTab() {
 }
 
 function OrdersReceivedTab() {
-  const { data, isLoading, isError } = useOrders();
-  const user = useAuthStore((s) => s.user);
-
+  const { data, isLoading, isError } = useOrders({ role: "writer" });
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError)
-    return <p className="text-red-600">Impossible de charger les commandes.</p>;
-  const orders = data?.results?.filter((o) => o.writer?.id === user?.id) || [];
+  if (isError) return <p className="text-red-600">Impossible de charger les commandes.</p>;
+  const orders = data?.results || [];
 
   return (
     <Card>
@@ -99,21 +96,45 @@ function OrdersReceivedTab() {
 }
 
 function MyProposalsTab() {
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError } = useAllProposals();
+  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+  if (isError) return <p className="text-red-600">Impossible de charger vos propositions.</p>;
+
+  const mine = (data?.results || []).filter((p) => p.writer?.id === user?.id);
+  if (mine.length === 0) {
+    return (
+      <Card>
+        <p className="text-neutral-500">
+          Vous n'avez pas encore envoyé de proposition. Parcourez{" "}
+          <Link to="/requests" className="text-primary-700 hover:underline">
+            les demandes
+          </Link>
+          .
+        </p>
+      </Card>
+    );
+  }
   return (
-    <Card>
-      <p className="text-neutral-500">
-        Ouvrez une demande depuis{" "}
-        <Link to="/requests" className="text-primary-700 hover:underline">
-          le tableau des demandes
-        </Link>{" "}
-        pour proposer vos services ou consulter vos propositions.
-      </p>
-    </Card>
+    <div className="space-y-3">
+      {mine.map((p) => (
+        <Card key={p.id} className="flex items-center justify-between gap-3">
+          <div>
+            <Link to={`/requests/${p.request}`} className="font-medium text-neutral-900">
+              {p.request_title}
+            </Link>
+            <p className="text-sm text-neutral-500">{Number(p.price).toFixed(0)} €</p>
+          </div>
+          <StatusBadge status={p.status} />
+        </Card>
+      ))}
+    </div>
   );
 }
 
 function PaymentsTab() {
-  const { data, isLoading, isError } = useConnectStatus();
+  const { data: status, isLoading } = useConnectStatus();
+  const { data: earnings } = useEarnings();
   const onboard = useOnboard();
 
   const startOnboarding = async () => {
@@ -122,32 +143,48 @@ function PaymentsTab() {
   };
 
   if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError)
-    return <p className="text-red-600">Impossible de charger le statut des paiements.</p>;
 
   return (
-    <Card className="space-y-3">
-      <h2 className="font-medium text-neutral-900">Recevoir vos paiements</h2>
-      {data?.payouts_enabled ? (
-        <p className="text-green-700">
-          Votre compte Stripe est configuré : vous pouvez recevoir le versement de vos commandes.
-        </p>
-      ) : (
-        <>
-          <p className="text-neutral-600">
-            Configurez votre compte de paiement Stripe pour recevoir le versement de vos
-            commandes (commission plateforme de 15 % déduite, versement à la finalisation).
+    <div className="space-y-4">
+      <Card className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-xs uppercase text-neutral-500">En séquestre</p>
+          <p className="text-xl font-semibold text-neutral-900">
+            {Number(earnings?.in_escrow || 0).toFixed(2)} €
           </p>
-          <Button onClick={startOnboarding} disabled={onboard.isPending}>
-            {onboard.isPending
-              ? "Redirection…"
-              : data?.has_account
-                ? "Continuer la configuration"
-                : "Configurer les paiements"}
-          </Button>
-        </>
-      )}
-    </Card>
+        </div>
+        <div>
+          <p className="text-xs uppercase text-neutral-500">Gagné (net)</p>
+          <p className="text-xl font-semibold text-neutral-900">
+            {Number(earnings?.earned || 0).toFixed(2)} €
+          </p>
+        </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-medium text-neutral-900">Recevoir vos paiements</h2>
+        {status?.payouts_enabled ? (
+          <p className="text-green-700">
+            Votre compte Stripe est configuré : vous pouvez recevoir le versement de vos
+            commandes.
+          </p>
+        ) : (
+          <>
+            <p className="text-neutral-600">
+              Configurez votre compte de paiement Stripe pour recevoir le versement de vos
+              commandes (commission plateforme de 15 % déduite, versement à la finalisation).
+            </p>
+            <Button onClick={startOnboarding} disabled={onboard.isPending}>
+              {onboard.isPending
+                ? "Redirection…"
+                : status?.has_account
+                  ? "Continuer la configuration"
+                  : "Configurer les paiements"}
+            </Button>
+          </>
+        )}
+      </Card>
+    </div>
   );
 }
 
@@ -174,11 +211,7 @@ export default function DashboardWriter() {
               label: "Mes propositions",
               render: () => <MyProposalsTab />,
             },
-            {
-              key: "payments",
-              label: "Paiements",
-              render: () => <PaymentsTab />,
-            },
+            { key: "payments", label: "Paiements", render: () => <PaymentsTab /> },
           ]}
         />
       </div>

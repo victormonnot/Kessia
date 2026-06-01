@@ -84,3 +84,11 @@ def test_search_by_title(api_client):
     ListingFactory(title="Oncology paper")
     response = api_client.get(reverse("listing-list"), {"search": "oncology"})
     assert response.json()["count"] == 1
+
+
+def test_mine_filter_returns_only_own_listings(writer_auth_client, writer_user, other_writer_user):
+    ListingFactory(writer=writer_user)
+    ListingFactory(writer=other_writer_user)
+    response = writer_auth_client.get(reverse("listing-list"), {"mine": "true"})
+    assert response.status_code == 200
+    assert response.json()["count"] == 1

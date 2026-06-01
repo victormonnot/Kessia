@@ -17,6 +17,10 @@ export function useOrder(id) {
   });
 }
 
+export function useEarnings() {
+  return useQuery({ queryKey: ["earnings"], queryFn: ordersApi.earnings });
+}
+
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({

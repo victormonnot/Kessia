@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -30,10 +30,14 @@ class RequestViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        qs = (
-            Request.objects.select_related("doctor")
-            .annotate(proposals_count=Count("proposals"))
+        qs = Request.objects.select_related("doctor").annotate(
+            proposals_count=Count("proposals")
         )
+        # `?mine=true` restricts to the authenticated doctor's own requests.
+        if self.request.query_params.get("mine") in ("true", "1"):
+            user = self.request.user
+            if user.is_authenticated:
+                qs = qs.filter(doctor=user)
         return qs
 
     def get_serializer_class(self):
@@ -82,17 +86,32 @@ class RequestViewSet(viewsets.ModelViewSet):
 
 
 class ProposalViewSet(
+    mixins.ListModelMixin,
     mixins.DestroyModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Proposal.objects.select_related("request", "writer")
-    http_method_names = ("patch", "delete", "head", "options")
+    http_method_names = ("get", "patch", "delete", "head", "options")
+    ordering = ("-created_at",)
+
+    def get_queryset(self):
+        # Proposals the user is involved in: their own (as a writer) or those on
+        # their requests (as a doctor). Powers both dashboard proposal tabs.
+        user = self.request.user
+        return (
+            Proposal.objects.select_related("request", "request__doctor", "writer")
+            .filter(Q(writer=user) | Q(request__doctor=user))
+            .order_by("-created_at")
+        )
 
     def get_serializer_class(self):
-        return ProposalUpdateSerializer
+        if self.action in {"update", "partial_update"}:
+            return ProposalUpdateSerializer
+        return ProposalSerializer
 
     def get_permissions(self):
+        if self.action == "list":
+            return [IsAuthenticated()]
         if self.action == "destroy":
             return [IsAuthenticated(), IsWriter(), IsProposalWriter()]
         # update / partial_update

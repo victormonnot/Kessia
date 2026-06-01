@@ -243,3 +243,40 @@ def test_emails_fire_on_lifecycle_events(user, writer_user):
         format="json",
     )
     assert len(mail.outbox) == 2  # order_accepted -> doctor
+
+
+# --- Dashboard endpoints --------------------------------------------------
+
+
+def test_orders_role_filter_scopes_results(user, writer_user):
+    doctor_client = APIClient()
+    doctor_client.force_authenticate(user)
+    listing = ListingFactory(writer=writer_user)
+    OrderFactory(listing=listing, doctor=user)  # user is the doctor here
+
+    as_doctor = doctor_client.get(reverse("order-list"), {"role": "doctor"})
+    assert as_doctor.json()["count"] == 1
+    as_writer = doctor_client.get(reverse("order-list"), {"role": "writer"})
+    assert as_writer.json()["count"] == 0
+
+
+def test_earnings_summary_for_writer(writer_auth_client, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    OrderFactory(
+        listing=listing,
+        status=Order.Status.IN_PROGRESS,
+        payment_status=Order.PaymentStatus.HELD,
+        amount=Decimal("200.00"),
+    )
+    OrderFactory(
+        listing=listing,
+        status=Order.Status.COMPLETED,
+        payment_status=Order.PaymentStatus.RELEASED,
+        amount=Decimal("100.00"),
+        application_fee_amount=Decimal("15.00"),
+    )
+    response = writer_auth_client.get(reverse("order-earnings"))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["in_escrow"] == "200.00"
+    assert body["earned"] == "85.00"  # 100 - 15% commission

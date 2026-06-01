@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 from django.db.models import Q
 from django.http import FileResponse
@@ -35,13 +36,17 @@ class OrderViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        return (
-            Order.objects.select_related(
-                "listing", "listing__writer", "doctor", "writer", "proposal"
-            )
-            .prefetch_related("deliverables")
-            .filter(Q(doctor=user) | Q(writer=user))
-        )
+        qs = Order.objects.select_related(
+            "listing", "listing__writer", "doctor", "writer", "proposal"
+        ).prefetch_related("deliverables")
+        # `?role=writer` (orders received) / `?role=doctor` (orders placed); both
+        # otherwise. Used by the dashboards instead of client-side filtering.
+        role = self.request.query_params.get("role")
+        if role == "writer":
+            return qs.filter(writer=user)
+        if role == "doctor":
+            return qs.filter(doctor=user)
+        return qs.filter(Q(doctor=user) | Q(writer=user))
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -139,4 +144,26 @@ class OrderViewSet(
             deliverable.file.open("rb"),
             as_attachment=True,
             filename=os.path.basename(deliverable.file.name),
+        )
+
+    @action(detail=False, methods=("get",))
+    def earnings(self, request):
+        """Writer earnings summary: funds in escrow and net amount earned."""
+        received = Order.objects.filter(writer=request.user)
+        held = received.filter(payment_status=Order.PaymentStatus.HELD)
+        released = received.filter(payment_status=Order.PaymentStatus.RELEASED)
+
+        in_escrow = sum((o.amount for o in held), Decimal("0"))
+        earned = sum(
+            (o.amount - (o.application_fee_amount or Decimal("0")) for o in released),
+            Decimal("0"),
+        )
+        return Response(
+            {
+                "in_escrow": str(in_escrow),
+                "earned": str(earned),
+                "currency": "EUR",
+                "held_count": held.count(),
+                "released_count": released.count(),
+            }
         )

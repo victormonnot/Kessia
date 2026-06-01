@@ -76,3 +76,23 @@ export function useDeleteProposal(requestId) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["proposals", requestId] }),
   });
 }
+
+// Dashboard: all proposals the current user is involved in (own + received).
+export function useAllProposals() {
+  return useQuery({
+    queryKey: ["proposals", "all"],
+    queryFn: proposalsApi.list,
+  });
+}
+
+// Dashboard accept/reject: invalidates every proposal list and the requests.
+export function useDecideProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => proposalsApi.update(id, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["requests"] });
+    },
+  });
+}
