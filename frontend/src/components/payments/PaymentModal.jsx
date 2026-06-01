@@ -6,13 +6,16 @@ import {
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
+import Spinner from "@/components/feedback/Spinner";
 import { paymentsApi } from "@/api/payments";
 import { useConfirmPayment } from "@/hooks/usePayments";
+import { errorMessage, formatPrice } from "@/lib/format";
 
-function CheckoutForm({ orderId, onClose }) {
+function CheckoutForm({ order, onClose }) {
   const stripe = useStripe();
   const elements = useElements();
   const confirm = useConfirmPayment();
@@ -38,7 +41,8 @@ function CheckoutForm({ orderId, onClose }) {
     // Webhooks are the source of truth, but we sync immediately so the UI
     // reflects the payment without waiting (works without the Stripe CLI in dev).
     try {
-      await confirm.mutateAsync(orderId);
+      await confirm.mutateAsync(order.id);
+      toast.success("Paiement effectué. Le rédacteur peut démarrer le travail.");
       onClose?.();
     } catch {
       setError("Paiement reçu, mais la synchronisation a échoué. Rafraîchissez la page.");
@@ -50,13 +54,19 @@ function CheckoutForm({ orderId, onClose }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
           Annuler
         </Button>
         <Button type="submit" disabled={!stripe || submitting}>
-          {submitting ? "Paiement…" : "Payer"}
+          {submitting ? (
+            <>
+              <Spinner /> Paiement…
+            </>
+          ) : (
+            "Payer"
+          )}
         </Button>
       </div>
     </form>
@@ -83,9 +93,7 @@ export default function PaymentModal({ order, open, onClose }) {
         setClientSecret(data.client_secret);
       })
       .catch((e) => {
-        if (active) {
-          setError(e?.response?.data?.detail || "Impossible d'initialiser le paiement.");
-        }
+        if (active) setError(errorMessage(e, "Impossible d'initialiser le paiement."));
       });
     return () => {
       active = false;
@@ -96,17 +104,28 @@ export default function PaymentModal({ order, open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={`Payer ${Number(order.amount).toFixed(2)} ${order.currency || "EUR"}`}
+      title={`Payer ${formatPrice(order.amount, order.currency)}`}
+      description={order.listing?.title || "Paiement de la commande"}
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {!error && !clientSecret && (
-        <p className="text-neutral-500">Initialisation du paiement…</p>
-      )}
-      {clientSecret && stripePromise && (
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <CheckoutForm orderId={order.id} onClose={onClose} />
-        </Elements>
-      )}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
+          <span className="font-medium">{order.listing?.title || "Commande"}</span>
+          <span className="font-semibold text-primary">
+            {formatPrice(order.amount, order.currency)}
+          </span>
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {!error && !clientSecret && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner /> Initialisation du paiement…
+          </p>
+        )}
+        {clientSecret && stripePromise && (
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <CheckoutForm order={order} onClose={onClose} />
+          </Elements>
+        )}
+      </div>
     </Modal>
   );
 }

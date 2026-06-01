@@ -1,54 +1,80 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Download, MessageSquare, Star, Upload } from "lucide-react";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/ui/Modal";
-import Textarea from "@/components/ui/Textarea";
+import ConfirmButton from "@/components/ConfirmButton";
+import Spinner from "@/components/feedback/Spinner";
+import ReviewModal from "@/components/reviews/ReviewModal";
 import PaymentModal from "@/components/payments/PaymentModal";
 import { ordersApi } from "@/api/orders";
 import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
-import { useCreateReview } from "@/hooks/useReviews";
 import { useStartConversation } from "@/hooks/useMessaging";
+import { errorMessage, fullName } from "@/lib/format";
+
+const CANCEL = {
+  title: "Annuler la commande ?",
+  description:
+    "La commande sera annulée. Si elle a déjà été payée, un remboursement sera initié.",
+  confirmLabel: "Annuler la commande",
+  destructive: true,
+};
 
 // Plain status transitions per role/status. Paying (doctor, on accepted),
 // delivering (writer, on in_progress) and downloading (doctor) are handled
-// separately below because they aren't plain status PATCHes. The writer no
-// longer "starts" work — the doctor's payment moves accepted -> in_progress.
+// separately because they aren't plain status PATCHes. The writer no longer
+// "starts" work — the doctor's payment moves accepted -> in_progress.
 const TRANSITIONS = {
   writer: {
     pending: [
-      { label: "Accepter", next: "accepted", variant: "primary" },
-      { label: "Refuser", next: "declined", variant: "outline" },
+      { label: "Accepter", next: "accepted", variant: "default", success: "Commande acceptée." },
+      {
+        label: "Refuser",
+        next: "declined",
+        variant: "outline",
+        success: "Commande refusée.",
+        confirm: {
+          title: "Refuser la commande ?",
+          description: "Le médecin sera informé que vous avez refusé cette commande.",
+          confirmLabel: "Refuser",
+          destructive: true,
+        },
+      },
     ],
   },
   doctor: {
-    pending: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
-    accepted: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
-    in_progress: [{ label: "Annuler", next: "cancelled", variant: "outline" }],
+    pending: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
+    accepted: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
+    in_progress: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
     delivered: [
-      { label: "Confirmer la réception", next: "completed", variant: "primary" },
+      {
+        label: "Confirmer la réception",
+        next: "completed",
+        variant: "default",
+        success: "Réception confirmée — paiement versé au rédacteur.",
+        confirm: {
+          title: "Confirmer la réception ?",
+          description:
+            "Le travail sera validé et le paiement versé au rédacteur. Cette action est définitive.",
+          confirmLabel: "Confirmer",
+        },
+      },
     ],
   },
 };
-
-function errorText(err) {
-  const detail = err?.response?.data?.detail ?? err?.response?.data;
-  if (!detail) return "Une erreur est survenue.";
-  return typeof detail === "string" ? detail : JSON.stringify(detail);
-}
 
 export default function OrderActions({ order, role }) {
   const navigate = useNavigate();
   const update = useUpdateOrderStatus();
   const upload = useUploadDeliverable();
-  const review = useCreateReview();
   const startConversation = useStartConversation();
-  const [error, setError] = useState(null);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState("");
   const [note, setNote] = useState("");
   const fileRef = useRef(null);
 
@@ -67,20 +93,21 @@ export default function OrderActions({ order, role }) {
     (order.deliverables?.length || 0) > 0;
 
   const busy = update.isPending || upload.isPending;
+  const counterparty = role === "writer" ? order.doctor : order.writer;
 
-  const runTransition = (status) => {
-    setError(null);
-    update.mutate(
-      { id: order.id, status },
-      { onError: (e) => setError(errorText(e)) },
-    );
+  const runTransition = async (status, successMsg) => {
+    try {
+      await update.mutateAsync({ id: order.id, status });
+      if (successMsg) toast.success(successMsg);
+    } catch (e) {
+      toast.error(errorMessage(e, "L'action a échoué."));
+    }
   };
 
   const submitDelivery = async () => {
-    setError(null);
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Veuillez sélectionner un fichier.");
+      toast.error("Veuillez sélectionner un fichier.");
       return;
     }
     const formData = new FormData();
@@ -88,38 +115,25 @@ export default function OrderActions({ order, role }) {
     if (note) formData.append("note", note);
     try {
       await upload.mutateAsync({ id: order.id, formData });
+      toast.success("Travail livré.");
       setDeliverOpen(false);
       setNote("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
-      setError(errorText(e));
+      toast.error(errorMessage(e, "L'envoi du livrable a échoué."));
     }
   };
 
   const contact = async () => {
-    setError(null);
     try {
       const conv = await startConversation.mutateAsync({ order: order.id });
       navigate(`/messages/${conv.id}`);
     } catch (e) {
-      setError(errorText(e));
-    }
-  };
-
-  const submitReview = async () => {
-    setError(null);
-    try {
-      await review.mutateAsync({ order: order.id, rating, comment });
-      setReviewOpen(false);
-      setComment("");
-      setRating(5);
-    } catch (e) {
-      setError(errorText(e));
+      toast.error(errorMessage(e, "Impossible d'ouvrir la conversation."));
     }
   };
 
   const download = async (deliverable) => {
-    setError(null);
     try {
       const blob = await ordersApi.downloadDeliverable(order.id, deliverable.id);
       const url = URL.createObjectURL(blob);
@@ -131,63 +145,80 @@ export default function OrderActions({ order, role }) {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(errorText(e));
+      toast.error(errorMessage(e, "Le téléchargement a échoué."));
     }
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex flex-wrap justify-end gap-2">
-        {transitions.map((t) => (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {transitions.map((t) =>
+        t.confirm ? (
+          <ConfirmButton
+            key={t.next}
+            size="sm"
+            variant={t.variant}
+            disabled={busy}
+            title={t.confirm.title}
+            description={t.confirm.description}
+            confirmLabel={t.confirm.confirmLabel || t.label}
+            destructive={t.confirm.destructive}
+            onConfirm={() => runTransition(t.next, t.success)}
+          >
+            {t.label}
+          </ConfirmButton>
+        ) : (
           <Button
             key={t.next}
             size="sm"
             variant={t.variant}
             disabled={busy}
-            onClick={() => runTransition(t.next)}
+            onClick={() => runTransition(t.next, t.success)}
           >
             {t.label}
           </Button>
-        ))}
-        {canPay && (
-          <Button size="sm" disabled={busy} onClick={() => setPayOpen(true)}>
-            Payer
-          </Button>
-        )}
-        {awaitingPayment && (
-          <span className="text-xs text-neutral-500">En attente du paiement du médecin</span>
-        )}
-        {canDeliver && (
-          <Button size="sm" disabled={busy} onClick={() => setDeliverOpen(true)}>
-            Livrer le travail
-          </Button>
-        )}
-        {canDownload &&
-          order.deliverables.map((d) => (
-            <Button key={d.id} size="sm" variant="outline" onClick={() => download(d)}>
-              Télécharger
-            </Button>
-          ))}
-        {canReview && (
-          <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
-            Laisser un avis
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={contact}
-          disabled={startConversation.isPending}
-        >
-          Contacter
+        ),
+      )}
+
+      {canPay && (
+        <Button size="sm" disabled={busy} onClick={() => setPayOpen(true)}>
+          Payer
         </Button>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      )}
+      {awaitingPayment && (
+        <span className="text-xs text-muted-foreground">
+          En attente du paiement du médecin
+        </span>
+      )}
+      {canDeliver && (
+        <Button size="sm" disabled={busy} onClick={() => setDeliverOpen(true)}>
+          <Upload className="size-4" /> Livrer
+        </Button>
+      )}
+      {canDownload &&
+        order.deliverables.map((d) => (
+          <Button key={d.id} size="sm" variant="outline" onClick={() => download(d)}>
+            <Download className="size-4" /> Télécharger
+          </Button>
+        ))}
+      {canReview && (
+        <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
+          <Star className="size-4" /> Laisser un avis
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={contact}
+        disabled={startConversation.isPending}
+      >
+        <MessageSquare className="size-4" /> Contacter
+      </Button>
 
       <Modal
         open={deliverOpen}
         onClose={() => setDeliverOpen(false)}
         title="Livrer le travail finalisé"
+        description="Téléversez le fichier livrable pour cette commande."
         footer={
           <>
             <Button
@@ -198,74 +229,47 @@ export default function OrderActions({ order, role }) {
               Annuler
             </Button>
             <Button onClick={submitDelivery} disabled={upload.isPending}>
-              {upload.isPending ? "Envoi…" : "Livrer"}
+              {upload.isPending ? (
+                <>
+                  <Spinner /> Envoi…
+                </>
+              ) : (
+                "Livrer"
+              )}
             </Button>
           </>
         }
       >
-        <label className="mb-1 block text-sm font-medium text-neutral-700">Fichier</label>
-        <input
-          ref={fileRef}
-          type="file"
-          className="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-2 file:text-white hover:file:bg-primary-700"
-        />
-        <div className="mt-3">
-          <Textarea
-            label="Note (facultatif)"
-            name="note"
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="deliverable-file">Fichier</Label>
+            <input
+              id="deliverable-file"
+              ref={fileRef}
+              type="file"
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="deliverable-note">Note (optionnel)</Label>
+            <Textarea
+              id="deliverable-note"
+              rows={3}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Précisions sur le livrable…"
+            />
+          </div>
         </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </Modal>
 
       <PaymentModal order={order} open={payOpen} onClose={() => setPayOpen(false)} />
-
-      <Modal
+      <ReviewModal
+        order={order}
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        title="Évaluer le rédacteur"
-        footer={
-          <>
-            <Button
-              variant="outline"
-              onClick={() => setReviewOpen(false)}
-              disabled={review.isPending}
-            >
-              Annuler
-            </Button>
-            <Button onClick={submitReview} disabled={review.isPending}>
-              {review.isPending ? "Envoi…" : "Publier l'avis"}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setRating(i)}
-              className={`text-2xl ${i <= rating ? "text-amber-500" : "text-neutral-300"}`}
-              aria-label={`${i} étoile${i > 1 ? "s" : ""}`}
-            >
-              ★
-            </button>
-          ))}
-        </div>
-        <div className="mt-3">
-          <Textarea
-            label="Commentaire (facultatif)"
-            name="comment"
-            rows={3}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      </Modal>
+        writerName={fullName(counterparty)}
+      />
     </div>
   );
 }

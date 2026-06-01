@@ -1,302 +1,179 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
+import { FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/Badge";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
 import StatusBadge from "@/components/ui/StatusBadge";
-import Textarea from "@/components/ui/Textarea";
-import OrderRow from "@/components/orders/OrderRow";
 import Tabs from "@/components/layout/Tabs";
-import { useListings, useDeleteListing } from "@/hooks/useListings";
-import { useOrders, useEarnings } from "@/hooks/useOrders";
+import ConfirmButton from "@/components/ConfirmButton";
+import EmptyState from "@/components/feedback/EmptyState";
+import ErrorState from "@/components/feedback/ErrorState";
+import { LoadingBlock } from "@/components/feedback/Spinner";
+import OrdersList from "@/components/orders/OrdersList";
+import EarningsSummary from "@/components/dashboard/EarningsSummary";
+import ConnectCard from "@/components/payments/ConnectCard";
+import VerificationCard from "@/components/verification/VerificationCard";
+import { useDeleteListing, useListings } from "@/hooks/useListings";
 import { useAllProposals } from "@/hooks/useRequests";
-import { useConnectStatus, useOnboard } from "@/hooks/usePayments";
-import { useMyVerifications, useRequestVerification } from "@/hooks/useVerification";
 import { useAuthStore } from "@/store/authStore";
+import { errorMessage, formatPrice, fullName } from "@/lib/format";
+import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 function MyListingsTab() {
-  const { data, isLoading, isError } = useListings({ mine: true });
+  const { data, isLoading, isError, refetch } = useListings({ mine: true });
   const remove = useDeleteListing();
 
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError) return <p className="text-red-600">Impossible de charger vos annonces.</p>;
+  if (isLoading) return <LoadingBlock />;
+  if (isError) return <ErrorState onRetry={refetch} />;
   const listings = data?.results || [];
 
+  const onDelete = async (id) => {
+    try {
+      await remove.mutateAsync(id);
+      toast.success("Annonce supprimée.");
+    } catch (e) {
+      toast.error(errorMessage(e, "La suppression a échoué."));
+    }
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex justify-end">
-        <Link to="/listings/new">
-          <Button>+ Nouvelle annonce</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/listings/new">
+            <Plus className="size-4" /> Nouvelle annonce
+          </Link>
+        </Button>
       </div>
-      {listings.length === 0 && (
-        <Card>
-          <p className="text-neutral-500">Vous n'avez pas encore publié d'annonces.</p>
-        </Card>
-      )}
-      {listings.map((l) => (
-        <Card key={l.id} className="flex items-center justify-between gap-3">
-          <div>
-            <Link to={`/listings/${l.id}`} className="font-medium text-neutral-900">
-              {l.title}
-            </Link>
-            <p className="text-sm text-neutral-500">
-              {Number(l.price).toFixed(0)} € · {l.specialty}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link to={`/listings/${l.id}/edit`}>
-              <Button size="sm" variant="outline">
-                Modifier
-              </Button>
-            </Link>
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() => {
-                if (confirm("Supprimer cette annonce ?")) remove.mutate(l.id);
-              }}
-            >
-              Supprimer
+      {listings.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="Aucune annonce"
+          description="Publiez votre première annonce pour recevoir des commandes."
+          action={
+            <Button asChild>
+              <Link to="/listings/new">Publier une annonce</Link>
             </Button>
-          </div>
-        </Card>
-      ))}
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {listings.map((l) => (
+            <div
+              key={l.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm"
+            >
+              <div>
+                <Link to={`/listings/${l.id}`} className="font-medium hover:text-primary">
+                  {l.title}
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {formatPrice(l.price)} · {labelFor(l.specialty, SPECIALTY_OPTIONS)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/listings/${l.id}/edit`}>
+                    <Pencil className="size-4" /> Modifier
+                  </Link>
+                </Button>
+                <ConfirmButton
+                  size="sm"
+                  variant="outline"
+                  destructive
+                  title="Supprimer cette annonce ?"
+                  description="Cette action est définitive."
+                  confirmLabel="Supprimer"
+                  onConfirm={() => onDelete(l.id)}
+                >
+                  <Trash2 className="size-4" /> Supprimer
+                </ConfirmButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 function OrdersReceivedTab() {
-  const { data, isLoading, isError } = useOrders({ role: "writer" });
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError) return <p className="text-red-600">Impossible de charger les commandes.</p>;
-  const orders = data?.results || [];
-
   return (
-    <Card>
-      {orders.length === 0 ? (
-        <p className="text-neutral-500">Aucune commande reçue pour le moment.</p>
-      ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-xs uppercase text-neutral-500">
-              <th className="px-3 py-2">Commande</th>
-              <th className="px-3 py-2">Médecin</th>
-              <th className="px-3 py-2">Statut</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <OrderRow key={o.id} order={o} role="writer" />
-            ))}
-          </tbody>
-        </table>
-      )}
-    </Card>
+    <OrdersList
+      role="writer"
+      emptyTitle="Aucune commande reçue"
+      emptyDescription="Les commandes passées sur vos annonces apparaîtront ici."
+    />
   );
 }
 
 function MyProposalsTab() {
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, isError } = useAllProposals();
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  if (isError) return <p className="text-red-600">Impossible de charger vos propositions.</p>;
+  const { data, isLoading, isError, refetch } = useAllProposals();
+  if (isLoading) return <LoadingBlock />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   const mine = (data?.results || []).filter((p) => p.writer?.id === user?.id);
   if (mine.length === 0) {
     return (
-      <Card>
-        <p className="text-neutral-500">
-          Vous n'avez pas encore envoyé de proposition. Parcourez{" "}
-          <Link to="/requests" className="text-primary-700 hover:underline">
-            les demandes
-          </Link>
-          .
-        </p>
-      </Card>
+      <EmptyState
+        icon={Send}
+        title="Aucune proposition"
+        description="Parcourez les demandes et envoyez votre première proposition."
+        action={
+          <Button asChild>
+            <Link to="/requests">Voir les demandes</Link>
+          </Button>
+        }
+      />
     );
   }
+
   return (
     <div className="space-y-3">
       {mine.map((p) => (
-        <Card key={p.id} className="flex items-center justify-between gap-3">
+        <div
+          key={p.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm"
+        >
           <div>
-            <Link to={`/requests/${p.request}`} className="font-medium text-neutral-900">
+            <Link to={`/requests/${p.request}`} className="font-medium hover:text-primary">
               {p.request_title}
             </Link>
-            <p className="text-sm text-neutral-500">{Number(p.price).toFixed(0)} €</p>
+            <p className="text-sm text-muted-foreground">{formatPrice(p.price)}</p>
           </div>
           <StatusBadge status={p.status} />
-        </Card>
+        </div>
       ))}
     </div>
   );
 }
 
-function PaymentsTab() {
-  const { data: status, isLoading } = useConnectStatus();
-  const { data: earnings } = useEarnings();
-  const onboard = useOnboard();
-
-  const startOnboarding = async () => {
-    const { url } = await onboard.mutateAsync();
-    window.location.href = url;
-  };
-
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-
-  return (
-    <div className="space-y-4">
-      <Card className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-xs uppercase text-neutral-500">En séquestre</p>
-          <p className="text-xl font-semibold text-neutral-900">
-            {Number(earnings?.in_escrow || 0).toFixed(2)} €
-          </p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-neutral-500">Gagné (net)</p>
-          <p className="text-xl font-semibold text-neutral-900">
-            {Number(earnings?.earned || 0).toFixed(2)} €
-          </p>
-        </div>
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="font-medium text-neutral-900">Recevoir vos paiements</h2>
-        {status?.payouts_enabled ? (
-          <p className="text-green-700">
-            Votre compte Stripe est configuré : vous pouvez recevoir le versement de vos
-            commandes.
-          </p>
-        ) : (
-          <>
-            <p className="text-neutral-600">
-              Configurez votre compte de paiement Stripe pour recevoir le versement de vos
-              commandes (commission plateforme de 15 % déduite, versement à la finalisation).
-            </p>
-            <Button onClick={startOnboarding} disabled={onboard.isPending}>
-              {onboard.isPending
-                ? "Redirection…"
-                : status?.has_account
-                  ? "Continuer la configuration"
-                  : "Configurer les paiements"}
-            </Button>
-          </>
-        )}
-      </Card>
-    </div>
-  );
-}
-
-function VerificationTab() {
-  const user = useAuthStore((s) => s.user);
-  const { data, isLoading } = useMyVerifications();
-  const request = useRequestVerification();
-  const [credentials, setCredentials] = useState("");
-  const [error, setError] = useState(null);
-
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-
-  if (user?.is_verified) {
-    return (
-      <Card>
-        <p className="text-green-700">
-          Votre compte est vérifié <Badge variant="success">Vérifié</Badge>
-        </p>
-      </Card>
-    );
-  }
-
-  const latest = data?.results?.[0];
-  const pending = latest?.status === "pending";
-
-  const submit = async () => {
-    setError(null);
-    if (!credentials.trim()) {
-      setError("Veuillez décrire vos justificatifs.");
-      return;
-    }
-    try {
-      await request.mutateAsync({ credentials });
-      setCredentials("");
-    } catch (e) {
-      const detail = e?.response?.data;
-      setError(
-        typeof detail === "string"
-          ? detail
-          : detail?.non_field_errors?.[0] || "Une erreur est survenue.",
-      );
-    }
-  };
-
-  return (
-    <Card className="space-y-3">
-      <h2 className="font-medium text-neutral-900">Vérification du profil</h2>
-      {pending ? (
-        <p className="text-neutral-600">
-          Votre demande est en cours d'examen par notre équipe.
-        </p>
-      ) : (
-        <>
-          {latest?.status === "rejected" && (
-            <p className="text-red-600">
-              Votre précédente demande a été refusée. Vous pouvez en soumettre une nouvelle.
-            </p>
-          )}
-          <p className="text-neutral-600">
-            Décrivez vos qualifications (diplômes, expérience). Un administrateur examinera
-            votre demande ; un badge « Vérifié » apparaîtra alors sur votre profil et vos
-            annonces.
-          </p>
-          <Textarea
-            label="Justificatifs"
-            name="credentials"
-            rows={4}
-            value={credentials}
-            onChange={(e) => setCredentials(e.target.value)}
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button onClick={submit} disabled={request.isPending}>
-            {request.isPending ? "Envoi…" : "Demander la vérification"}
-          </Button>
-        </>
-      )}
-    </Card>
-  );
-}
-
 export default function DashboardWriter() {
   const user = useAuthStore((s) => s.user);
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-neutral-900">Tableau de bord rédacteur</h1>
-      <p className="text-neutral-600">
-        Bon retour, {user?.first_name || user?.email}.{" "}
+    <div className="container py-8">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
         <Badge variant="primary">Rédacteur</Badge>
-      </p>
+        {user?.is_verified && <Badge variant="success">Vérifié</Badge>}
+      </div>
+      <p className="mt-1 text-muted-foreground">Bon retour, {fullName(user)}.</p>
+
+      <div className="mt-6">
+        <EarningsSummary />
+      </div>
+
       <div className="mt-6">
         <Tabs
           tabs={[
             { key: "listings", label: "Mes annonces", render: () => <MyListingsTab /> },
-            {
-              key: "orders",
-              label: "Commandes reçues",
-              render: () => <OrdersReceivedTab />,
-            },
-            {
-              key: "proposals",
-              label: "Mes propositions",
-              render: () => <MyProposalsTab />,
-            },
-            { key: "payments", label: "Paiements", render: () => <PaymentsTab /> },
-            {
-              key: "verification",
-              label: "Vérification",
-              render: () => <VerificationTab />,
-            },
+            { key: "orders", label: "Commandes reçues", render: () => <OrdersReceivedTab /> },
+            { key: "proposals", label: "Mes propositions", render: () => <MyProposalsTab /> },
+            { key: "payments", label: "Paiements", render: () => <ConnectCard /> },
+            { key: "verification", label: "Vérification", render: () => <VerificationCard /> },
           ]}
         />
       </div>
