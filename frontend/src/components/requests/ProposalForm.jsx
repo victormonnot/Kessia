@@ -1,49 +1,59 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Textarea from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { TextareaField, TextField } from "@/components/form/fields";
+import Spinner from "@/components/feedback/Spinner";
+import { proposalSchema } from "@/lib/schemas/request";
+import { errorMessage } from "@/lib/format";
 
 export default function ProposalForm({ onSubmit, submitting }) {
-  const [form, setForm] = useState({ message: "", price: "" });
-  const [error, setError] = useState(null);
-  const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const form = useForm({
+    resolver: zodResolver(proposalSchema),
+    defaultValues: { message: "", price: "" },
+  });
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const submit = async (values) => {
     try {
-      await onSubmit({ ...form, price: String(form.price) });
-      setForm({ message: "", price: "" });
+      await onSubmit({ message: values.message, price: String(values.price) });
+      toast.success("Proposition envoyée.");
+      form.reset({ message: "", price: "" });
     } catch (err) {
-      const detail = err.response?.data;
-      setError(typeof detail === "string" ? detail : JSON.stringify(detail));
+      toast.error(errorMessage(err, "L'envoi de la proposition a échoué."));
     }
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <Textarea
-        label="Message"
-        name="message"
-        rows={4}
-        required
-        value={form.message}
-        onChange={change}
-      />
-      <Input
-        label="Prix (€)"
-        name="price"
-        type="number"
-        step="0.01"
-        required
-        value={form.price}
-        onChange={change}
-      />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Envoi…" : "Envoyer la proposition"}
-      </Button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-4" noValidate>
+        <TextareaField
+          control={form.control}
+          name="message"
+          label="Message"
+          rows={4}
+          placeholder="Présentez votre approche, votre expérience et vos délais…"
+        />
+        <TextField
+          control={form.control}
+          name="price"
+          label="Prix proposé (€)"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="280"
+        />
+        <Button type="submit" disabled={submitting}>
+          {submitting ? (
+            <>
+              <Spinner /> Envoi…
+            </>
+          ) : (
+            "Envoyer la proposition"
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }
