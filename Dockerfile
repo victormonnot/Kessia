@@ -26,5 +26,5 @@ COPY backend/ .
 # Bring in the built SPA (prod settings serve it via WhiteNoise).
 COPY --from=frontend /app/frontend/dist ./frontend_dist
 RUN python manage.py collectstatic --noinput
-# Render/Railway inject $PORT.
-CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"]
+# Render/Railway inject $PORT. start.sh runs migrate, ensures the admin, then daphne.
+CMD ["sh", "start.sh"]
