@@ -1,22 +1,55 @@
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { FileText, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 
-import Card from "@/components/ui/Card";
-import Pagination from "@/components/ui/Pagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Select from "@/components/ui/Select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import ListingCard from "@/components/listings/ListingCard";
+import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
 import ListingFilters from "@/components/listings/ListingFilters";
+import Pagination from "@/components/ui/Pagination";
+import EmptyState from "@/components/feedback/EmptyState";
+import ErrorState from "@/components/feedback/ErrorState";
+import { cn } from "@/lib/utils";
 import { useListings } from "@/hooks/useListings";
+import { useAuthStore } from "@/store/authStore";
+
+const ORDERING_OPTIONS = [
+  { value: "-created_at", label: "Plus récentes" },
+  { value: "price", label: "Prix croissant" },
+  { value: "-price", label: "Prix décroissant" },
+  { value: "-writer_rating", label: "Mieux notées" },
+  { value: "turnaround_days", label: "Délai le plus court" },
+];
+
+const FILTER_KEYS = [
+  "specialty",
+  "deliverable_type",
+  "price_min",
+  "price_max",
+  "turnaround_max",
+  "rating_min",
+];
 
 function paramsToObject(searchParams) {
-  return Object.fromEntries(
-    [...searchParams.entries()].filter(([, v]) => v !== ""),
-  );
+  return Object.fromEntries([...searchParams.entries()].filter(([, v]) => v !== ""));
 }
 
 export default function Listings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = paramsToObject(searchParams);
   const page = Number(filters.page || 1);
-  const { data, isLoading, isError } = useListings(filters);
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError, isFetching, refetch } = useListings(filters);
+  const [searchText, setSearchText] = useState(filters.search || "");
 
   const updateFilters = (next) => {
     const cleaned = Object.fromEntries(
@@ -27,36 +60,133 @@ export default function Listings() {
   };
 
   const goToPage = (p) => setSearchParams({ ...filters, page: String(p) });
+  const submitSearch = (e) => {
+    e.preventDefault();
+    updateFilters({ ...filters, search: searchText });
+  };
+  const clearSearch = () => {
+    setSearchText("");
+    updateFilters({ ...filters, search: undefined });
+  };
+
+  const activeCount = FILTER_KEYS.filter((k) => filters[k]).length;
+  const total = data?.count ?? 0;
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[260px_1fr]">
-      <aside>
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold uppercase text-neutral-500">
-            Filtres
-          </h2>
-          <ListingFilters value={filters} onChange={updateFilters} />
-        </Card>
-      </aside>
-      <section>
-        <h1 className="mb-4 text-2xl font-semibold text-neutral-900">Annonces</h1>
-        {isLoading && <p className="text-neutral-500">Chargement…</p>}
-        {isError && <p className="text-red-600">Échec du chargement des annonces.</p>}
-        {data && data.count === 0 && (
-          <p className="text-neutral-500">Aucune annonce ne correspond à vos filtres.</p>
-        )}
-        <div className="grid gap-3 sm:grid-cols-2">
-          {data?.results?.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
+    <div className="container py-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Annonces</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isLoading
+              ? "Recherche en cours…"
+              : `${total} annonce${total > 1 ? "s" : ""} de rédaction médicale`}
+          </p>
         </div>
-        <Pagination
-          page={page}
-          hasPrev={Boolean(data?.previous)}
-          hasNext={Boolean(data?.next)}
-          onPage={goToPage}
-        />
-      </section>
+        {user?.is_writer && (
+          <Button asChild>
+            <Link to="/listings/new">
+              <Plus className="size-4" /> Publier une annonce
+            </Link>
+          </Button>
+        )}
+      </header>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={submitSearch} className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Rechercher une annonce…"
+            aria-label="Rechercher une annonce"
+            className="pl-9 pr-9"
+          />
+          {searchText && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </form>
+        <div className="flex gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="lg:hidden">
+                <SlidersHorizontal className="size-4" /> Filtres
+                {activeCount > 0 && ` (${activeCount})`}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-80 overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Filtres</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <ListingFilters value={filters} onChange={updateFilters} />
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Select
+            aria-label="Trier par"
+            options={ORDERING_OPTIONS}
+            value={filters.ordering || "-created_at"}
+            onChange={(e) => updateFilters({ ...filters, ordering: e.target.value })}
+            className="min-w-[11rem]"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 rounded-lg border bg-card p-5">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Filtres
+            </h2>
+            <ListingFilters value={filters} onChange={updateFilters} />
+          </div>
+        </aside>
+
+        <section>
+          {isError ? (
+            <ErrorState title="Échec du chargement des annonces" onRetry={refetch} />
+          ) : isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ListingCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : total === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="Aucune annonce trouvée"
+              description="Essayez d'élargir vos critères ou de réinitialiser les filtres."
+            />
+          ) : (
+            <>
+              <div
+                className={cn(
+                  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+                  isFetching && "opacity-60 transition-opacity",
+                )}
+              >
+                {data.results.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+              <Pagination
+                page={page}
+                hasPrev={Boolean(data.previous)}
+                hasNext={Boolean(data.next)}
+                onPage={goToPage}
+              />
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

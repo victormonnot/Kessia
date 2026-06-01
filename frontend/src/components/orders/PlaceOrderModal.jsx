@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/ui/Modal";
-import Textarea from "@/components/ui/Textarea";
+import Spinner from "@/components/feedback/Spinner";
 import { useCreateOrder } from "@/hooks/useOrders";
+import { errorMessage, formatPrice } from "@/lib/format";
 
 export default function PlaceOrderModal({ listing, open, onClose }) {
   const [message, setMessage] = useState("");
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const create = useCreateOrder();
 
   const submit = async () => {
-    setError(null);
     try {
       await create.mutateAsync({ listing: listing.id, message });
+      toast.success("Commande envoyée au rédacteur.");
       onClose?.();
       navigate("/dashboard/doctor");
     } catch (err) {
-      const detail = err.response?.data;
-      setError(typeof detail === "string" ? detail : JSON.stringify(detail));
+      toast.error(errorMessage(err, "La commande n'a pas pu être passée."));
     }
   };
 
@@ -28,27 +30,41 @@ export default function PlaceOrderModal({ listing, open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={`Commande : ${listing?.title || ""}`}
+      title="Passer commande"
+      description={listing?.title}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={create.isPending}>
             Annuler
           </Button>
           <Button onClick={submit} disabled={create.isPending}>
-            {create.isPending ? "Envoi…" : "Passer commande"}
+            {create.isPending ? (
+              <>
+                <Spinner /> Envoi…
+              </>
+            ) : (
+              "Passer commande"
+            )}
           </Button>
         </>
       }
     >
-      <Textarea
-        label="Consignes"
-        name="message"
-        rows={5}
-        placeholder="Décrivez ce dont vous avez besoin."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-      />
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
+          <span className="font-medium">{listing?.title}</span>
+          <span className="font-semibold text-primary">{formatPrice(listing?.price)}</span>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="order-message">Consignes (optionnel)</Label>
+          <Textarea
+            id="order-message"
+            rows={5}
+            placeholder="Décrivez ce dont vous avez besoin : objectifs, format attendu, références…"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </div>
+      </div>
     </Modal>
   );
 }

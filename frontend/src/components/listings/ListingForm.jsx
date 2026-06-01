@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
-import Textarea from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { TextField, TextareaField, SelectField, SwitchField } from "@/components/form/fields";
+import Spinner from "@/components/feedback/Spinner";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS } from "@/lib/choices";
+import { listingSchema } from "@/lib/schemas/listing";
 
-const empty = {
+const DEFAULTS = {
   title: "",
   description: "",
   specialty: "general_medicine",
@@ -17,78 +19,93 @@ const empty = {
 };
 
 export default function ListingForm({ initial, onSubmit, submitting }) {
-  const [form, setForm] = useState({ ...empty, ...(initial || {}) });
-  const change = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
-  };
+  const form = useForm({
+    resolver: zodResolver(listingSchema),
+    defaultValues: initial
+      ? {
+          title: initial.title ?? "",
+          description: initial.description ?? "",
+          specialty: initial.specialty ?? "general_medicine",
+          deliverable_type: initial.deliverable_type ?? "research_paper",
+          price: initial.price ?? "",
+          turnaround_days: initial.turnaround_days ?? 7,
+          is_published: initial.is_published ?? true,
+        }
+      : DEFAULTS,
+  });
 
-  const submit = (e) => {
-    e.preventDefault();
+  const submit = (values) =>
     onSubmit({
-      ...form,
-      price: String(form.price),
-      turnaround_days: Number(form.turnaround_days),
+      ...values,
+      price: String(values.price),
+      turnaround_days: Number(values.turnaround_days),
     });
-  };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <Input label="Titre" name="title" required value={form.title} onChange={change} />
-      <Textarea
-        label="Description"
-        name="description"
-        rows={6}
-        required
-        value={form.description}
-        onChange={change}
-      />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label="Spécialité"
-          name="specialty"
-          options={SPECIALTY_OPTIONS}
-          value={form.specialty}
-          onChange={change}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-5" noValidate>
+        <TextField
+          control={form.control}
+          name="title"
+          label="Titre"
+          placeholder="Ex. Rédaction d'un article de recherche en cardiologie"
         />
-        <Select
-          label="Livrable"
-          name="deliverable_type"
-          options={DELIVERABLE_OPTIONS}
-          value={form.deliverable_type}
-          onChange={change}
+        <TextareaField
+          control={form.control}
+          name="description"
+          label="Description"
+          rows={6}
+          placeholder="Décrivez votre service, votre méthodologie, ce qui est inclus…"
         />
-        <Input
-          label="Prix (€)"
-          name="price"
-          type="number"
-          step="0.01"
-          required
-          value={form.price}
-          onChange={change}
-        />
-        <Input
-          label="Délai (jours)"
-          name="turnaround_days"
-          type="number"
-          min="1"
-          required
-          value={form.turnaround_days}
-          onChange={change}
-        />
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+        <div className="grid gap-5 sm:grid-cols-2">
+          <SelectField
+            control={form.control}
+            name="specialty"
+            label="Spécialité"
+            options={SPECIALTY_OPTIONS}
+            placeholder="Choisir une spécialité"
+          />
+          <SelectField
+            control={form.control}
+            name="deliverable_type"
+            label="Type de livrable"
+            options={DELIVERABLE_OPTIONS}
+            placeholder="Choisir un livrable"
+          />
+          <TextField
+            control={form.control}
+            name="price"
+            label="Prix (€)"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="250"
+          />
+          <TextField
+            control={form.control}
+            name="turnaround_days"
+            label="Délai (jours)"
+            type="number"
+            min="1"
+            placeholder="7"
+          />
+        </div>
+        <SwitchField
+          control={form.control}
           name="is_published"
-          checked={form.is_published}
-          onChange={change}
+          label="Publiée"
+          description="Rendre cette annonce visible dans le catalogue."
         />
-        Publiée
-      </label>
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Enregistrement…" : "Enregistrer l'annonce"}
-      </Button>
-    </form>
+        <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+          {submitting ? (
+            <>
+              <Spinner /> Enregistrement…
+            </>
+          ) : (
+            "Enregistrer l'annonce"
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }
