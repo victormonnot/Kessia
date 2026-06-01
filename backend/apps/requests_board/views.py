@@ -21,6 +21,7 @@ from .serializers import (
     RequestListSerializer,
     RequestWriteSerializer,
 )
+from .services import accept_proposal, notify_new_proposal, notify_proposal_accepted
 
 
 class RequestViewSet(viewsets.ModelViewSet):
@@ -82,6 +83,7 @@ class RequestViewSet(viewsets.ModelViewSet):
         )
         serializer.is_valid(raise_exception=True)
         proposal = serializer.save()
+        notify_new_proposal(proposal)
         return Response(ProposalSerializer(proposal).data, status=status.HTTP_201_CREATED)
 
 
@@ -122,8 +124,15 @@ class ProposalViewSet(
         partial = kwargs.pop("partial", False)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        instance.refresh_from_db()
+        new_status = serializer.validated_data.get("status")
+        if new_status == Proposal.Status.ACCEPTED:
+            # Atomic: create the order, close the request, reject the others.
+            accept_proposal(instance)
+            instance.refresh_from_db()
+            notify_proposal_accepted(instance)
+        else:
+            serializer.save()
+            instance.refresh_from_db()
         return Response(ProposalSerializer(instance).data)
 
 

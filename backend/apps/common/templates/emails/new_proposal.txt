@@ -1,0 +1,10 @@
+Bonjour {{ proposal.request.doctor.get_full_name|default:proposal.request.doctor.email }},
+
+Vous avez reçu une nouvelle proposition de {{ proposal.writer.get_full_name|default:proposal.writer.email }} pour votre demande « {{ proposal.request.title }} ».
+
+Prix proposé : {{ proposal.price }} €
+
+Consultez-la depuis votre tableau de bord :
+{{ frontend_url }}/dashboard/doctor
+
+— L'équipe Kessia

@@ -1,0 +1,8 @@
+Bonjour {{ proposal.writer.get_full_name|default:proposal.writer.email }},
+
+Bonne nouvelle : votre proposition pour « {{ proposal.request.title }} » a été acceptée. Une commande a été créée — le médecin va procéder au paiement, puis vous pourrez livrer votre travail.
+
+Suivez-la depuis votre tableau de bord :
+{{ frontend_url }}/dashboard/writer
+
+— L'équipe Kessia

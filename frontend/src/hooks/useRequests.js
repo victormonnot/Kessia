@@ -65,7 +65,13 @@ export function useUpdateProposal(requestId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }) => proposalsApi.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["proposals", requestId] }),
+    onSuccess: () => {
+      // Accepting a proposal closes the request and creates an order.
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["request", requestId] });
+      qc.invalidateQueries({ queryKey: ["requests"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
   });
 }
 
@@ -93,6 +99,7 @@ export function useDecideProposal() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["proposals"] });
       qc.invalidateQueries({ queryKey: ["requests"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
     },
   });
 }
