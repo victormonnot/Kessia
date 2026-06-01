@@ -1,34 +1,31 @@
 import { forwardRef } from "react";
 
-const variants = {
-  primary:
-    "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500",
-  secondary:
-    "bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus-visible:ring-neutral-400",
-  outline:
-    "border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50 focus-visible:ring-neutral-400",
-  danger:
-    "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500",
-  ghost: "text-neutral-700 hover:bg-neutral-100 focus-visible:ring-neutral-400",
+import { Button as ShadButton } from "@/components/ui/button";
+
+// Compatibility wrapper: keeps the v1 public API (default export, variant names
+// primary/secondary/outline/danger/ghost, sizes sm/md/lg, default type="button")
+// on top of the shadcn Button. Lets every existing call site stay untouched.
+const variantMap = {
+  primary: "default",
+  secondary: "secondary",
+  outline: "outline",
+  danger: "destructive",
+  ghost: "ghost",
+  link: "link",
 };
 
-const sizes = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
-};
+const sizeMap = { sm: "sm", md: "default", lg: "lg", icon: "icon" };
 
 const Button = forwardRef(function Button(
-  { variant = "primary", size = "md", className = "", type = "button", ...props },
+  { variant = "primary", size = "md", type = "button", ...props },
   ref,
 ) {
-  const base =
-    "inline-flex items-center justify-center rounded-md font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
   return (
-    <button
+    <ShadButton
       ref={ref}
       type={type}
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      variant={variantMap[variant] ?? variant}
+      size={sizeMap[size] ?? size}
       {...props}
     />
   );

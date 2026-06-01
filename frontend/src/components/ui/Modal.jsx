@@ -1,38 +1,34 @@
-import { useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
-export default function Modal({ open, onClose, title, children, footer }) {
-  useEffect(() => {
-    if (!open) return undefined;
-    const handler = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
+// Compatibility wrapper keeping the v1 API ({ open, onClose, title, footer })
+// on top of the accessible Radix Dialog (focus trap, ESC, animations, portal).
+// `description` is optional; we always render one (sr-only fallback) so Radix's
+// accessible-description requirement is satisfied without a console warning.
+export default function Modal({ open, onClose, title, description, children, footer }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
-        <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-          <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-          <button
-            type="button"
-            className="text-neutral-500 hover:text-neutral-900"
-            onClick={onClose}
-            aria-label="Fermer"
-          >
-            ×
-          </button>
-        </header>
-        <div className="px-4 py-4">{children}</div>
-        {footer && (
-          <footer className="flex justify-end gap-2 border-t border-neutral-200 px-4 py-3">
-            {footer}
-          </footer>
-        )}
-      </div>
-    </div>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose?.();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          {title && <DialogTitle>{title}</DialogTitle>}
+          <DialogDescription className={description ? undefined : "sr-only"}>
+            {description || title}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="text-sm text-foreground">{children}</div>
+        {footer && <DialogFooter>{footer}</DialogFooter>}
+      </DialogContent>
+    </Dialog>
   );
 }

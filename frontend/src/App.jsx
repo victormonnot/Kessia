@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import Router from "@/router";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { LoadingBlock } from "@/components/feedback/Spinner";
+import { Toaster } from "@/components/ui/sonner";
 import { refreshAccessToken } from "@/api/client";
 import { useAuthStore } from "@/store/authStore";
 
@@ -31,8 +34,8 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-neutral-500">
-        Chargement…
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingBlock label="Chargement de Kessia…" />
       </div>
     );
   }
@@ -41,9 +44,12 @@ export default function App() {
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
-        <Router />
+        <ErrorBoundary>
+          <Router />
+        </ErrorBoundary>
       </main>
       <Footer />
+      <Toaster richColors closeButton position="top-right" />
     </div>
   );
 }

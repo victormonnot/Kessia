@@ -1,15 +1,22 @@
+import { cn } from "@/lib/utils";
+
+// Compatibility wrapper keeping the v1 semantic variants on theme tokens.
 const variants = {
-  neutral: "bg-neutral-100 text-neutral-700",
-  primary: "bg-primary-100 text-primary-700",
+  neutral: "bg-muted text-muted-foreground",
+  primary: "bg-primary/10 text-primary",
   success: "bg-emerald-100 text-emerald-700",
   warning: "bg-amber-100 text-amber-700",
-  danger: "bg-red-100 text-red-700",
+  danger: "bg-destructive/10 text-destructive",
 };
 
 export default function Badge({ children, variant = "neutral", className = "" }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${variants[variant]} ${className}`}
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        variants[variant],
+        className,
+      )}
     >
       {children}
     </span>

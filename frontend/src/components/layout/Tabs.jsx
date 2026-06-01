@@ -1,23 +1,29 @@
 import { useState } from "react";
 
+import { cn } from "@/lib/utils";
+
+// Lightweight tab switcher keeping the v1 API ({ tabs: [{key,label,render}] }).
 export default function Tabs({ tabs, initial }) {
   const [active, setActive] = useState(initial || tabs[0]?.key);
   const current = tabs.find((t) => t.key === active);
 
   return (
     <div>
-      <div className="border-b border-neutral-200">
-        <nav className="flex gap-4">
+      <div className="border-b">
+        <nav className="flex gap-1 overflow-x-auto" role="tablist">
           {tabs.map((t) => (
             <button
               key={t.key}
               type="button"
+              role="tab"
+              aria-selected={t.key === active}
               onClick={() => setActive(t.key)}
-              className={`-mb-px border-b-2 px-1 py-3 text-sm font-medium transition ${
+              className={cn(
+                "-mb-px whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition",
                 t.key === active
-                  ? "border-primary-600 text-primary-700"
-                  : "border-transparent text-neutral-500 hover:text-neutral-700"
-              }`}
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
             >
               {t.label}
             </button>
