@@ -6,6 +6,7 @@ import Textarea from "@/components/ui/Textarea";
 import PaymentModal from "@/components/payments/PaymentModal";
 import { ordersApi } from "@/api/orders";
 import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
+import { useCreateReview } from "@/hooks/useReviews";
 
 // Plain status transitions per role/status. Paying (doctor, on accepted),
 // delivering (writer, on in_progress) and downloading (doctor) are handled
@@ -37,9 +38,13 @@ function errorText(err) {
 export default function OrderActions({ order, role }) {
   const update = useUpdateOrderStatus();
   const upload = useUploadDeliverable();
+  const review = useCreateReview();
   const [error, setError] = useState(null);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
   const [note, setNote] = useState("");
   const fileRef = useRef(null);
 
@@ -50,6 +55,8 @@ export default function OrderActions({ order, role }) {
     !["held", "released"].includes(order.payment_status);
   const canDeliver = role === "writer" && order.status === "in_progress";
   const awaitingPayment = role === "writer" && order.status === "accepted";
+  const canReview =
+    role === "doctor" && order.status === "completed" && !order.has_review;
   const canDownload =
     role === "doctor" &&
     ["delivered", "completed"].includes(order.status) &&
@@ -80,6 +87,18 @@ export default function OrderActions({ order, role }) {
       setDeliverOpen(false);
       setNote("");
       if (fileRef.current) fileRef.current.value = "";
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
+  const submitReview = async () => {
+    setError(null);
+    try {
+      await review.mutateAsync({ order: order.id, rating, comment });
+      setReviewOpen(false);
+      setComment("");
+      setRating(5);
     } catch (e) {
       setError(errorText(e));
     }
@@ -135,6 +154,11 @@ export default function OrderActions({ order, role }) {
               Télécharger
             </Button>
           ))}
+        {canReview && (
+          <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
+            Laisser un avis
+          </Button>
+        )}
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -176,6 +200,50 @@ export default function OrderActions({ order, role }) {
       </Modal>
 
       <PaymentModal order={order} open={payOpen} onClose={() => setPayOpen(false)} />
+
+      <Modal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        title="Évaluer le rédacteur"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setReviewOpen(false)}
+              disabled={review.isPending}
+            >
+              Annuler
+            </Button>
+            <Button onClick={submitReview} disabled={review.isPending}>
+              {review.isPending ? "Envoi…" : "Publier l'avis"}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setRating(i)}
+              className={`text-2xl ${i <= rating ? "text-amber-500" : "text-neutral-300"}`}
+              aria-label={`${i} étoile${i > 1 ? "s" : ""}`}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+        <div className="mt-3">
+          <Textarea
+            label="Commentaire (facultatif)"
+            name="comment"
+            rows={3}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+        </div>
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      </Modal>
     </div>
   );
 }

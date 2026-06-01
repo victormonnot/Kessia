@@ -37,7 +37,7 @@ class OrderViewSet(
     def get_queryset(self):
         user = self.request.user
         qs = Order.objects.select_related(
-            "listing", "listing__writer", "doctor", "writer", "proposal"
+            "listing", "listing__writer", "doctor", "writer", "proposal", "review"
         ).prefetch_related("deliverables")
         # `?role=writer` (orders received) / `?role=doctor` (orders placed); both
         # otherwise. Used by the dashboards instead of client-side filtering.

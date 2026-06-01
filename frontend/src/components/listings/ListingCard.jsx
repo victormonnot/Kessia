@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import Stars from "@/components/ui/Stars";
 import {
   DELIVERABLE_OPTIONS,
   SPECIALTY_OPTIONS,
@@ -19,6 +20,11 @@ export default function ListingCard({ listing }) {
           </span>
         </div>
         <p className="mt-1 text-sm text-neutral-600">{listing.writer_name}</p>
+        {listing.writer_reviews_count > 0 && (
+          <div className="mt-1">
+            <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="primary">
             {labelFor(listing.specialty, SPECIALTY_OPTIONS)}

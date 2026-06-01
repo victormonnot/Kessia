@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import Stars from "@/components/ui/Stars";
 import PlaceOrderModal from "@/components/orders/PlaceOrderModal";
 import { useListing } from "@/hooks/useListings";
 import { useAuthStore } from "@/store/authStore";
@@ -58,6 +59,11 @@ export default function ListingDetail() {
         >
           {listing.writer?.first_name} {listing.writer?.last_name}
         </Link>
+        {listing.writer_reviews_count > 0 && (
+          <div className="mt-1">
+            <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
+          </div>
+        )}
         {listing.writer?.bio && (
           <p className="mt-2 text-sm text-neutral-600">{listing.writer.bio}</p>
         )}

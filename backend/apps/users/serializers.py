@@ -88,8 +88,14 @@ class PublicWriterSerializer(serializers.ModelSerializer):
 
         return ListingListSerializer(self._published(obj), many=True).data
 
+    def _rating(self, obj):
+        from django.db.models import Avg, Count
+
+        return obj.reviews_received.aggregate(avg=Avg("rating"), count=Count("id"))
+
     def get_avg_rating(self, obj):
-        return None  # populated in Phase 7 (reviews)
+        avg = self._rating(obj)["avg"]
+        return round(float(avg), 1) if avg is not None else None
 
     def get_reviews_count(self, obj):
-        return 0  # populated in Phase 7 (reviews)
+        return self._rating(obj)["count"]

@@ -1,3 +1,4 @@
+from django.db.models import Avg, Count
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -12,7 +13,16 @@ from .serializers import (
 
 
 class ListingViewSet(viewsets.ModelViewSet):
-    queryset = Listing.objects.select_related("writer").all()
+    # Annotate each listing with its writer's aggregate rating (avoids N+1 in
+    # the catalog and on the detail view).
+    queryset = (
+        Listing.objects.select_related("writer")
+        .annotate(
+            writer_rating=Avg("writer__reviews_received__rating"),
+            writer_reviews_count=Count("writer__reviews_received", distinct=True),
+        )
+        .all()
+    )
     filterset_class = ListingFilter
     search_fields = ("title", "description")
     ordering_fields = ("created_at", "price", "turnaround_days")

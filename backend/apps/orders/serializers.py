@@ -32,6 +32,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     doctor = UserPublicSerializer(read_only=True)
     writer = UserPublicSerializer(read_only=True)
     deliverables = DeliverableSerializer(many=True, read_only=True)
+    has_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -47,10 +48,14 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "currency",
             "payment_status",
             "deliverables",
+            "has_review",
             "created_at",
             "updated_at",
         )
         read_only_fields = fields
+
+    def get_has_review(self, obj) -> bool:
+        return hasattr(obj, "review")
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
