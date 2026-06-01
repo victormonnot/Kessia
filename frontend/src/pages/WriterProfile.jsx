@@ -1,17 +1,23 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Stars from "@/components/ui/Stars";
 import ListingCard from "@/components/listings/ListingCard";
 import { useWriter } from "@/hooks/useWriters";
 import { useWriterReviews } from "@/hooks/useReviews";
+import { useStartConversation } from "@/hooks/useMessaging";
+import { useAuthStore } from "@/store/authStore";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 export default function WriterProfile() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const me = useAuthStore((s) => s.user);
   const { data: writer, isLoading, isError } = useWriter(id);
   const { data: reviews } = useWriterReviews(id);
+  const startConversation = useStartConversation();
 
   if (isLoading) return <p className="px-4 py-8 text-neutral-500">Chargement…</p>;
   if (isError || !writer)
@@ -19,6 +25,12 @@ export default function WriterProfile() {
 
   const fullName =
     `${writer.first_name || ""} ${writer.last_name || ""}`.trim() || "Rédacteur";
+  const canContact = me && me.id !== writer.id;
+
+  const contact = async () => {
+    const conv = await startConversation.mutateAsync({ recipient: writer.id });
+    navigate(`/messages/${conv.id}`);
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -26,6 +38,17 @@ export default function WriterProfile() {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-neutral-900">{fullName}</h1>
           {writer.is_verified && <Badge variant="success">Vérifié</Badge>}
+          {canContact && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              onClick={contact}
+              disabled={startConversation.isPending}
+            >
+              Contacter le rédacteur
+            </Button>
+          )}
         </div>
         <div className="mt-1">
           {writer.reviews_count > 0 ? (

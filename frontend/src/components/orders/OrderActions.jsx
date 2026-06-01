@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -7,6 +8,7 @@ import PaymentModal from "@/components/payments/PaymentModal";
 import { ordersApi } from "@/api/orders";
 import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
 import { useCreateReview } from "@/hooks/useReviews";
+import { useStartConversation } from "@/hooks/useMessaging";
 
 // Plain status transitions per role/status. Paying (doctor, on accepted),
 // delivering (writer, on in_progress) and downloading (doctor) are handled
@@ -36,9 +38,11 @@ function errorText(err) {
 }
 
 export default function OrderActions({ order, role }) {
+  const navigate = useNavigate();
   const update = useUpdateOrderStatus();
   const upload = useUploadDeliverable();
   const review = useCreateReview();
+  const startConversation = useStartConversation();
   const [error, setError] = useState(null);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -87,6 +91,16 @@ export default function OrderActions({ order, role }) {
       setDeliverOpen(false);
       setNote("");
       if (fileRef.current) fileRef.current.value = "";
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+
+  const contact = async () => {
+    setError(null);
+    try {
+      const conv = await startConversation.mutateAsync({ order: order.id });
+      navigate(`/messages/${conv.id}`);
     } catch (e) {
       setError(errorText(e));
     }
@@ -159,6 +173,14 @@ export default function OrderActions({ order, role }) {
             Laisser un avis
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={contact}
+          disabled={startConversation.isPending}
+        >
+          Contacter
+        </Button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
 

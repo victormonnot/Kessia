@@ -3,11 +3,17 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import { useAuthStore } from "@/store/authStore";
 import { useLogout } from "@/hooks/useAuth";
+import { useConversations } from "@/hooks/useMessaging";
 
 export default function Navbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const navigate = useNavigate();
+  const { data: conversations } = useConversations(Boolean(user));
+  const unreadTotal = (conversations?.results || []).reduce(
+    (sum, c) => sum + (c.unread_count || 0),
+    0,
+  );
 
   const linkClass = ({ isActive }) =>
     `px-3 py-2 text-sm font-medium ${
@@ -34,6 +40,14 @@ export default function Navbar() {
                 className={linkClass}
               >
                 Tableau de bord
+              </NavLink>
+              <NavLink to="/messages" className={linkClass}>
+                Messagerie
+                {unreadTotal > 0 && (
+                  <span className="ml-1 rounded-full bg-primary-600 px-1.5 text-xs text-white">
+                    {unreadTotal}
+                  </span>
+                )}
               </NavLink>
               <Button
                 variant="outline"

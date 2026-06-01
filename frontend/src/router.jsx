@@ -12,6 +12,8 @@ import RequestFormPage from "@/pages/RequestFormPage";
 import DashboardWriter from "@/pages/DashboardWriter";
 import DashboardDoctor from "@/pages/DashboardDoctor";
 import WriterProfile from "@/pages/WriterProfile";
+import Inbox from "@/pages/Inbox";
+import Conversation from "@/pages/Conversation";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
@@ -76,6 +78,23 @@ export default function Router() {
         element={
           <ProtectedRoute>
             <DashboardDoctor />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/messages"
+        element={
+          <ProtectedRoute>
+            <Inbox />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messages/:id"
+        element={
+          <ProtectedRoute>
+            <Conversation />
           </ProtectedRoute>
         }
       />

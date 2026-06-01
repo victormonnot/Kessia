@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.requests_board",
     "apps.payments",
     "apps.reviews",
+    "apps.messaging",
 ]
 
 MIDDLEWARE = [

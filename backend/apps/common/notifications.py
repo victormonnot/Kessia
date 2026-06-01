@@ -28,6 +28,7 @@ NOTIFICATION_SUBJECTS: dict[str, str] = {
     "order_cancelled": "Une commande a été annulée",
     "new_proposal": "Nouvelle proposition reçue sur Kessia",
     "proposal_accepted": "Votre proposition a été acceptée",
+    "new_message": "Nouveau message sur Kessia",
 }
 
 
