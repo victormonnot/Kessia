@@ -52,9 +52,12 @@ export default function ListingDetail() {
 
       <Card className="mt-4">
         <h2 className="font-semibold text-neutral-900">À propos du rédacteur</h2>
-        <p className="mt-1 text-sm font-medium text-neutral-900">
+        <Link
+          to={`/redacteurs/${listing.writer?.id}`}
+          className="mt-1 inline-block text-sm font-medium text-primary-700 hover:underline"
+        >
           {listing.writer?.first_name} {listing.writer?.last_name}
-        </p>
+        </Link>
         {listing.writer?.bio && (
           <p className="mt-2 text-sm text-neutral-600">{listing.writer.bio}</p>
         )}

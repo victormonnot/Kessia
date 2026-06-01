@@ -49,3 +49,47 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("first_name", "last_name", "bio")
+
+
+class PublicWriterSerializer(serializers.ModelSerializer):
+    """Shareable public profile for a writer: bio, specialties, active listings,
+    verified badge and rating. The rating fields are placeholders until reviews
+    land (Phase 7)."""
+
+    specialties = serializers.SerializerMethodField()
+    listings = serializers.SerializerMethodField()
+    avg_rating = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "bio",
+            "is_verified",
+            "specialties",
+            "listings",
+            "avg_rating",
+            "reviews_count",
+        )
+        read_only_fields = fields
+
+    def _published(self, obj):
+        return obj.listings.filter(is_published=True)
+
+    def get_specialties(self, obj):
+        return sorted(set(self._published(obj).values_list("specialty", flat=True)))
+
+    def get_listings(self, obj):
+        # Local import avoids a circular import (listings.serializers imports this module).
+        from apps.listings.serializers import ListingListSerializer
+
+        return ListingListSerializer(self._published(obj), many=True).data
+
+    def get_avg_rating(self, obj):
+        return None  # populated in Phase 7 (reviews)
+
+    def get_reviews_count(self, obj):
+        return 0  # populated in Phase 7 (reviews)

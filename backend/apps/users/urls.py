@@ -5,6 +5,7 @@ from .views import (
     CookieTokenRefreshView,
     LogoutView,
     MeView,
+    PublicWriterView,
     activate_writer,
     register,
 )
@@ -16,4 +17,5 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("users/me/", MeView.as_view(), name="users-me"),
     path("users/me/activate-writer/", activate_writer, name="users-activate-writer"),
+    path("writers/<int:pk>/", PublicWriterView.as_view(), name="public-writer"),
 ]

@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -13,7 +13,9 @@ from .cookies import (
     clear_auth_cookies,
     set_auth_cookies,
 )
+from .models import User
 from .serializers import (
+    PublicWriterSerializer,
     RegisterSerializer,
     UserSerializer,
     UserUpdateSerializer,
@@ -119,3 +121,11 @@ def activate_writer(request):
     request.user.is_writer = True
     request.user.save(update_fields=["is_writer"])
     return Response(UserSerializer(request.user).data)
+
+
+class PublicWriterView(generics.RetrieveAPIView):
+    """Public, shareable writer profile. Only writers have one (404 otherwise)."""
+
+    queryset = User.objects.filter(is_writer=True)
+    serializer_class = PublicWriterSerializer
+    permission_classes = (AllowAny,)

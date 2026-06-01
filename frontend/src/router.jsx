@@ -11,6 +11,7 @@ import RequestDetail from "@/pages/RequestDetail";
 import RequestFormPage from "@/pages/RequestFormPage";
 import DashboardWriter from "@/pages/DashboardWriter";
 import DashboardDoctor from "@/pages/DashboardDoctor";
+import WriterProfile from "@/pages/WriterProfile";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
@@ -40,6 +41,8 @@ export default function Router() {
           </WriterRoute>
         }
       />
+
+      <Route path="/redacteurs/:id" element={<WriterProfile />} />
 
       <Route path="/requests" element={<Requests />} />
       <Route path="/requests/:id" element={<RequestDetail />} />
