@@ -80,8 +80,8 @@ export default function Landing() {
           </Reveal>
           <Reveal delay={0.1}>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              Kessia met en relation médecins et institutions avec des rédacteurs
-              scientifiques qualifiés — articles de revue, études de cas, résumés, et plus.
+              Kessia met en relation médecins et institutions avec des rédacteurs scientifiques
+              qualifiés — articles de revue, études de cas, résumés, et plus.
             </p>
           </Reveal>
           <Reveal delay={0.15}>
@@ -145,8 +145,8 @@ export default function Landing() {
             <div className="flex h-full flex-col rounded-xl border bg-card p-8 shadow-sm">
               <h3 className="text-xl font-bold">Vous êtes médecin</h3>
               <p className="mt-2 flex-1 text-muted-foreground">
-                Parcourez les annonces, commandez un livrable ou publiez une demande sur
-                mesure. Suivez l'avancement et payez en toute sécurité.
+                Parcourez les annonces, commandez un livrable ou publiez une demande sur mesure.
+                Suivez l'avancement et payez en toute sécurité.
               </p>
               <Button asChild className="mt-6 self-start">
                 <Link to="/listings">
@@ -159,8 +159,8 @@ export default function Landing() {
             <div className="flex h-full flex-col rounded-xl border bg-card p-8 shadow-sm">
               <h3 className="text-xl font-bold">Vous êtes rédacteur</h3>
               <p className="mt-2 flex-1 text-muted-foreground">
-                Publiez vos services, recevez des commandes et répondez aux demandes
-                ouvertes. Faites-vous vérifier et développez votre activité.
+                Publiez vos services, recevez des commandes et répondez aux demandes ouvertes.
+                Faites-vous vérifier et développez votre activité.
               </p>
               <Button asChild className="mt-6 self-start">
                 <Link to="/register">

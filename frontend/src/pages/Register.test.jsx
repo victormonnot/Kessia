@@ -8,9 +8,7 @@ import Register from "./Register";
 
 vi.mock("@/api/auth", () => ({
   authApi: {
-    register: vi
-      .fn()
-      .mockResolvedValue({ access: "a", user: { id: 1, email: "u@example.com" } }),
+    register: vi.fn().mockResolvedValue({ access: "a", user: { id: 1, email: "u@example.com" } }),
     me: vi.fn().mockResolvedValue({ id: 1, email: "u@example.com", is_writer: false }),
   },
 }));

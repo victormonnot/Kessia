@@ -55,10 +55,7 @@ export default function ReviewModal({ order, open, onClose, writerName }) {
       <div className="space-y-4">
         <div>
           <Label>Note</Label>
-          <div
-            className="mt-1.5 flex items-center gap-1"
-            onMouseLeave={() => setHover(0)}
-          >
+          <div className="mt-1.5 flex items-center gap-1" onMouseLeave={() => setHover(0)}>
             {[1, 2, 3, 4, 5].map((i) => (
               <button
                 key={i}

@@ -9,8 +9,7 @@ export const ordersApi = {
 
   earnings: () => api.get("/orders/earnings/").then((r) => r.data),
 
-  updateStatus: (id, status) =>
-    api.patch(`/orders/${id}/`, { status }).then((r) => r.data),
+  updateStatus: (id, status) => api.patch(`/orders/${id}/`, { status }).then((r) => r.data),
 
   // Writer uploads the finished work (sets the order to "delivered").
   // Content-Type is left undefined so the browser sets the multipart boundary.

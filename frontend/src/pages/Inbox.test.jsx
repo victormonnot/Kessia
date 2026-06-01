@@ -13,7 +13,10 @@ vi.mock("@/hooks/useMessaging", () => ({
           other_user: { first_name: "Marie", last_name: "Durand" },
           order: 12,
           unread_count: 2,
-          last_message: { body: "Bonjour, voici le brouillon.", created_at: "2026-05-20T10:00:00Z" },
+          last_message: {
+            body: "Bonjour, voici le brouillon.",
+            created_at: "2026-05-20T10:00:00Z",
+          },
         },
       ],
     },

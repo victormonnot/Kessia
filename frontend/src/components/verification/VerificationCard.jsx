@@ -14,10 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useMyVerifications, useRequestVerification } from "@/hooks/useVerification";
 
 const schema = z.object({
-  credentials: z
-    .string()
-    .trim()
-    .min(10, "Décrivez vos qualifications (10 caractères minimum)."),
+  credentials: z.string().trim().min(10, "Décrivez vos qualifications (10 caractères minimum)."),
 });
 
 // Verification request card — reused by the writer dashboard and settings.

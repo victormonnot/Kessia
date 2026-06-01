@@ -67,16 +67,13 @@ export default function RequestDetail() {
 
   const isOwner = user?.id === request.doctor?.id;
   const hasOwnProposal = proposals.some((p) => p.writer?.id === user?.id);
-  const canSubmit =
-    user?.is_writer && !isOwner && request.status === "open" && !hasOwnProposal;
+  const canSubmit = user?.is_writer && !isOwner && request.status === "open" && !hasOwnProposal;
 
   const onDecide = async (pid, status) => {
     try {
       await updateProposal.mutateAsync({ id: pid, payload: { status } });
       toast.success(
-        status === "accepted"
-          ? "Proposition acceptée — commande créée."
-          : "Proposition rejetée.",
+        status === "accepted" ? "Proposition acceptée — commande créée." : "Proposition rejetée.",
       );
     } catch (err) {
       toast.error(errorMessage(err, "L'action a échoué."));
@@ -154,9 +151,7 @@ export default function RequestDetail() {
           </CardHeader>
           <CardContent>
             {proposals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Aucune proposition pour le moment.
-              </p>
+              <p className="text-sm text-muted-foreground">Aucune proposition pour le moment.</p>
             ) : (
               <div className="-my-1">
                 {proposals.map((p) => (

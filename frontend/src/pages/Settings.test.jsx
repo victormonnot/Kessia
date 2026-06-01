@@ -34,8 +34,6 @@ describe("Settings page", () => {
     expect(screen.getByRole("heading", { name: "Paramètres" })).toBeInTheDocument();
     expect(screen.getByText("doctor@kessia.demo")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Marie")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /devenir rédacteur/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /devenir rédacteur/i })).toBeInTheDocument();
   });
 });

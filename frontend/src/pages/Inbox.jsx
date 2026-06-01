@@ -28,11 +28,7 @@ export default function Inbox() {
       <h1 className="text-2xl font-bold tracking-tight">Messagerie</h1>
 
       {isError ? (
-        <ErrorState
-          className="mt-6"
-          title="Impossible de charger vos messages"
-          onRetry={refetch}
-        />
+        <ErrorState className="mt-6" title="Impossible de charger vos messages" onRetry={refetch} />
       ) : isLoading ? (
         <div className="mt-6 space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (

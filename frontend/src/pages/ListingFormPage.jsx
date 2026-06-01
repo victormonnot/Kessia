@@ -20,9 +20,7 @@ export default function ListingFormPage() {
 
   const onSubmit = async (payload) => {
     try {
-      const saved = isEdit
-        ? await update.mutateAsync(payload)
-        : await create.mutateAsync(payload);
+      const saved = isEdit ? await update.mutateAsync(payload) : await create.mutateAsync(payload);
       toast.success(isEdit ? "Annonce mise à jour." : "Annonce publiée.");
       navigate(`/listings/${saved.id}`);
     } catch (err) {

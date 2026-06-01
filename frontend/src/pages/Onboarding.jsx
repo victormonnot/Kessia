@@ -20,9 +20,7 @@ function Step({ done, icon: Icon, title, description, action }) {
         {done ? <Check className="size-5" /> : <Icon className="size-5" />}
       </div>
       <div className="flex-1">
-        <p className={cn("font-medium", done && "text-muted-foreground line-through")}>
-          {title}
-        </p>
+        <p className={cn("font-medium", done && "text-muted-foreground line-through")}>{title}</p>
         <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         {!done && action && <div className="mt-3">{action}</div>}
       </div>
@@ -47,9 +45,7 @@ export default function Onboarding() {
   return (
     <div className="container max-w-2xl py-8">
       <h1 className="text-2xl font-bold tracking-tight">Bienvenue, rédacteur !</h1>
-      <p className="mt-1 text-muted-foreground">
-        Quelques étapes pour bien démarrer sur Kessia.
-      </p>
+      <p className="mt-1 text-muted-foreground">Quelques étapes pour bien démarrer sur Kessia.</p>
 
       <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
         <div

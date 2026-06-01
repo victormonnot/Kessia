@@ -36,8 +36,8 @@ export default function ConnectCard() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              Configurez votre compte Stripe pour recevoir vos versements (commission
-              plateforme de 15 % déduite, versement à la finalisation de la commande).
+              Configurez votre compte Stripe pour recevoir vos versements (commission plateforme de
+              15 % déduite, versement à la finalisation de la commande).
             </p>
             <Button onClick={start} disabled={onboard.isPending}>
               {onboard.isPending ? (

@@ -111,10 +111,7 @@ export default function Conversation() {
             messages.map((m) => {
               const mine = m.sender?.id === me?.id;
               return (
-                <div
-                  key={m.id}
-                  className={cn("flex flex-col", mine ? "items-end" : "items-start")}
-                >
+                <div key={m.id} className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
                   <div
                     className={cn(
                       "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm",
@@ -146,7 +143,12 @@ export default function Conversation() {
             aria-label="Votre message"
             className="max-h-32 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-          <Button type="submit" size="icon" disabled={send.isPending || !body.trim()} aria-label="Envoyer">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={send.isPending || !body.trim()}
+            aria-label="Envoyer"
+          >
             {send.isPending ? <Spinner /> : <Send className="size-4" />}
           </Button>
         </form>

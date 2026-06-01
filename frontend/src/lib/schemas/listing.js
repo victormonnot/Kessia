@@ -2,10 +2,7 @@ import { z } from "zod";
 
 export const listingSchema = z.object({
   title: z.string().trim().min(3, "Le titre est trop court."),
-  description: z
-    .string()
-    .trim()
-    .min(20, "Décrivez votre service (20 caractères minimum)."),
+  description: z.string().trim().min(20, "Décrivez votre service (20 caractères minimum)."),
   specialty: z.string().min(1, "Choisissez une spécialité."),
   deliverable_type: z.string().min(1, "Choisissez un type de livrable."),
   price: z.coerce

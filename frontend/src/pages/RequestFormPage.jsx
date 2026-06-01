@@ -20,9 +20,7 @@ export default function RequestFormPage() {
 
   const onSubmit = async (payload) => {
     try {
-      const saved = isEdit
-        ? await update.mutateAsync(payload)
-        : await create.mutateAsync(payload);
+      const saved = isEdit ? await update.mutateAsync(payload) : await create.mutateAsync(payload);
       toast.success(isEdit ? "Demande mise à jour." : "Demande publiée.");
       navigate(`/requests/${saved.id}`);
     } catch (err) {

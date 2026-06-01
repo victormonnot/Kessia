@@ -98,9 +98,7 @@ function ProposalsReceivedTab() {
     try {
       await decide.mutateAsync({ id, status });
       toast.success(
-        status === "accepted"
-          ? "Proposition acceptée — commande créée."
-          : "Proposition rejetée.",
+        status === "accepted" ? "Proposition acceptée — commande créée." : "Proposition rejetée.",
       );
     } catch (e) {
       toast.error(errorMessage(e, "L'action a échoué."));

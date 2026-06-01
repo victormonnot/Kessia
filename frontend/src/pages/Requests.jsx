@@ -5,13 +5,7 @@ import { ClipboardList, Plus, Search, SlidersHorizontal, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Select from "@/components/ui/Select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import RequestCard from "@/components/requests/RequestCard";
 import RequestCardSkeleton from "@/components/requests/RequestCardSkeleton";
 import RequestFilters from "@/components/requests/RequestFilters";
@@ -60,8 +54,8 @@ export default function Requests() {
   };
 
   const activeCount =
-    ["specialty", "budget_min", "budget_max", "deadline_before"].filter((k) => filters[k])
-      .length + (filters.status && filters.status !== "open" ? 1 : 0);
+    ["specialty", "budget_min", "budget_max", "deadline_before"].filter((k) => filters[k]).length +
+    (filters.status && filters.status !== "open" ? 1 : 0);
   const total = data?.count ?? 0;
 
   return (

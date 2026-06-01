@@ -158,10 +158,7 @@ export default function ListingDetail() {
               )}
               {!user && (
                 <Button asChild className="w-full">
-                  <Link
-                    to="/login"
-                    state={{ from: { pathname: `/listings/${listing.id}` } }}
-                  >
+                  <Link to="/login" state={{ from: { pathname: `/listings/${listing.id}` } }}>
                     Se connecter pour commander
                   </Link>
                 </Button>
@@ -179,11 +176,7 @@ export default function ListingDetail() {
       </div>
 
       {canOrder && (
-        <PlaceOrderModal
-          listing={listing}
-          open={orderOpen}
-          onClose={() => setOrderOpen(false)}
-        />
+        <PlaceOrderModal listing={listing} open={orderOpen} onClose={() => setOrderOpen(false)} />
       )}
     </div>
   );

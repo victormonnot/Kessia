@@ -22,9 +22,7 @@ export default function ReviewCard({ review }) {
         <Stars rating={review.rating} />
       </div>
       {review.comment && (
-        <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
-          {review.comment}
-        </p>
+        <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{review.comment}</p>
       )}
     </div>
   );

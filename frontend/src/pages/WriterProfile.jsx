@@ -109,9 +109,7 @@ export default function WriterProfile() {
             </div>
           )}
           {writer.bio && (
-            <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
-              {writer.bio}
-            </p>
+            <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{writer.bio}</p>
           )}
         </div>
         {canContact && (

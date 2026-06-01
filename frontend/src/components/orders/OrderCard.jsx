@@ -18,9 +18,7 @@ export default function OrderCard({ order, role }) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">
-              {order.listing?.title || "Commande personnalisée"}
-            </p>
+            <p className="font-medium">{order.listing?.title || "Commande personnalisée"}</p>
             <p className="text-sm text-muted-foreground">
               {role === "writer" ? "Médecin" : "Rédacteur"} : {fullName(counterparty)} ·{" "}
               <span className="font-medium text-foreground">

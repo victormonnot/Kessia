@@ -38,8 +38,6 @@ describe("Login page", () => {
     await userEvent.type(screen.getByLabelText(/mot de passe/i), "secret");
     await userEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
-    await waitFor(() =>
-      expect(authApi.login).toHaveBeenCalledWith("user@example.com", "secret"),
-    );
+    await waitFor(() => expect(authApi.login).toHaveBeenCalledWith("user@example.com", "secret"));
   });
 });

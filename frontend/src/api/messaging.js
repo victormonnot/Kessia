@@ -5,8 +5,7 @@ export const messagingApi = {
 
   getConversation: (id) => api.get(`/conversations/${id}/`).then((r) => r.data),
 
-  createConversation: (payload) =>
-    api.post("/conversations/", payload).then((r) => r.data),
+  createConversation: (payload) => api.post("/conversations/", payload).then((r) => r.data),
 
   listMessages: (id) => api.get(`/conversations/${id}/messages/`).then((r) => r.data),
 

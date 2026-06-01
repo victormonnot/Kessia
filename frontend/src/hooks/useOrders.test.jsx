@@ -5,9 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 vi.mock("@/api/orders", () => ({
   ordersApi: {
     list: vi.fn().mockResolvedValue({ count: 0, results: [] }),
-    earnings: vi
-      .fn()
-      .mockResolvedValue({ in_escrow: "200.00", earned: "85.00", currency: "EUR" }),
+    earnings: vi.fn().mockResolvedValue({ in_escrow: "200.00", earned: "85.00", currency: "EUR" }),
   },
 }));
 

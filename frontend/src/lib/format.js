@@ -15,6 +15,7 @@ export function initials(user) {
 }
 
 export function formatPrice(amount, currency = "EUR") {
+  if (amount === null || amount === undefined || amount === "") return "—";
   const value = Number(amount);
   if (Number.isNaN(value)) return "—";
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(value);

@@ -81,9 +81,7 @@ export default function LegalPage({ doc }) {
   return (
     <div className="container max-w-3xl py-12">
       <h1 className="text-3xl font-bold tracking-tight">{data.title}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Dernière mise à jour : {data.updated}
-      </p>
+      <p className="mt-1 text-sm text-muted-foreground">Dernière mise à jour : {data.updated}</p>
       <div className="mt-8 space-y-8">
         {data.sections.map((s) => (
           <section key={s.heading}>

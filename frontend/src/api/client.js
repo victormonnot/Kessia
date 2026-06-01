@@ -54,11 +54,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (
-      error.response?.status === 401 &&
-      !original._retry &&
-      !original.url?.includes("/auth/")
-    ) {
+    if (error.response?.status === 401 && !original._retry && !original.url?.includes("/auth/")) {
       original._retry = true;
       try {
         refreshPromise = refreshPromise || refreshAccessToken();

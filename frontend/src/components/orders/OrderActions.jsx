@@ -18,8 +18,7 @@ import { errorMessage, fullName } from "@/lib/format";
 
 const CANCEL = {
   title: "Annuler la commande ?",
-  description:
-    "La commande sera annulée. Si elle a déjà été payée, un remboursement sera initié.",
+  description: "La commande sera annulée. Si elle a déjà été payée, un remboursement sera initié.",
   confirmLabel: "Annuler la commande",
   destructive: true,
 };
@@ -47,9 +46,33 @@ const TRANSITIONS = {
     ],
   },
   doctor: {
-    pending: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
-    accepted: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
-    in_progress: [{ label: "Annuler", next: "cancelled", variant: "outline", success: "Commande annulée.", confirm: CANCEL }],
+    pending: [
+      {
+        label: "Annuler",
+        next: "cancelled",
+        variant: "outline",
+        success: "Commande annulée.",
+        confirm: CANCEL,
+      },
+    ],
+    accepted: [
+      {
+        label: "Annuler",
+        next: "cancelled",
+        variant: "outline",
+        success: "Commande annulée.",
+        confirm: CANCEL,
+      },
+    ],
+    in_progress: [
+      {
+        label: "Annuler",
+        next: "cancelled",
+        variant: "outline",
+        success: "Commande annulée.",
+        confirm: CANCEL,
+      },
+    ],
     delivered: [
       {
         label: "Confirmer la réception",
@@ -85,8 +108,7 @@ export default function OrderActions({ order, role }) {
     !["held", "released"].includes(order.payment_status);
   const canDeliver = role === "writer" && order.status === "in_progress";
   const awaitingPayment = role === "writer" && order.status === "accepted";
-  const canReview =
-    role === "doctor" && order.status === "completed" && !order.has_review;
+  const canReview = role === "doctor" && order.status === "completed" && !order.has_review;
   const canDownload =
     role === "doctor" &&
     ["delivered", "completed"].includes(order.status) &&
@@ -185,9 +207,7 @@ export default function OrderActions({ order, role }) {
         </Button>
       )}
       {awaitingPayment && (
-        <span className="text-xs text-muted-foreground">
-          En attente du paiement du médecin
-        </span>
+        <span className="text-xs text-muted-foreground">En attente du paiement du médecin</span>
       )}
       {canDeliver && (
         <Button size="sm" disabled={busy} onClick={() => setDeliverOpen(true)}>
@@ -205,12 +225,7 @@ export default function OrderActions({ order, role }) {
           <Star className="size-4" /> Laisser un avis
         </Button>
       )}
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={contact}
-        disabled={startConversation.isPending}
-      >
+      <Button size="sm" variant="ghost" onClick={contact} disabled={startConversation.isPending}>
         <MessageSquare className="size-4" /> Contacter
       </Button>
 

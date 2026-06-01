@@ -124,7 +124,11 @@ export default function Navbar() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     <SheetClose asChild>
-                      <Button variant="outline" className="w-full" onClick={() => navigate("/login")}>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => navigate("/login")}
+                      >
                         Se connecter
                       </Button>
                     </SheetClose>

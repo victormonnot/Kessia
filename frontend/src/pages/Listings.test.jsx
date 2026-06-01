@@ -44,9 +44,7 @@ describe("Listings page", () => {
   it("renders the catalogue and listing cards", () => {
     renderListings();
     expect(screen.getByRole("heading", { name: "Annonces" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Article de recherche en cardiologie"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Article de recherche en cardiologie")).toBeInTheDocument();
     expect(screen.getByText("Marie Durand")).toBeInTheDocument();
   });
 });
