@@ -16,6 +16,12 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   backend:
     build: ./backend
     restart: unless-stopped
@@ -23,6 +29,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

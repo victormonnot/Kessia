@@ -1,18 +1,41 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useConversation, useMessages, useSendMessage } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const WS_BASE = API_BASE.replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "");
+
 export default function Conversation() {
   const { id } = useParams();
   const me = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
   const { data: conversation } = useConversation(id);
   const { data: messages = [], isLoading, isError } = useMessages(id);
   const send = useSendMessage(id);
   const [body, setBody] = useState("");
+
+  // Live delivery: a WebSocket pushes new messages instantly; the REST polling
+  // in useMessages stays as a fallback. The access token is passed via the
+  // connection subprotocol (never the URL). On a push we refetch the thread
+  // (which also marks incoming messages read) and the inbox.
+  useEffect(() => {
+    const token = useAuthStore.getState().accessToken;
+    if (!id || !token) return undefined;
+    const ws = new WebSocket(`${WS_BASE}/ws/conversations/${id}/`, [
+      "access_token",
+      token,
+    ]);
+    ws.onmessage = () => {
+      queryClient.invalidateQueries({ queryKey: ["messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    };
+    return () => ws.close();
+  }, [id, queryClient]);
 
   const submit = async (e) => {
     e.preventDefault();
