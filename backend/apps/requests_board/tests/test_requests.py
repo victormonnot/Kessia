@@ -242,3 +242,20 @@ def test_request_rejects_past_deadline(auth_client):
         format="json",
     )
     assert response.status_code == 400
+
+
+def test_filter_requests_by_budget_range(api_client):
+    from decimal import Decimal
+
+    RequestFactory(budget=Decimal("300.00"))
+    RequestFactory(budget=Decimal("800.00"))
+    response = api_client.get(reverse("request-list"), {"budget_min": "500"})
+    assert response.json()["count"] == 1
+
+
+def test_filter_requests_by_deadline_before(api_client):
+    RequestFactory(deadline=date.today() + timedelta(days=10))
+    RequestFactory(deadline=date.today() + timedelta(days=40))
+    cutoff = (date.today() + timedelta(days=20)).isoformat()
+    response = api_client.get(reverse("request-list"), {"deadline_before": cutoff})
+    assert response.json()["count"] == 1

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.listings.permissions import IsWriter
 
+from .filters import RequestFilter
 from .models import Proposal, Request
 from .permissions import (
     IsProposalRequestOwner,
@@ -25,21 +26,15 @@ from .services import accept_proposal, notify_new_proposal, notify_proposal_acce
 
 
 class RequestViewSet(viewsets.ModelViewSet):
-    filterset_fields = ("specialty", "status")
+    filterset_class = RequestFilter
     search_fields = ("title", "description")
     ordering_fields = ("created_at", "deadline", "budget")
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        qs = Request.objects.select_related("doctor").annotate(
+        return Request.objects.select_related("doctor").annotate(
             proposals_count=Count("proposals")
         )
-        # `?mine=true` restricts to the authenticated doctor's own requests.
-        if self.request.query_params.get("mine") in ("true", "1"):
-            user = self.request.user
-            if user.is_authenticated:
-                qs = qs.filter(doctor=user)
-        return qs
 
     def get_serializer_class(self):
         if self.action == "list":

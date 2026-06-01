@@ -25,7 +25,7 @@ class ListingViewSet(viewsets.ModelViewSet):
     )
     filterset_class = ListingFilter
     search_fields = ("title", "description")
-    ordering_fields = ("created_at", "price", "turnaround_days")
+    ordering_fields = ("created_at", "price", "turnaround_days", "writer_rating")
     ordering = ("-created_at",)
 
     def get_serializer_class(self):

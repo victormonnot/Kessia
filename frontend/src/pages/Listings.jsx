@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 
 import Card from "@/components/ui/Card";
+import Pagination from "@/components/ui/Pagination";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingFilters from "@/components/listings/ListingFilters";
 import { useListings } from "@/hooks/useListings";
@@ -14,14 +15,18 @@ function paramsToObject(searchParams) {
 export default function Listings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = paramsToObject(searchParams);
+  const page = Number(filters.page || 1);
   const { data, isLoading, isError } = useListings(filters);
 
   const updateFilters = (next) => {
     const cleaned = Object.fromEntries(
       Object.entries(next).filter(([, v]) => v !== undefined && v !== ""),
     );
+    delete cleaned.page; // changing filters returns to the first page
     setSearchParams(cleaned);
   };
+
+  const goToPage = (p) => setSearchParams({ ...filters, page: String(p) });
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[260px_1fr]">
@@ -45,6 +50,12 @@ export default function Listings() {
             <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>
+        <Pagination
+          page={page}
+          hasPrev={Boolean(data?.previous)}
+          hasNext={Boolean(data?.next)}
+          onPage={goToPage}
+        />
       </section>
     </div>
   );

@@ -92,3 +92,37 @@ def test_mine_filter_returns_only_own_listings(writer_auth_client, writer_user, 
     response = writer_auth_client.get(reverse("listing-list"), {"mine": "true"})
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+def test_filter_by_price_range(api_client):
+    from decimal import Decimal
+
+    ListingFactory(price=Decimal("100.00"))
+    ListingFactory(price=Decimal("500.00"))
+    response = api_client.get(
+        reverse("listing-list"), {"price_min": "200", "price_max": "600"}
+    )
+    assert response.json()["count"] == 1
+
+
+def test_filter_by_turnaround_max(api_client):
+    ListingFactory(turnaround_days=5)
+    ListingFactory(turnaround_days=30)
+    response = api_client.get(reverse("listing-list"), {"turnaround_max": "10"})
+    assert response.json()["count"] == 1
+
+
+def test_filter_by_min_rating(api_client, user, writer_user, other_writer_user):
+    from apps.orders.models import Order
+    from apps.orders.tests.factories import OrderFactory
+    from apps.reviews.models import Review
+
+    rated = ListingFactory(writer=writer_user)
+    ListingFactory(writer=other_writer_user)  # no reviews -> rating NULL
+    order = OrderFactory(listing=rated, doctor=user, status=Order.Status.COMPLETED)
+    Review.objects.create(order=order, doctor=user, writer=writer_user, rating=5)
+
+    response = api_client.get(reverse("listing-list"), {"rating_min": "4"})
+    assert response.status_code == 200
+    ids = [r["id"] for r in response.json()["results"]]
+    assert ids == [rated.id]
