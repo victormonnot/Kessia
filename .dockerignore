@@ -1,0 +1,14 @@
+**/node_modules
+**/__pycache__
+**/.venv
+**/.ruff_cache
+**/.pytest_cache
+frontend/dist
+backend/staticfiles
+backend/media
+backend/frontend_dist
+.git
+.github
+*.sqlite3
+*.md
+Meetings
