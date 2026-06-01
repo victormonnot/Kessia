@@ -112,12 +112,14 @@ Client sends a request with a JWT token → Django validates it and routes to th
 | Requests | `/requests` | Public | Board of open writing requests |
 | Request Detail | `/requests/:id` | Public | Full request + proposal form |
 | Request Form | `/requests/new` | Authenticated | Post a writing request |
-| Dashboard Writer | `/dashboard/writer` | Writer | My listings and incoming orders |
-| Dashboard Doctor | `/dashboard/doctor` | Authenticated | My placed orders and statuses |
+| Writer Profile | `/redacteurs/:id` | Public | Shareable profile: bio, specialties, listings, rating, badge |
+| Dashboard Writer | `/dashboard/writer` | Writer | Listings, incoming orders + actions, proposals, earnings/payouts, verification |
+| Dashboard Doctor | `/dashboard/doctor` | Authenticated | Placed orders + payment/tracking, requests, received proposals |
+| Messaging | `/messages` `/messages/:id` | Authenticated | Inbox + real-time conversation thread |
 
-**Key UI components:** `ListingCard`, `ListingFilters`, `PlaceOrderModal`, `RequestCard`, `ProposalForm`, `OrderRow`, `StatusBadge`, `ProtectedRoute`, `WriterRoute`.
+**Key UI components:** `ListingCard`, `ListingFilters`, `Pagination`, `PlaceOrderModal`, `OrderActions` (status/pay/deliver/review/contact), `PaymentModal` (Stripe Elements), `Stars`, `RequestCard`, `ProposalForm`, `OrderRow`, `StatusBadge`, `ProtectedRoute`, `WriterRoute`.
 
-**State management:** Zustand stores auth tokens, TanStack React Query handles server data caching, Axios manages HTTP with automatic JWT refresh on 401.
+**State management:** Zustand holds the in-memory access token + user; TanStack React Query caches server data (and polls messaging); Axios attaches the token, sends the CSRF header, and silently refreshes via the httpOnly cookie on 401.
 
 ---
 
@@ -125,20 +127,34 @@ Client sends a request with a JWT token → Django validates it and routes to th
 
 | App | Models | Responsibility |
 |-----|--------|----------------|
-| `users` | `User` | Auth, JWT, writer activation |
-| `listings` | `Listing` | Service offers: CRUD + public catalog |
-| `orders` | `Order` | Order placement and status transitions |
-| `requests_board` | `Request`, `Proposal` | Reverse marketplace: doctors post, writers respond |
+| `users` | `User` | Auth (httpOnly-cookie JWT), writer activation, verified flag, Stripe ids, public profiles |
+| `listings` | `Listing` | Service offers: CRUD + public catalog, search/filter, writer rating |
+| `orders` | `Order`, `Deliverable` | Engagement lifecycle, amount snapshot, deliverable upload/download |
+| `requests_board` | `Request`, `Proposal` | Reverse marketplace; accepting a proposal atomically creates an order |
+| `payments` | `StripeEvent` | Stripe Connect onboarding, escrow charge, release, refund, idempotent webhooks |
+| `reviews` | `Review` | Completed-order-gated ratings, aggregated onto profiles/listings |
+| `messaging` | `Conversation`, `Message` | 1-to-1 chat (REST + Channels WebSocket), unread counts |
+| `verification` | `VerificationRequest` | Writer verification requests; admin-approved badge |
 
-**User** — `email` (unique), `first_name`, `last_name`, `bio`, `is_writer` (role flag), `is_staff`, `date_joined`.
+**User** — `email` (unique), `first_name`, `last_name`, `bio`, `is_writer`, `is_verified` (badge), `stripe_account_id`, `stripe_charges_enabled`, `stripe_payouts_enabled`, `is_staff`, `date_joined`.
 
 **Listing** — `writer` (FK), `title`, `description`, `specialty`, `deliverable_type`, `price`, `turnaround_days`, `is_published`.
 
-**Order** — `listing` (FK, protected), `doctor` (FK), `status` (`pending → accepted | declined → delivered`), `message`.
+**Order** — the unified engagement. `doctor` (FK), `writer` (FK), nullable `listing` (FK, protected) **or** nullable `proposal` (FK) as origin, `amount` + `currency` (snapshot at order time), `status` (`pending → accepted → in_progress → delivered → completed`, plus `declined`/`cancelled`), `payment_status` (`unpaid → processing → held → released | refunded | failed`), Stripe references, `message`.
+
+**Deliverable** — `order` (FK), `file`, `note`, `uploaded_at`. The finished work; download is access-gated to the doctor once delivered.
 
 **Request** — `doctor` (FK), `title`, `description`, `specialty`, `deadline`, `budget`, `status` (`open | closed`).
 
-**Proposal** — `request` (FK), `writer` (FK), `message`, `price`, `status` (`pending → accepted | rejected`). One proposal per writer per request enforced at DB level.
+**Proposal** — `request` (FK), `writer` (FK), `message`, `price`, `status` (`pending → accepted | rejected`). One proposal per writer per request (DB constraint). Acceptance creates an `Order` and closes the request in one transaction.
+
+**Review** — one-to-one `order`, `doctor` (FK), `writer` (FK), `rating` (1–5), `comment`. Allowed only to the doctor of a completed order.
+
+**Conversation / Message** — a deduped user pair (optionally tied to an `order`) and its messages (`sender`, `body`, `read_at`). Live delivery via a per-conversation WebSocket group.
+
+**VerificationRequest** — `writer` (FK), `credentials`, optional `document`, `status`, `reviewed_by`. Admin approval flips `User.is_verified`.
+
+**StripeEvent** — processed webhook `event_id` log, for idempotent handling.
 
 ---
 
@@ -167,10 +183,19 @@ erDiagram
     }
     ORDER {
         bigint id PK
-        bigint listing_id FK
+        bigint listing_id FK "nullable"
+        bigint proposal_id FK "nullable"
         bigint doctor_id FK
+        bigint writer_id FK
+        decimal amount
         varchar status
+        varchar payment_status
         text message
+    }
+    DELIVERABLE {
+        bigint id PK
+        bigint order_id FK
+        varchar file
     }
     REQUEST {
         bigint id PK
@@ -189,18 +214,45 @@ erDiagram
         decimal price
         varchar status
     }
+    REVIEW {
+        bigint id PK
+        bigint order_id FK UK
+        bigint writer_id FK
+        int rating
+    }
+    CONVERSATION {
+        bigint id PK
+        bigint order_id FK "nullable"
+    }
+    MESSAGE {
+        bigint id PK
+        bigint conversation_id FK
+        bigint sender_id FK
+        timestamptz read_at
+    }
+    VERIFICATIONREQUEST {
+        bigint id PK
+        bigint writer_id FK
+        varchar status
+    }
 
     USER ||--o{ LISTING : "writes"
-    LISTING ||--o{ ORDER : "has"
-    USER ||--o{ ORDER : "places"
+    LISTING ||--o{ ORDER : "spawns"
+    PROPOSAL ||--o{ ORDER : "spawns"
+    USER ||--o{ ORDER : "places / fulfils"
+    ORDER ||--o{ DELIVERABLE : "has"
+    ORDER ||--o| REVIEW : "rated by"
+    ORDER ||--o{ CONVERSATION : "discussed in"
+    CONVERSATION ||--o{ MESSAGE : "contains"
     USER ||--o{ REQUEST : "posts"
     REQUEST ||--o{ PROPOSAL : "receives"
     USER ||--o{ PROPOSAL : "submits"
+    USER ||--o{ VERIFICATIONREQUEST : "requests"
 ```
 
-**Order status:** `pending → accepted | declined` then `accepted → delivered`
+**Order status:** `pending → accepted → in_progress → delivered → completed`, with `declined`/`cancelled` as exits. Payment is taken after acceptance (held), released on completion (minus commission), refunded on cancel-after-payment.
 
-**Proposal status:** `pending → accepted | rejected`
+**Proposal status:** `pending → accepted | rejected` (acceptance spawns an order).
 
 ---
 
@@ -283,61 +335,89 @@ The requests board is public. Only writers can submit proposals. The doctor then
 
 ## 5. API & Methods
 
-### 5.1 External APIs
+### 5.1 External integrations
 
-No external API is used in the MVP. Planned integrations:
-
-| Service | Purpose | Stage |
-|---------|---------|-------|
-| Stripe Connect | Payments and escrow | Should Have |
-| SendGrid / Mailgun | Email notifications | Could Have |
-| Twilio | SMS notifications | Could Have |
+| Service | Purpose | Status |
+|---------|---------|--------|
+| Stripe Connect | Payments, escrow, payouts (test mode) | **Implemented** |
+| SendGrid / Mailgun (SMTP) | Transactional email | **Implemented** (console in dev) |
+| S3-compatible storage | Media (deliverables, verification docs) in prod | **Implemented** (django-storages) |
+| Twilio (SMS) | — | Dropped from v1 scope |
 
 ### 5.2 Internal Endpoints
 
-All endpoints are prefixed `/api/v1/`. All payloads are JSON. Protected routes require `Authorization: Bearer <token>`. Interactive docs at `/api/docs/` (Swagger UI).
+All endpoints are prefixed `/api/v1/`. JSON payloads. Protected routes use a JWT
+access token (`Authorization: Bearer …`) sent from memory; the refresh token is
+an httpOnly cookie. Interactive docs at `/api/docs/` (Swagger UI).
 
 #### Auth & Users
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/register/` | — | Create account, returns token pair |
-| POST | `/auth/login/` | — | Login, returns token pair |
-| POST | `/auth/refresh/` | Refresh token | Rotate tokens |
-| POST | `/auth/logout/` | JWT | Blacklist refresh token |
+| POST | `/auth/register/` | — | Create account; access in body, refresh in httpOnly cookie |
+| POST | `/auth/login/` | — | Login; access in body, refresh in cookie |
+| POST | `/auth/refresh/` | Refresh cookie + CSRF | Rotate the access token from the cookie |
+| POST | `/auth/logout/` | Cookie + CSRF | Blacklist refresh token, clear cookies |
 | GET / PATCH | `/users/me/` | JWT | Get or update profile |
 | POST | `/users/me/activate-writer/` | JWT | Enable writer mode |
+| GET | `/writers/{id}/` | — | Public writer profile (bio, specialties, listings, rating, badge) |
 
 #### Listings
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/listings/` | — | Public catalog (filter, search, paginate) |
+| GET | `/listings/` | — | Public catalog (specialty, deliverable, price/turnaround range, min rating, keyword, sort, paginate; `?mine=true`) |
 | POST | `/listings/` | Writer | Create a listing |
-| GET | `/listings/{id}/` | — | Listing detail with writer info |
-| PATCH / PUT | `/listings/{id}/` | Owner | Edit listing |
+| GET | `/listings/{id}/` | — | Listing detail with writer info + rating |
+| PATCH | `/listings/{id}/` | Owner | Edit listing |
 | DELETE | `/listings/{id}/` | Owner | Delete listing |
 
-#### Orders
+#### Orders & Deliverables
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/orders/` | JWT | My orders (doctor or writer view) |
-| POST | `/orders/` | JWT | Place an order |
+| GET | `/orders/` | JWT | My orders (`?role=doctor|writer`) |
+| POST | `/orders/` | JWT | Place an order (snapshots amount/writer) |
+| GET | `/orders/earnings/` | JWT | Writer earnings summary (escrow + net) |
 | GET | `/orders/{id}/` | Participant | Order detail |
-| PATCH | `/orders/{id}/` | Writer | Update status (accept / decline / deliver) |
+| PATCH | `/orders/{id}/` | Participant | Role-aware status transition |
+| GET / POST | `/orders/{id}/deliverables/` | Participant / Writer | List / upload finished work |
+| GET | `/orders/{id}/deliverables/{id}/download/` | Gated | Download (doctor, once delivered) |
 
 #### Requests & Proposals
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/requests/` | — | Public board (filter, search, paginate) |
+| GET | `/requests/` | — | Public board (specialty, budget range, deadline, keyword, sort, paginate; `?mine=true`) |
 | POST | `/requests/` | JWT | Post a writing request |
 | GET / PATCH / DELETE | `/requests/{id}/` | Owner | Manage a request |
-| GET | `/requests/{id}/proposals/` | JWT | List proposals |
-| POST | `/requests/{id}/proposals/` | Writer | Submit a proposal |
-| PATCH | `/proposals/{id}/` | Request owner | Accept or reject a proposal |
+| GET / POST | `/requests/{id}/proposals/` | JWT / Writer | List / submit proposals |
+| GET | `/proposals/` | JWT | Proposals I'm involved in (mine + on my requests) |
+| PATCH | `/proposals/{id}/` | Request owner | Accept (→ creates an order) or reject |
 | DELETE | `/proposals/{id}/` | Proposal writer | Withdraw a proposal |
+
+#### Payments (Stripe Connect)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/payments/connect/onboard/` | Writer | Start Express onboarding (returns Stripe URL) |
+| GET | `/payments/connect/status/` | Writer | Connected-account status |
+| POST | `/payments/orders/{id}/pay/` | Doctor | Create a PaymentIntent for an accepted order |
+| POST | `/payments/orders/{id}/confirm/` | Doctor | Sync payment after client confirmation (dev fallback) |
+| POST | `/payments/webhook/` | Stripe signature | Idempotent webhook (intent succeeded, account updated) |
+
+#### Reviews, Messaging & Verification
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/reviews/?writer={id}` | — | Public reviews for a writer |
+| POST | `/reviews/` | Doctor | Review a completed order (once) |
+| GET / POST | `/conversations/` | JWT | List my conversations / start one (recipient or order) |
+| GET / POST | `/conversations/{id}/messages/` | Participant | Read (marks read) / send a message |
+| GET / POST | `/verification/` | JWT / Writer | My verification requests / submit one |
+
+Real-time delivery: WebSocket at `ws/conversations/{id}/`, authenticated via the
+access token carried in the connection subprotocol.
 
 ---
 
@@ -360,15 +440,21 @@ Commits follow the Conventional Commits convention (`feat:`, `fix:`, `docs:`, `r
 
 | Layer | Tool | What is covered |
 |-------|------|-----------------|
-| Backend unit & integration | pytest + DRF APIClient | All endpoints, permissions, status transitions |
+| Backend unit & integration | pytest + DRF APIClient (on **Postgres**) | Endpoints, permissions, status transitions, payment flow (Stripe mocked), atomic acceptance, messaging, emails |
 | Backend fixtures | factory_boy | Deterministic model creation |
 | Frontend components | Vitest + Testing Library | UI components, hooks, user interactions |
-| Manual API testing | Postman | Auth flows, edge cases |
-| Code quality | ESLint + Prettier (frontend) | Linting and formatting |
+| Code quality | ESLint (frontend), Ruff (backend) | Linting and formatting |
 
 ### 6.3 Deployment
 
-Three environments: **local** (Docker Compose), **staging** (Railway/Render), **production** (Railway/Render). A GitHub Actions CI pipeline runs tests on every push to `dev` and blocks merges on failure. Deployment to staging is automatic on merge to `main`; promotion to production is manual after a smoke test.
+Environments: **local** (Docker Compose) and **production** (Railway/Render).
+The backend runs as **ASGI via Daphne** (`config.asgi:application`) to serve both
+REST and WebSockets. Production uses `config/settings/prod.py`: managed Postgres
+(`DATABASE_URL`), Redis as the Channels layer (`REDIS_URL`), S3-compatible object
+storage for media, WhiteNoise for static files, secure cross-site cookies, and an
+SMTP email provider. Full step-by-step instructions and the environment-variable
+list are in [`DEPLOYMENT.md`](DEPLOYMENT.md). CI (GitHub Actions) is a documented
+next step (see `LIMITATIONS.md`).
 
 ---
 
@@ -377,12 +463,15 @@ Three environments: **local** (Docker Compose), **staging** (Railway/Render), **
 | Technology | Why we chose it |
 |------------|-----------------|
 | **Django + DRF** | Built-in admin panel, mature ORM, and DRF covers auth, serializers, permissions, filtering, and pagination out of the box. |
-| **SimpleJWT** | Short-lived access tokens (15 min) with rotating refresh tokens minimise the risk of token theft. The blacklist module handles secure logout. |
+| **SimpleJWT** | Short-lived access tokens (15 min) with rotating refresh tokens minimise token-theft risk. The refresh token is stored in an httpOnly cookie (XSS-safe) with a double-submit CSRF check; the blacklist module handles secure logout. |
 | **React + Vite** | Component model fits a role-conditional UI (doctor vs. writer views). Vite is significantly faster than CRA and has built-in Vitest support. |
 | **Tailwind CSS** | Utility-first styling allows fast iteration directly in JSX without managing separate stylesheets. |
-| **TanStack React Query** | Handles server state (caching, background refetch) declaratively, keeping dashboards in sync without manual polling. |
-| **Zustand** | Minimal auth state store. Simpler than Redux, with built-in localStorage persistence for the refresh token. |
-| **PostgreSQL** | Relational integrity fits the marketplace data model. FK constraints and `on_delete=PROTECT` on orders prevent data loss at the DB level. |
+| **TanStack React Query** | Handles server state (caching, background refetch) declaratively, keeping dashboards in sync; also drives the messaging polling fallback. |
+| **Zustand** | Minimal auth store (access token in memory, user persisted). Simpler than Redux. |
+| **Stripe Connect** | Express connected accounts + separate charges & transfers give a clean hold-then-release escrow with an application fee, the standard pattern for marketplaces. |
+| **Django Channels + Daphne** | Adds WebSockets for live chat on top of the existing REST writes, with an in-memory layer in dev and Redis in prod. |
+| **django-storages (S3)** | Deliverables/verification files must survive on ephemeral platform filesystems; object storage is access-gated through the API. |
+| **PostgreSQL** | Relational integrity fits the marketplace data model. FK constraints and `on_delete=PROTECT`/`SET_NULL` prevent data loss; `select_for_update` makes proposal acceptance atomic. |
 | **Docker Compose** | Any team member can run the full stack in one command, eliminating environment setup issues. |
 
 **Ethics note:** Kessia is a *declared* medical writing platform. In line with ICMJE and COPE guidelines, all writing contributions must be acknowledged in publications. No patient data (PHI) transits through the platform in v1.
