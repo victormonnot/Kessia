@@ -19,7 +19,12 @@ export default function ListingCard({ listing }) {
             {Number(listing.price).toFixed(0)} €
           </span>
         </div>
-        <p className="mt-1 text-sm text-neutral-600">{listing.writer_name}</p>
+        <p className="mt-1 flex items-center gap-1 text-sm text-neutral-600">
+          {listing.writer_name}
+          {listing.writer_is_verified && (
+            <Badge variant="success">Vérifié</Badge>
+          )}
+        </p>
         {listing.writer_reviews_count > 0 && (
           <div className="mt-1">
             <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />

@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import StatusBadge from "@/components/ui/StatusBadge";
+import Textarea from "@/components/ui/Textarea";
 import OrderRow from "@/components/orders/OrderRow";
 import Tabs from "@/components/layout/Tabs";
 import { useListings, useDeleteListing } from "@/hooks/useListings";
 import { useOrders, useEarnings } from "@/hooks/useOrders";
 import { useAllProposals } from "@/hooks/useRequests";
 import { useConnectStatus, useOnboard } from "@/hooks/usePayments";
+import { useMyVerifications, useRequestVerification } from "@/hooks/useVerification";
 import { useAuthStore } from "@/store/authStore";
 
 function MyListingsTab() {
@@ -188,6 +191,83 @@ function PaymentsTab() {
   );
 }
 
+function VerificationTab() {
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading } = useMyVerifications();
+  const request = useRequestVerification();
+  const [credentials, setCredentials] = useState("");
+  const [error, setError] = useState(null);
+
+  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
+
+  if (user?.is_verified) {
+    return (
+      <Card>
+        <p className="text-green-700">
+          Votre compte est vérifié <Badge variant="success">Vérifié</Badge>
+        </p>
+      </Card>
+    );
+  }
+
+  const latest = data?.results?.[0];
+  const pending = latest?.status === "pending";
+
+  const submit = async () => {
+    setError(null);
+    if (!credentials.trim()) {
+      setError("Veuillez décrire vos justificatifs.");
+      return;
+    }
+    try {
+      await request.mutateAsync({ credentials });
+      setCredentials("");
+    } catch (e) {
+      const detail = e?.response?.data;
+      setError(
+        typeof detail === "string"
+          ? detail
+          : detail?.non_field_errors?.[0] || "Une erreur est survenue.",
+      );
+    }
+  };
+
+  return (
+    <Card className="space-y-3">
+      <h2 className="font-medium text-neutral-900">Vérification du profil</h2>
+      {pending ? (
+        <p className="text-neutral-600">
+          Votre demande est en cours d'examen par notre équipe.
+        </p>
+      ) : (
+        <>
+          {latest?.status === "rejected" && (
+            <p className="text-red-600">
+              Votre précédente demande a été refusée. Vous pouvez en soumettre une nouvelle.
+            </p>
+          )}
+          <p className="text-neutral-600">
+            Décrivez vos qualifications (diplômes, expérience). Un administrateur examinera
+            votre demande ; un badge « Vérifié » apparaîtra alors sur votre profil et vos
+            annonces.
+          </p>
+          <Textarea
+            label="Justificatifs"
+            name="credentials"
+            rows={4}
+            value={credentials}
+            onChange={(e) => setCredentials(e.target.value)}
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <Button onClick={submit} disabled={request.isPending}>
+            {request.isPending ? "Envoi…" : "Demander la vérification"}
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function DashboardWriter() {
   const user = useAuthStore((s) => s.user);
   return (
@@ -212,6 +292,11 @@ export default function DashboardWriter() {
               render: () => <MyProposalsTab />,
             },
             { key: "payments", label: "Paiements", render: () => <PaymentsTab /> },
+            {
+              key: "verification",
+              label: "Vérification",
+              render: () => <VerificationTab />,
+            },
           ]}
         />
       </div>

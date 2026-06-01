@@ -14,9 +14,10 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "bio",
             "is_writer",
+            "is_verified",
             "date_joined",
         )
-        read_only_fields = ("id", "email", "is_writer", "date_joined")
+        read_only_fields = ("id", "email", "is_writer", "is_verified", "date_joined")
 
 
 class UserPublicSerializer(serializers.ModelSerializer):

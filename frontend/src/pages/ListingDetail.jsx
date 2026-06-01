@@ -53,12 +53,15 @@ export default function ListingDetail() {
 
       <Card className="mt-4">
         <h2 className="font-semibold text-neutral-900">À propos du rédacteur</h2>
-        <Link
-          to={`/redacteurs/${listing.writer?.id}`}
-          className="mt-1 inline-block text-sm font-medium text-primary-700 hover:underline"
-        >
-          {listing.writer?.first_name} {listing.writer?.last_name}
-        </Link>
+        <div className="mt-1 flex items-center gap-2">
+          <Link
+            to={`/redacteurs/${listing.writer?.id}`}
+            className="text-sm font-medium text-primary-700 hover:underline"
+          >
+            {listing.writer?.first_name} {listing.writer?.last_name}
+          </Link>
+          {listing.writer_is_verified && <Badge variant="success">Vérifié</Badge>}
+        </div>
         {listing.writer_reviews_count > 0 && (
           <div className="mt-1">
             <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />

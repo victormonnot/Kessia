@@ -16,6 +16,7 @@ class WriterRatingMixin(serializers.Serializer):
 
     writer_rating = serializers.SerializerMethodField()
     writer_reviews_count = serializers.SerializerMethodField()
+    writer_is_verified = serializers.BooleanField(source="writer.is_verified", read_only=True)
 
     def get_writer_rating(self, obj):
         val = getattr(obj, "writer_rating", None)
@@ -44,6 +45,7 @@ class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "writer_name",
             "writer_rating",
             "writer_reviews_count",
+            "writer_is_verified",
             "created_at",
         )
         read_only_fields = fields
@@ -69,6 +71,7 @@ class ListingDetailSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "is_published",
             "writer_rating",
             "writer_reviews_count",
+            "writer_is_verified",
             "created_at",
             "updated_at",
         )
