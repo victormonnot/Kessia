@@ -1,38 +1,65 @@
-# Known MVP Limitations
+# Limitations & scope notes (v1)
 
-Scope decisions and tradeoffs deliberately accepted to ship the MVP by 2026-07-17. None of these are bugs — they are documented non-goals.
+The MVP non-goals listed below have been **resolved in v1**; the remaining
+section documents trade-offs that are still deliberately out of scope.
 
-## Product
+## Resolved since the MVP
 
-- **Proposal acceptance is not atomic.** Accepting one proposal on a request does not auto-reject the other proposals and does not auto-close the request. The doctor closes the request manually.
-- **No payments.** Stripe / payouts are post-MVP.
-- **No real-time chat.** The doctor's `message` on an order and the writer's `message` on a proposal are the only communication channels in-app.
-- **No file uploads.** No avatars, no deliverable attachments.
-- **No transactional email.** The dev settings use the console email backend.
-- **No badges / reputation system.** Verified-writer flow is post-MVP.
-- **Hard delete only.** Deleting a listing or a request removes the row. We rely on the `PROTECT` FK on orders to prevent deleting a listing that has orders attached.
+- **Payments.** Stripe Connect (test mode): the doctor pays after acceptance,
+  funds are held, released on completion minus a 15% platform fee, with
+  auto-refund on cancellation and idempotent webhooks.
+- **Real-time chat.** Django Channels over ASGI/Daphne; conversations between any
+  two users (optionally tied to an order), with REST history + WebSocket live
+  delivery and unread counts.
+- **File uploads.** Writers upload deliverables and verification documents
+  (Django storage: local in dev, S3-compatible in prod).
+- **Transactional email.** Event emails (order lifecycle, proposals, messages),
+  console in dev, SMTP provider in prod.
+- **Badges / reputation.** Reviews gated to completed orders aggregate onto
+  profiles and listings; an admin-approved verified badge is in place.
+- **Atomic proposal acceptance.** Accepting a proposal now creates the order,
+  closes the request and auto-rejects the others in a single `select_for_update`
+  transaction.
+- **Refresh token in `localStorage`.** Moved to an httpOnly cookie with a
+  double-submit CSRF check; the access token lives in memory only.
+- **Production settings.** `config/settings/prod.py` exists (secure cookies, S3
+  storage, Redis channel layer, WhiteNoise static); see `DEPLOYMENT.md`.
+- **Tests on Postgres.** The test database is Postgres (matching runtime), so
+  row-locking and other Postgres behaviour are actually exercised.
 
-## Security
+## Still out of scope
 
-- **Refresh token in `localStorage`.** Convenient for the SPA but readable by any script that achieves XSS on our origin. Acceptable for an MVP that handles no payments or PHI; revisit before exposing real users.
-- **No rate limiting.** DRF defaults only; no per-IP throttling on auth endpoints.
-
-## Ops
-
-- **No CI in this bootstrap.** Tests run locally via `docker compose exec`. A GitHub Actions workflow can be added on top without changes to this layout.
-- **No production settings module.** `config/settings/prod.py` is intentionally left out — it'll be added during the deployment step (week 10 per `High-LevelPlan.md`).
-- **Test DB is SQLite in-memory.** The runtime DB is Postgres 16. The two stay close enough for the model-shape tests in this MVP; integration tests that depend on Postgres-specific behaviour should be added when needed.
+- **Email is sent inline** (in the request path), not via a task queue. Fine at
+  this volume; a Celery/RQ worker would be the next step.
+- **No CI pipeline.** Tests run via `docker compose exec`; a GitHub Actions
+  workflow can be layered on without changing this structure.
+- **No rate limiting** beyond DRF defaults; no per-IP throttling on auth.
+- **Hard delete only** (no soft deletes); FK `PROTECT`/`SET_NULL` guard against
+  orphaning orders/conversations.
+- **Cross-site cookies in prod** require `AUTH_COOKIE_SAMESITE=None` + HTTPS and
+  the frontend origin in `CORS_ALLOWED_ORIGINS`/`CSRF_TRUSTED_ORIGINS` (see
+  `DEPLOYMENT.md`).
+- **Out of scope by design:** i18n/multi-currency, SMS, real credential
+  verification (the badge is an admin-gated flag).
 
 ## Manual end-to-end script
 
-This replaces the README walkthrough the bootstrap spec called for. Run after `docker compose up --build`:
+Run after `docker compose up --build` + `seed_demo` (Stripe test keys set):
 
-1. Register user A → `POST /api/v1/users/me/activate-writer/` (or the writer toggle in the UI) → create a listing.
-2. Register user B (stays a doctor) → browse `/listings` → place an order with a message.
-3. Log back in as A → writer dashboard shows the order → accept → mark delivered.
-4. Log back in as B → doctor dashboard reflects the status changes.
-5. As B, post a request on `/requests`.
-6. As A, submit a proposal on B's request.
-7. As B, accept A's proposal. Confirm the request stays `open` (see "Proposal acceptance is not atomic" above).
-8. Filter `/listings` by specialty + deliverable_type, search by keyword. Same on `/requests`.
-9. In DevTools, delete `accessToken` from `localStorage` → trigger any authenticated request → the axios interceptor refreshes via `/auth/refresh/` and retries once.
+1. Register a doctor; activate writer mode on a second account; the writer
+   onboards a Stripe Express account (Paiements tab).
+2. From the writer's public profile (`/redacteurs/:id`), the doctor sends a
+   pre-sales message (conversation with no order).
+3. The doctor discovers a writer via search/filters, or posts a request and
+   accepts a proposal → an order is created.
+4. The writer accepts the order → the doctor pays (test card `4242…`) → status
+   `in_progress`, payment held.
+5. The parties chat live on the order's conversation (WebSocket).
+6. The writer uploads a deliverable; the doctor downloads it and confirms
+   completion → payment released minus 15%.
+7. On a separate paid order, the doctor cancels → auto-refund.
+8. The doctor reviews the completed order → rating appears on the writer's
+   profile and listings.
+9. The writer requests verification → an admin approves it in Django admin → the
+   "Vérifié" badge appears.
+10. Confirm event emails (console in dev), mobile layout, and a green test suite.

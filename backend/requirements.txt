@@ -10,3 +10,6 @@ stripe==15.2.0
 channels==4.3.2
 channels-redis==4.3.0
 daphne==4.2.1
+django-storages[boto3]==1.14.4
+whitenoise==6.8.2
+dj-database-url==2.3.0
