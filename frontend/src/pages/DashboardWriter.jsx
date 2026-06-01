@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -152,6 +154,23 @@ function MyProposalsTab() {
 
 export default function DashboardWriter() {
   const user = useAuthStore((s) => s.user);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+
+  // Stripe Connect redirects back here with ?stripe=return|refresh.
+  useEffect(() => {
+    const stripe = searchParams.get("stripe");
+    if (!stripe) return;
+    if (stripe === "return") {
+      toast.success("Configuration Stripe enregistrée.");
+      queryClient.invalidateQueries({ queryKey: ["connectStatus"] });
+    } else if (stripe === "refresh") {
+      toast.info("Reprenez la configuration de votre compte Stripe.");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("stripe");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, queryClient]);
 
   return (
     <div className="container py-8">

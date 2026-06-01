@@ -68,3 +68,15 @@ export function useActivateWriter() {
     },
   });
 }
+
+export function useUpdateProfile() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.updateMe,
+    onSuccess: (user) => {
+      setUser(user);
+      qc.setQueryData(["currentUser"], user);
+    },
+  });
+}

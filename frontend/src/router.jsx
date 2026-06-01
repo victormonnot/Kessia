@@ -14,6 +14,8 @@ import DashboardDoctor from "@/pages/DashboardDoctor";
 import WriterProfile from "@/pages/WriterProfile";
 import Inbox from "@/pages/Inbox";
 import Conversation from "@/pages/Conversation";
+import Settings from "@/pages/Settings";
+import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
@@ -96,6 +98,23 @@ export default function Router() {
           <ProtectedRoute>
             <Conversation />
           </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <WriterRoute>
+            <Onboarding />
+          </WriterRoute>
         }
       />
 

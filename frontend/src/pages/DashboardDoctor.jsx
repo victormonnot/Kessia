@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ClipboardList, Inbox, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -138,11 +138,13 @@ function ProposalsReceivedTab() {
 export default function DashboardDoctor() {
   const user = useAuthStore((s) => s.user);
   const activate = useActivateWriter();
+  const navigate = useNavigate();
 
   const becomeWriter = async () => {
     try {
       await activate.mutateAsync();
       toast.success("Mode rédacteur activé !");
+      navigate("/onboarding");
     } catch (e) {
       toast.error(errorMessage(e, "L'activation a échoué."));
     }
