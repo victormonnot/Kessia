@@ -1,0 +1,8 @@
+Bonjour {{ order.doctor.get_full_name|default:order.doctor.email }},
+
+Votre commande{% if order.listing %} « {{ order.listing.title }} »{% endif %} a été refusée par le rédacteur.
+
+Vous pouvez explorer d'autres annonces :
+{{ frontend_url }}/listings
+
+— L'équipe Kessia

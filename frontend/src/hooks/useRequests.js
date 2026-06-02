@@ -65,7 +65,13 @@ export function useUpdateProposal(requestId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }) => proposalsApi.update(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["proposals", requestId] }),
+    onSuccess: () => {
+      // Accepting a proposal closes the request and creates an order.
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["request", requestId] });
+      qc.invalidateQueries({ queryKey: ["requests"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
   });
 }
 
@@ -74,5 +80,26 @@ export function useDeleteProposal(requestId) {
   return useMutation({
     mutationFn: proposalsApi.remove,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["proposals", requestId] }),
+  });
+}
+
+// Dashboard: all proposals the current user is involved in (own + received).
+export function useAllProposals() {
+  return useQuery({
+    queryKey: ["proposals", "all"],
+    queryFn: proposalsApi.list,
+  });
+}
+
+// Dashboard accept/reject: invalidates every proposal list and the requests.
+export function useDecideProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }) => proposalsApi.update(id, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["requests"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
   });
 }

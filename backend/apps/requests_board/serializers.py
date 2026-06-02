@@ -56,6 +56,18 @@ class RequestWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A new request must start as 'open'.")
         return value
 
+    def validate_budget(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("Le budget doit être supérieur à zéro.")
+        return value
+
+    def validate_deadline(self, value):
+        from datetime import date
+
+        if self.instance is None and value and value < date.today():
+            raise serializers.ValidationError("L'échéance doit être dans le futur.")
+        return value
+
     def create(self, validated_data):
         validated_data["doctor"] = self.context["request"].user
         return super().create(validated_data)
@@ -63,12 +75,14 @@ class RequestWriteSerializer(serializers.ModelSerializer):
 
 class ProposalSerializer(serializers.ModelSerializer):
     writer = UserPublicSerializer(read_only=True)
+    request_title = serializers.CharField(source="request.title", read_only=True)
 
     class Meta:
         model = Proposal
         fields = (
             "id",
             "request",
+            "request_title",
             "writer",
             "message",
             "price",

@@ -1,0 +1,8 @@
+Bonjour {{ recipient_name }},
+
+Vous avez reçu un nouveau message de {{ sender_name }} sur Kessia{% if order %} (commande #{{ order.id }}){% endif %}.
+
+Connectez-vous pour répondre :
+{{ frontend_url }}/messages/{{ conversation.id }}
+
+— L'équipe Kessia

@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
-import Textarea from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
+import { TextField, TextareaField, SelectField } from "@/components/form/fields";
+import Spinner from "@/components/feedback/Spinner";
 import { SPECIALTY_OPTIONS } from "@/lib/choices";
+import { requestSchema } from "@/lib/schemas/request";
 
-const empty = {
+const STATUS_OPTIONS = [
+  { value: "open", label: "Ouverte" },
+  { value: "closed", label: "Fermée" },
+];
+
+const DEFAULTS = {
   title: "",
   description: "",
   specialty: "general_medicine",
@@ -16,66 +23,76 @@ const empty = {
 };
 
 export default function RequestForm({ initial, onSubmit, submitting }) {
-  const [form, setForm] = useState({ ...empty, ...(initial || {}) });
-  const change = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const isEdit = Boolean(initial);
+  const form = useForm({
+    resolver: zodResolver(requestSchema),
+    defaultValues: initial
+      ? {
+          title: initial.title ?? "",
+          description: initial.description ?? "",
+          specialty: initial.specialty ?? "general_medicine",
+          deadline: initial.deadline ?? "",
+          budget: initial.budget ?? "",
+          status: initial.status ?? "open",
+        }
+      : DEFAULTS,
+  });
 
-  const submit = (e) => {
-    e.preventDefault();
-    onSubmit({ ...form, budget: String(form.budget) });
-  };
+  const submit = (values) => onSubmit({ ...values, budget: String(values.budget) });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <Input label="Titre" name="title" required value={form.title} onChange={change} />
-      <Textarea
-        label="Description"
-        name="description"
-        rows={6}
-        required
-        value={form.description}
-        onChange={change}
-      />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Select
-          label="Spécialité"
-          name="specialty"
-          options={SPECIALTY_OPTIONS}
-          value={form.specialty}
-          onChange={change}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(submit)} className="space-y-5" noValidate>
+        <TextField
+          control={form.control}
+          name="title"
+          label="Titre"
+          placeholder="Ex. Rédaction d'une revue systématique en oncologie"
         />
-        <Input
-          label="Échéance"
-          name="deadline"
-          type="date"
-          required
-          value={form.deadline}
-          onChange={change}
+        <TextareaField
+          control={form.control}
+          name="description"
+          label="Description"
+          rows={6}
+          placeholder="Décrivez votre besoin : objectifs, format attendu, contexte…"
         />
-        <Input
-          label="Budget (€)"
-          name="budget"
-          type="number"
-          step="0.01"
-          required
-          value={form.budget}
-          onChange={change}
-        />
-      </div>
-      {initial && (
-        <Select
-          label="Statut"
-          name="status"
-          options={[
-            { value: "open", label: "Ouverte" },
-            { value: "closed", label: "Fermée" },
-          ]}
-          value={form.status}
-          onChange={change}
-        />
-      )}
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Enregistrement…" : "Enregistrer la demande"}
-      </Button>
-    </form>
+        <div className="grid gap-5 sm:grid-cols-3">
+          <SelectField
+            control={form.control}
+            name="specialty"
+            label="Spécialité"
+            options={SPECIALTY_OPTIONS}
+            placeholder="Choisir"
+          />
+          <TextField control={form.control} name="deadline" label="Échéance" type="date" />
+          <TextField
+            control={form.control}
+            name="budget"
+            label="Budget (€)"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="300"
+          />
+        </div>
+        {isEdit && (
+          <SelectField
+            control={form.control}
+            name="status"
+            label="Statut"
+            options={STATUS_OPTIONS}
+          />
+        )}
+        <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+          {submitting ? (
+            <>
+              <Spinner /> Enregistrement…
+            </>
+          ) : (
+            "Enregistrer la demande"
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 }

@@ -10,6 +10,8 @@ DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
 INSTALLED_APPS = [
+    # daphne must precede staticfiles so its ASGI runserver takes over in dev.
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -17,6 +19,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Third-party
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -29,6 +32,10 @@ INSTALLED_APPS = [
     "apps.listings",
     "apps.orders",
     "apps.requests_board",
+    "apps.payments",
+    "apps.reviews",
+    "apps.messaging",
+    "apps.verification",
 ]
 
 MIDDLEWARE = [
@@ -89,6 +96,14 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Media / file storage. Deliverable files use Django's storage abstraction:
+# local FileSystemStorage in dev/test, S3-compatible (django-storages) in prod
+# (Railway/Render filesystems are ephemeral — overridden in config/settings/prod.py).
+# Deliverable downloads are always served through an access-gated DRF view, never
+# from a public URL.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # REST framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -127,3 +142,50 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:5173",
     cast=Csv(),
 )
+# The refresh token lives in a cookie, so XHR must send credentials cross-origin.
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:5173",
+    cast=Csv(),
+)
+
+# Auth cookies: the refresh token is stored in an httpOnly cookie (not readable
+# by JS, mitigating XSS token theft); a separate JS-readable CSRF cookie backs a
+# double-submit check on the cookie-authenticated auth endpoints. SameSite=Lax
+# is fine in dev (same site); cross-site prod deployments need
+# AUTH_COOKIE_SAMESITE=None and AUTH_COOKIE_SECURE=True.
+AUTH_COOKIE_SECURE = config("AUTH_COOKIE_SECURE", default=False, cast=bool)
+AUTH_COOKIE_SAMESITE = config("AUTH_COOKIE_SAMESITE", default="Lax")
+
+# Public URL of the SPA, used to build links in notification emails.
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+
+# Transactional email. Dev overrides EMAIL_BACKEND to the console and tests use
+# locmem; in prod the SMTP settings below are driven by env (e.g. SendGrid:
+# host=smtp.sendgrid.net, port=587, user="apikey", password=<API key>, TLS).
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kessia <no-reply@kessia.local>")
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+
+# Stripe Connect (test mode). The platform charges the doctor, holds the funds,
+# and on completion transfers (amount - commission) to the writer's connected
+# account. Keys are blank in dev/test; tests mock the Stripe SDK entirely.
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = config("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
+KESSIA_PLATFORM_FEE_PERCENT = config("KESSIA_PLATFORM_FEE_PERCENT", default=15, cast=int)
+
+# Channels (real-time messaging). In-memory layer in dev/test (single process);
+# prod swaps in channels-redis via REDIS_URL (see config/settings/prod.py).
+ASGI_APPLICATION = "config.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+}

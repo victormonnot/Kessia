@@ -1,0 +1,8 @@
+Bonjour {{ order.doctor.get_full_name|default:order.doctor.email }},
+
+Bonne nouvelle : votre commande{% if order.listing %} « {{ order.listing.title }} »{% endif %} a été acceptée par {{ order.writer.get_full_name|default:order.writer.email }}.
+
+Suivez son avancement depuis votre tableau de bord :
+{{ frontend_url }}/dashboard/doctor
+
+— L'équipe Kessia

@@ -27,10 +27,22 @@ export const STATUS_LABELS = {
   pending: "En attente",
   accepted: "Acceptée",
   declined: "Refusée",
+  in_progress: "En cours",
   delivered: "Livrée",
+  completed: "Finalisée",
+  cancelled: "Annulée",
   rejected: "Rejetée",
   open: "Ouverte",
   closed: "Fermée",
+};
+
+export const PAYMENT_STATUS_LABELS = {
+  unpaid: "Non payée",
+  processing: "Paiement en cours",
+  held: "Paiement séquestré",
+  released: "Versée au rédacteur",
+  refunded: "Remboursée",
+  failed: "Échec du paiement",
 };
 
 export function labelFor(value, options) {

@@ -12,6 +12,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     bio = models.TextField(blank=True)
     is_writer = models.BooleanField(default=False)
 
+    # Verified-writer badge (admin-gated flag; see the verification app).
+    is_verified = models.BooleanField(default=False)
+
+    # Stripe Connect (Express) state for writers receiving payouts.
+    stripe_account_id = models.CharField(max_length=255, blank=True)
+    stripe_charges_enabled = models.BooleanField(default=False)
+    stripe_payouts_enabled = models.BooleanField(default=False)
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)

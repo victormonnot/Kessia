@@ -114,3 +114,148 @@ def test_writer_can_withdraw_own_proposal(writer_auth_client, writer_user):
     response = writer_auth_client.delete(reverse("proposal-detail", args=[proposal.id]))
     assert response.status_code == 204
     assert not Proposal.objects.filter(id=proposal.id).exists()
+
+
+def test_requests_mine_filter(auth_client, user):
+    RequestFactory(doctor=user)
+    RequestFactory()  # someone else's request
+    response = auth_client.get(reverse("request-list"), {"mine": "true"})
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
+def test_proposals_list_scopes_to_involved_users(user, writer_user):
+    from rest_framework.test import APIClient
+
+    doctor_client = APIClient()
+    doctor_client.force_authenticate(user)
+    writer_client = APIClient()
+    writer_client.force_authenticate(writer_user)
+
+    own_request = RequestFactory(doctor=user)
+    ProposalFactory(request=own_request, writer=writer_user)
+    ProposalFactory()  # unrelated proposal on someone else's request
+
+    # The doctor sees the proposal on their own request.
+    as_doctor = doctor_client.get(reverse("proposal-list"))
+    assert as_doctor.status_code == 200
+    assert as_doctor.json()["count"] == 1
+
+    # The writer sees their own proposal.
+    as_writer = writer_client.get(reverse("proposal-list"))
+    assert as_writer.json()["count"] == 1
+
+
+# --- Proposal acceptance creates an engagement (Phase 8) ------------------
+
+
+def test_accept_proposal_creates_order_and_closes_request(auth_client, user, writer_user):
+    from decimal import Decimal
+
+    from apps.orders.models import Order
+
+    req = RequestFactory(doctor=user)
+    proposal = ProposalFactory(request=req, writer=writer_user, price=Decimal("420.00"))
+
+    response = auth_client.patch(
+        reverse("proposal-detail", args=[proposal.id]),
+        {"status": Proposal.Status.ACCEPTED},
+        format="json",
+    )
+    assert response.status_code == 200
+
+    order = Order.objects.get(proposal=proposal)
+    assert order.doctor_id == user.id
+    assert order.writer_id == writer_user.id
+    assert order.amount == Decimal("420.00")
+    assert order.listing_id is None
+    assert order.status == Order.Status.ACCEPTED
+
+    req.refresh_from_db()
+    assert req.status == Request.Status.CLOSED
+
+
+def test_accept_auto_rejects_other_proposals(auth_client, user):
+    req = RequestFactory(doctor=user)
+    accepted = ProposalFactory(request=req)
+    other = ProposalFactory(request=req)
+
+    auth_client.patch(
+        reverse("proposal-detail", args=[accepted.id]),
+        {"status": Proposal.Status.ACCEPTED},
+        format="json",
+    )
+    other.refresh_from_db()
+    assert other.status == Proposal.Status.REJECTED
+
+
+def test_cannot_accept_a_second_proposal_after_close(auth_client, user):
+    req = RequestFactory(doctor=user)
+    first = ProposalFactory(request=req)
+    second = ProposalFactory(request=req)
+
+    auth_client.patch(
+        reverse("proposal-detail", args=[first.id]),
+        {"status": Proposal.Status.ACCEPTED},
+        format="json",
+    )
+    # The request is now closed and `second` was auto-rejected -> can't accept it.
+    response = auth_client.patch(
+        reverse("proposal-detail", args=[second.id]),
+        {"status": Proposal.Status.ACCEPTED},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+def test_emails_on_proposal_and_acceptance(user, writer_user):
+    from django.core import mail
+    from rest_framework.test import APIClient
+
+    doctor_client = APIClient()
+    doctor_client.force_authenticate(user)
+    writer_client = APIClient()
+    writer_client.force_authenticate(writer_user)
+
+    req = RequestFactory(doctor=user)
+    submit = writer_client.post(
+        reverse("request-proposals", args=[req.id]),
+        {"message": "I can help", "price": "400.00"},
+        format="json",
+    )
+    assert submit.status_code == 201
+    assert len(mail.outbox) == 1  # new_proposal -> doctor
+
+    proposal_id = submit.json()["id"]
+    doctor_client.patch(
+        reverse("proposal-detail", args=[proposal_id]),
+        {"status": Proposal.Status.ACCEPTED},
+        format="json",
+    )
+    assert len(mail.outbox) == 2  # proposal_accepted -> writer
+
+
+def test_request_rejects_past_deadline(auth_client):
+    response = auth_client.post(
+        reverse("request-list"),
+        _request_payload(deadline=(date.today() - timedelta(days=1)).isoformat()),
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+def test_filter_requests_by_budget_range(api_client):
+    from decimal import Decimal
+
+    RequestFactory(budget=Decimal("300.00"))
+    RequestFactory(budget=Decimal("800.00"))
+    response = api_client.get(reverse("request-list"), {"budget_min": "500"})
+    assert response.json()["count"] == 1
+
+
+def test_filter_requests_by_deadline_before(api_client):
+    RequestFactory(deadline=date.today() + timedelta(days=10))
+    RequestFactory(deadline=date.today() + timedelta(days=40))
+    cutoff = (date.today() + timedelta(days=20)).isoformat()
+    response = api_client.get(reverse("request-list"), {"deadline_before": cutoff})
+    assert response.json()["count"] == 1

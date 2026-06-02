@@ -17,5 +17,16 @@ module.exports = {
       { allowConstantExport: true },
     ],
     "react/prop-types": "off",
+    // The UI is entirely in French; raw apostrophes in JSX text are valid and
+    // pervasive, so this rule is pure noise here.
+    "react/no-unescaped-entities": "off",
   },
+  overrides: [
+    {
+      // Vendored shadcn/ui primitives intentionally co-export variant helpers
+      // (buttonVariants, badgeVariants…) next to their component.
+      files: ["src/components/ui/**"],
+      rules: { "react-refresh/only-export-components": "off" },
+    },
+  ],
 };

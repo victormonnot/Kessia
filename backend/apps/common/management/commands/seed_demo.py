@@ -1,270 +1,342 @@
-"""Seed demo data for local development.
+"""Seed a rich, lifelike demo dataset for local dev and demo deployments.
 
-Idempotent: re-running the command never creates duplicates. We use plain
-``get_or_create`` instead of the factory-boy factories because (a) the demo
-values must be deterministic, and (b) factory-boy lives in
-``requirements-dev.txt`` only — importing it from a management command would
-break ``manage.py`` in any environment that doesn't install dev deps.
+Idempotent: re-running never creates duplicates (everything keys off stable
+natural keys via ``get_or_create``). We use the plain ORM rather than the
+factory-boy factories because those live in ``requirements-dev.txt`` only —
+importing them here would break ``manage.py`` in production.
 """
 
 from __future__ import annotations
 
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
+from apps.messaging.models import Conversation, Message
 from apps.orders.models import Order
 from apps.requests_board.models import Proposal, Request
+from apps.reviews.models import Review
 from apps.users.models import User
 
-WRITER_EMAIL = "writer@kessia.demo"
-DOCTOR_EMAIL = "doctor@kessia.demo"
 DEMO_PASSWORD = "demo1234"
+
+# (email, first, last, specialty, verified, bio)
+WRITERS = [
+    ("writer@kessia.demo", "Alice", "Martin", Specialty.CARDIOLOGY, True,
+     "Rédactrice médicale freelance, 8 ans d'expérience auprès de laboratoires "
+     "et de groupes hospitaliers. Spécialités : cardiologie, oncologie."),
+    ("paul.nguyen@kessia.demo", "Paul", "Nguyen", Specialty.ONCOLOGY, True,
+     "Docteur en biologie, rédacteur scientifique spécialisé en oncologie et "
+     "immunothérapie. Publications dans des revues à comité de lecture."),
+    ("sophie.bernard@kessia.demo", "Sophie", "Bernard", Specialty.NEUROLOGY, True,
+     "Neurologue de formation, j'accompagne les équipes dans la rédaction "
+     "d'articles et de revues systématiques."),
+    ("karim.haddad@kessia.demo", "Karim", "Haddad", Specialty.PEDIATRICS, False,
+     "Rédacteur médical, focus pédiatrie et études de cas cliniques (CARE)."),
+    ("elena.rossi@kessia.demo", "Elena", "Rossi", Specialty.DERMATOLOGY, True,
+     "Spécialiste de la rédaction en dermatologie : séries de cas, revues, "
+     "résumés de congrès."),
+    ("thomas.leroy@kessia.demo", "Thomas", "Leroy", Specialty.RADIOLOGY, False,
+     "Ingénieur biomédical et rédacteur, imagerie et radiologie diagnostique."),
+    ("nadia.benali@kessia.demo", "Nadia", "Benali", Specialty.PSYCHIATRY, True,
+     "Rédactrice en santé mentale et psychiatrie, sensible aux enjeux éthiques."),
+    ("marc.dubois@kessia.demo", "Marc", "Dubois", Specialty.SURGERY, False,
+     "Ancien interne en chirurgie, rédaction d'articles chirurgicaux et de protocoles."),
+    ("clara.fontaine@kessia.demo", "Clara", "Fontaine", Specialty.ENDOCRINOLOGY, True,
+     "Endocrinologie et métabolisme : articles originaux et méta-analyses."),
+    ("hugo.moreau@kessia.demo", "Hugo", "Moreau", Specialty.GASTROENTEROLOGY, False,
+     "Rédacteur médical, gastro-entérologie et hépatologie."),
+]
+
+# (email, first, last)
+DOCTORS = [
+    ("doctor@kessia.demo", "Bob", "Dupont"),
+    ("julie.petit@kessia.demo", "Julie", "Petit"),
+    ("antoine.garcia@kessia.demo", "Antoine", "Garcia"),
+    ("lea.fournier@kessia.demo", "Léa", "Fournier"),
+    ("mehdi.cherif@kessia.demo", "Mehdi", "Chérif"),
+    ("camille.roux@kessia.demo", "Camille", "Roux"),
+]
+
+# Two listing ideas per specialty: (title, deliverable_type).
+SPECIALTY_LISTINGS = {
+    Specialty.CARDIOLOGY: [
+        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.REVIEW_ARTICLE),
+        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.CASE_REPORT),
+    ],
+    Specialty.ONCOLOGY: [
+        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.RESEARCH_PAPER),
+        ("Résumé pour congrès international d'oncologie", DeliverableType.ABSTRACT),
+    ],
+    Specialty.NEUROLOGY: [
+        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.REVIEW_ARTICLE),
+        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.RESEARCH_PAPER),
+    ],
+    Specialty.PEDIATRICS: [
+        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.CASE_REPORT),
+        ("Résumé pour journées de pédiatrie", DeliverableType.ABSTRACT),
+    ],
+    Specialty.DERMATOLOGY: [
+        ("Série de cas en dermatologie inflammatoire", DeliverableType.CASE_REPORT),
+        ("Revue sur les biothérapies du psoriasis", DeliverableType.REVIEW_ARTICLE),
+    ],
+    Specialty.RADIOLOGY: [
+        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.ABSTRACT),
+        ("Article original — IA et imagerie diagnostique", DeliverableType.RESEARCH_PAPER),
+    ],
+    Specialty.PSYCHIATRY: [
+        ("Revue sur les troubles anxieux et la TCC", DeliverableType.REVIEW_ARTICLE),
+        ("Étude de cas en psychiatrie de liaison", DeliverableType.CASE_REPORT),
+    ],
+    Specialty.SURGERY: [
+        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.RESEARCH_PAPER),
+        ("Étude de cas chirurgical rare", DeliverableType.CASE_REPORT),
+    ],
+    Specialty.ENDOCRINOLOGY: [
+        ("Méta-analyse sur le diabète de type 2", DeliverableType.RESEARCH_PAPER),
+        ("Revue sur les analogues du GLP-1", DeliverableType.REVIEW_ARTICLE),
+    ],
+    Specialty.GASTROENTEROLOGY: [
+        ("Revue sur les MICI et les biothérapies", DeliverableType.REVIEW_ARTICLE),
+        ("Étude de cas en hépatologie", DeliverableType.CASE_REPORT),
+    ],
+}
+
+# (price, turnaround_days) per deliverable type.
+PRICING = {
+    DeliverableType.RESEARCH_PAPER: (Decimal("900.00"), 21),
+    DeliverableType.REVIEW_ARTICLE: (Decimal("750.00"), 14),
+    DeliverableType.CASE_REPORT: (Decimal("350.00"), 7),
+    DeliverableType.ABSTRACT: (Decimal("200.00"), 5),
+    DeliverableType.OTHER: (Decimal("400.00"), 10),
+}
+
+REVIEW_COMMENTS = [
+    "Travail rigoureux, livré dans les temps. Je recommande vivement.",
+    "Excellente plume scientifique, structure et sources impeccables.",
+    "Très bonne collaboration, révisions prises en compte rapidement.",
+    "Article clair et bien argumenté, parfait pour notre soumission.",
+    "Professionnel et réactif. Je referai appel à ses services.",
+]
+REVIEW_RATINGS = [5, 5, 4, 5, 4, 5, 4, 5, 5, 4]
+
+# (doctor_index, title, specialty, budget, deadline_in_days)
+REQUESTS = [
+    (1, "Recherche d'un rédacteur pour un article de neurologie", Specialty.NEUROLOGY, Decimal("1200.00"), 30),
+    (2, "Aide pour une série de cas en dermatologie", Specialty.DERMATOLOGY, Decimal("600.00"), 21),
+    (0, "Relecture d'un résumé pour un congrès de radiologie", Specialty.RADIOLOGY, Decimal("250.00"), 14),
+    (3, "Méta-analyse sur le diabète de type 2", Specialty.ENDOCRINOLOGY, Decimal("1500.00"), 45),
+    (4, "Article original en oncologie thoracique", Specialty.ONCOLOGY, Decimal("1100.00"), 28),
+    (5, "Étude de cas en gastro-entérologie", Specialty.GASTROENTEROLOGY, Decimal("500.00"), 18),
+]
+
+ORDER_STATUSES = [
+    Order.Status.COMPLETED, Order.Status.COMPLETED, Order.Status.DELIVERED,
+    Order.Status.IN_PROGRESS, Order.Status.ACCEPTED, Order.Status.PENDING,
+    Order.Status.COMPLETED, Order.Status.COMPLETED, Order.Status.IN_PROGRESS,
+    Order.Status.COMPLETED, Order.Status.DELIVERED, Order.Status.ACCEPTED,
+    Order.Status.COMPLETED, Order.Status.PENDING, Order.Status.COMPLETED,
+]
+
+
+def _fee(amount: Decimal) -> Decimal:
+    return (amount * Decimal("0.15")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class Command(BaseCommand):
-    help = "Seed the database with demo data for local development. Safe to re-run."
+    help = "Seed a rich, lifelike demo dataset. Safe to re-run (idempotent)."
 
     @transaction.atomic
     def handle(self, *args, **options):
-        created = 0
-        existing = 0
+        self.created = 0
+        self.existing = 0
 
-        def track(_pair):
-            nonlocal created, existing
-            obj, was_created = _pair
-            if was_created:
-                created += 1
-            else:
-                existing += 1
-            return obj
+        writers = [self._ensure_writer(*w) for w in WRITERS]
+        doctors = [self._ensure_doctor(*d) for d in DOCTORS]
 
-        # --- Users ------------------------------------------------------------
-        writer = track(
-            self._ensure_user(
-                email=WRITER_EMAIL,
-                first_name="Alice",
-                last_name="Martin",
-                is_writer=True,
-                bio=(
-                    "Rédactrice médicale freelance avec 8 ans d'expérience "
-                    "auprès de laboratoires et de groupes hospitaliers. "
-                    "Spécialités principales : cardiologie, oncologie, pédiatrie."
-                ),
-            )
-        )
-        doctor = track(
-            self._ensure_user(
-                email=DOCTOR_EMAIL,
-                first_name="Bob",
-                last_name="Dupont",
-                is_writer=False,
-                bio="",
-            )
-        )
+        listings = self._seed_listings(writers)
+        self._seed_orders_and_reviews(listings, doctors)
+        self._seed_requests_and_proposals(doctors, writers)
+        self._seed_conversations(doctors, writers)
 
-        # --- Listings (owned by the writer) ----------------------------------
-        listings_spec = [
-            {
-                "title": "Revue systématique sur les outcomes cardiovasculaires",
-                "specialty": Specialty.CARDIOLOGY,
-                "deliverable_type": DeliverableType.REVIEW_ARTICLE,
-                "price": Decimal("850.00"),
-                "turnaround_days": 14,
-                "description": (
-                    "Revue systématique structurée selon PRISMA, ciblant les "
-                    "essais cliniques de phase III publiés sur les cinq "
-                    "dernières années. Livraison avec extraction de données, "
-                    "méta-analyse exploratoire et discussion critique."
-                ),
-            },
-            {
-                "title": "Étude de cas — présentation pédiatrique rare",
-                "specialty": Specialty.PEDIATRICS,
-                "deliverable_type": DeliverableType.CASE_REPORT,
-                "price": Decimal("350.00"),
-                "turnaround_days": 7,
-                "description": (
-                    "Rédaction complète d'une étude de cas pédiatrique "
-                    "respectant les lignes directrices CARE. Anonymisation, "
-                    "discussion comparative et mise au format de la revue "
-                    "cible inclus."
-                ),
-            },
-            {
-                "title": "Résumé pour symposium international d'oncologie",
-                "specialty": Specialty.ONCOLOGY,
-                "deliverable_type": DeliverableType.ABSTRACT,
-                "price": Decimal("200.00"),
-                "turnaround_days": 5,
-                "description": (
-                    "Résumé structuré (250 à 300 mots) pour soumission à un "
-                    "congrès international d'oncologie. Mise en avant des "
-                    "résultats clés et alignement strict sur les consignes "
-                    "de l'organisateur."
-                ),
-            },
-        ]
-        cardio_listing = None
-        for spec in listings_spec:
-            listing = track(self._ensure_listing(writer=writer, **spec))
-            if listing.specialty == Specialty.CARDIOLOGY:
-                cardio_listing = listing
+        self._recap()
 
-        # --- Requests (posted by the doctor) ---------------------------------
-        today = date.today()
-        requests_spec = [
-            {
-                "title": "Recherche d'un rédacteur pour un article de neurologie",
-                "specialty": Specialty.NEUROLOGY,
-                "budget": Decimal("1200.00"),
-                "deadline": today + timedelta(days=30),
-                "description": (
-                    "Étude observationnelle sur l'évolution de patients "
-                    "post-AVC. Recherche d'un rédacteur pour structurer "
-                    "l'article complet et retravailler la section discussion."
-                ),
-            },
-            {
-                "title": "Aide pour rédiger une série de cas en dermatologie",
-                "specialty": Specialty.DERMATOLOGY,
-                "budget": Decimal("600.00"),
-                "deadline": today + timedelta(days=21),
-                "description": (
-                    "Série de quatre cas cliniques de dermatologie "
-                    "inflammatoire. Données et photos disponibles, à mettre "
-                    "en forme selon les guidelines CARE."
-                ),
-            },
-            {
-                "title": "Relecture d'un résumé pour un congrès de radiologie",
-                "specialty": Specialty.RADIOLOGY,
-                "budget": Decimal("250.00"),
-                "deadline": today + timedelta(days=14),
-                "description": (
-                    "Relecture et reformulation d'un résumé radiologique "
-                    "de 300 mots pour un congrès européen. Objectif : "
-                    "clarté et impact."
-                ),
-            },
-        ]
-        neuro_request = None
-        for spec in requests_spec:
-            req = track(self._ensure_request(doctor=doctor, **spec))
-            if req.specialty == Specialty.NEUROLOGY:
-                neuro_request = req
-
-        # --- One existing order: doctor -> cardiology listing ----------------
-        if cardio_listing is not None:
-            track(
-                Order.objects.get_or_create(
-                    listing=cardio_listing,
-                    doctor=doctor,
-                    defaults={
-                        "status": Order.Status.ACCEPTED,
-                        "message": (
-                            "Bonjour Alice, j'aurais besoin d'une revue sur "
-                            "les outcomes cardiovasculaires d'un nouvel "
-                            "anticoagulant. Merci !"
-                        ),
-                    },
-                )
-            )
-
-        # --- One existing proposal: writer -> neurology request --------------
-        if neuro_request is not None:
-            track(
-                Proposal.objects.get_or_create(
-                    request=neuro_request,
-                    writer=writer,
-                    defaults={
-                        "price": Decimal("1100.00"),
-                        "status": Proposal.Status.PENDING,
-                        "message": (
-                            "Bonjour, je peux livrer l'article structuré "
-                            "sous trois semaines, avec une première version "
-                            "au bout de dix jours."
-                        ),
-                    },
-                )
-            )
-
-        self._print_recap(created, existing)
-
-    # ------------------------------------------------------------------ helpers
-    def _ensure_user(self, *, email, first_name, last_name, is_writer, bio):
-        user, was_created = User.objects.get_or_create(
+    # -- users --------------------------------------------------------------
+    def _ensure_writer(self, email, first, last, specialty, verified, bio):
+        user, created = User.objects.get_or_create(
             email=email,
             defaults={
-                "first_name": first_name,
-                "last_name": last_name,
-                "is_writer": is_writer,
-                "bio": bio,
+                "first_name": first, "last_name": last, "is_writer": True,
+                "is_verified": verified, "bio": bio,
             },
         )
-        if was_created:
+        self._track(created)
+        if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
-        return user, was_created
+        user._specialty = specialty  # carried in-memory for listing seeding
+        return user
 
-    def _ensure_listing(
-        self,
-        *,
-        writer,
-        title,
-        specialty,
-        deliverable_type,
-        price,
-        turnaround_days,
-        description,
-    ):
-        return Listing.objects.get_or_create(
-            writer=writer,
-            title=title,
-            defaults={
-                "description": description,
-                "specialty": specialty,
-                "deliverable_type": deliverable_type,
-                "price": price,
-                "turnaround_days": turnaround_days,
-                "is_published": True,
-            },
+    def _ensure_doctor(self, email, first, last):
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={"first_name": first, "last_name": last, "is_writer": False},
         )
+        self._track(created)
+        if created:
+            user.set_password(DEMO_PASSWORD)
+            user.save(update_fields=["password"])
+        return user
 
-    def _ensure_request(
-        self,
-        *,
-        doctor,
-        title,
-        specialty,
-        budget,
-        deadline,
-        description,
-    ):
-        return Request.objects.get_or_create(
-            doctor=doctor,
-            title=title,
-            defaults={
-                "description": description,
-                "specialty": specialty,
-                "budget": budget,
-                "deadline": deadline,
-                "status": Request.Status.OPEN,
-            },
-        )
+    # -- listings -----------------------------------------------------------
+    def _seed_listings(self, writers):
+        listings = []
+        for writer in writers:
+            for title, deliverable in SPECIALTY_LISTINGS[writer._specialty]:
+                price, turnaround = PRICING[deliverable]
+                listing, created = Listing.objects.get_or_create(
+                    writer=writer,
+                    title=title,
+                    defaults={
+                        "description": (
+                            "Rédaction structurée respectant les standards de la "
+                            "discipline (PRISMA / CARE / ICMJE selon le format). "
+                            "Livraison avec relecture et mise au format de la revue cible."
+                        ),
+                        "specialty": writer._specialty,
+                        "deliverable_type": deliverable,
+                        "price": price,
+                        "turnaround_days": turnaround,
+                        "is_published": True,
+                    },
+                )
+                self._track(created)
+                listings.append(listing)
+        return listings
 
-    def _print_recap(self, created, existing):
+    # -- orders + reviews ---------------------------------------------------
+    def _seed_orders_and_reviews(self, listings, doctors):
+        review_i = 0
+        for i, listing in enumerate(listings[: len(ORDER_STATUSES)]):
+            doctor = doctors[i % len(doctors)]
+            status = ORDER_STATUSES[i]
+            if status == Order.Status.COMPLETED:
+                payment = Order.PaymentStatus.RELEASED
+            elif status in (Order.Status.IN_PROGRESS, Order.Status.DELIVERED):
+                payment = Order.PaymentStatus.HELD
+            else:
+                payment = Order.PaymentStatus.UNPAID
+
+            defaults = {
+                "writer": listing.writer,
+                "amount": listing.price,
+                "status": status,
+                "payment_status": payment,
+                "message": "Bonjour, j'aurais besoin de ce travail pour une soumission. Merci !",
+            }
+            if status == Order.Status.COMPLETED:
+                defaults["application_fee_amount"] = _fee(listing.price)
+
+            order, created = Order.objects.get_or_create(
+                listing=listing, doctor=doctor, defaults=defaults
+            )
+            self._track(created)
+
+            if status == Order.Status.COMPLETED:
+                _, r_created = Review.objects.get_or_create(
+                    order=order,
+                    defaults={
+                        "doctor": doctor,
+                        "writer": order.writer,
+                        "rating": REVIEW_RATINGS[review_i % len(REVIEW_RATINGS)],
+                        "comment": REVIEW_COMMENTS[review_i % len(REVIEW_COMMENTS)],
+                    },
+                )
+                self._track(r_created)
+                review_i += 1
+
+    # -- requests + proposals ----------------------------------------------
+    def _seed_requests_and_proposals(self, doctors, writers):
+        today = date.today()
+        for doctor_idx, title, specialty, budget, deadline_days in REQUESTS:
+            doctor = doctors[doctor_idx]
+            req, created = Request.objects.get_or_create(
+                doctor=doctor,
+                title=title,
+                defaults={
+                    "description": (
+                        "Nous recherchons un rédacteur scientifique pour ce projet. "
+                        "Données disponibles, accompagnement éditorial souhaité."
+                    ),
+                    "specialty": specialty,
+                    "budget": budget,
+                    "deadline": today + timedelta(days=deadline_days),
+                    "status": Request.Status.OPEN,
+                },
+            )
+            self._track(created)
+            # Two writers propose on each request.
+            for offset in (1, 2):
+                writer = writers[(doctor_idx + offset) % len(writers)]
+                _, p_created = Proposal.objects.get_or_create(
+                    request=req,
+                    writer=writer,
+                    defaults={
+                        "price": (budget * Decimal("0.9")).quantize(Decimal("0.01")),
+                        "status": Proposal.Status.PENDING,
+                        "message": (
+                            "Bonjour, ce sujet correspond à mon domaine. Je peux livrer "
+                            "une première version sous dix jours."
+                        ),
+                    },
+                )
+                self._track(p_created)
+
+    # -- conversations ------------------------------------------------------
+    def _seed_conversations(self, doctors, writers):
+        pairs = [
+            (doctors[0], writers[0], "Bonjour, seriez-vous disponible pour une revue ce mois-ci ?"),
+            (doctors[1], writers[1], "Bonjour, quel délai pour un article original en oncologie ?"),
+            (doctors[2], writers[4], "Bonjour, j'ai une série de cas à mettre en forme."),
+        ]
+        for doctor, writer, body in pairs:
+            low, high = sorted([doctor, writer], key=lambda u: u.id)
+            conv, created = Conversation.objects.get_or_create(
+                user_low=low, user_high=high, order=None
+            )
+            self._track(created)
+            if not conv.messages.exists():
+                Message.objects.create(conversation=conv, sender=doctor, body=body)
+                Message.objects.create(
+                    conversation=conv,
+                    sender=writer,
+                    body="Bonjour, avec plaisir — pouvez-vous m'en dire plus sur le périmètre ?",
+                )
+
+    # -- helpers ------------------------------------------------------------
+    def _track(self, created):
+        if created:
+            self.created += 1
+        else:
+            self.existing += 1
+
+    def _recap(self):
         write = self.stdout.write
         write(self.style.SUCCESS("\nDemo data ready."))
         write("")
-        write("Comptes de démonstration :")
-        write(f"  Rédactrice : {WRITER_EMAIL}  /  mot de passe : {DEMO_PASSWORD}")
-        write(f"  Médecin    : {DOCTOR_EMAIL}  /  mot de passe : {DEMO_PASSWORD}")
+        write("Comptes de démonstration (mot de passe : demo1234) :")
+        write(f"  Rédactrice principale : {WRITERS[0][0]}")
+        write(f"  Médecin principal     : {DOCTORS[0][0]}")
+        write(f"  + {len(WRITERS) - 1} autres rédacteurs et {len(DOCTORS) - 1} autres médecins")
         write("")
-        write(f"  Créés cette fois        : {created}")
-        write(f"  Existaient déjà         : {existing}")
-        write(f"  Total objets attendus   : {created + existing}  (2 users + 3 listings + 3 requests + 1 order + 1 proposal = 10)")
+        write(f"  Objets créés cette fois : {self.created}")
+        write(f"  Déjà présents           : {self.existing}")
+        write(
+            f"  Totaux : {User.objects.count()} users · {Listing.objects.count()} annonces · "
+            f"{Order.objects.count()} commandes · {Review.objects.count()} avis · "
+            f"{Request.objects.count()} demandes · {Proposal.objects.count()} propositions"
+        )

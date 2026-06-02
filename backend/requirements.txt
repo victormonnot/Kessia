@@ -6,3 +6,10 @@ django-filter==24.3
 drf-spectacular==0.28.0
 psycopg[binary]==3.2.3
 python-decouple==3.8
+stripe==15.2.0
+channels==4.3.2
+channels-redis==4.3.0
+daphne==4.2.1
+django-storages[boto3]==1.14.4
+whitenoise==6.8.2
+dj-database-url==2.3.0

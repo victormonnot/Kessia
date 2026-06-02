@@ -1,116 +1,162 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ClipboardList, Inbox, Plus } from "lucide-react";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import StatusBadge from "@/components/ui/StatusBadge";
-import OrderRow from "@/components/orders/OrderRow";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Tabs from "@/components/layout/Tabs";
-import { useOrders } from "@/hooks/useOrders";
-import { useRequests } from "@/hooks/useRequests";
+import EmptyState from "@/components/feedback/EmptyState";
+import ErrorState from "@/components/feedback/ErrorState";
+import { LoadingBlock } from "@/components/feedback/Spinner";
+import OrdersList from "@/components/orders/OrdersList";
+import RequestCard from "@/components/requests/RequestCard";
+import ProposalRow from "@/components/requests/ProposalRow";
+import { useAllProposals, useDecideProposal, useRequests } from "@/hooks/useRequests";
 import { useActivateWriter } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
+import { errorMessage, fullName } from "@/lib/format";
 
 function MyOrdersTab() {
-  const { data, isLoading } = useOrders();
-  const user = useAuthStore((s) => s.user);
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  const orders = data?.results?.filter((o) => o.doctor?.id === user?.id) || [];
-  if (orders.length === 0) {
-    return (
-      <Card>
-        <p className="text-neutral-500">
-          Parcourez les{" "}
-          <Link to="/listings" className="text-primary-700">
-            annonces
-          </Link>{" "}
-          pour passer votre première commande.
-        </p>
-      </Card>
-    );
-  }
   return (
-    <Card>
-      <table className="w-full">
-        <thead>
-          <tr className="text-left text-xs uppercase text-neutral-500">
-            <th className="px-3 py-2">Annonce</th>
-            <th className="px-3 py-2">Rédacteur</th>
-            <th className="px-3 py-2">Statut</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => (
-            <OrderRow key={o.id} order={o} role="doctor" />
-          ))}
-        </tbody>
-      </table>
-    </Card>
+    <OrdersList
+      role="doctor"
+      emptyTitle="Aucune commande"
+      emptyDescription="Parcourez les annonces pour passer votre première commande."
+      emptyAction={
+        <Button asChild>
+          <Link to="/listings">Voir les annonces</Link>
+        </Button>
+      }
+    />
   );
 }
 
 function MyRequestsTab() {
-  const user = useAuthStore((s) => s.user);
-  const { data, isLoading } = useRequests({ page_size: 100 });
-  if (isLoading) return <p className="text-neutral-500">Chargement…</p>;
-  const mine = data?.results?.filter((r) => r.doctor?.id === user?.id) || [];
+  const { data, isLoading, isError, refetch } = useRequests({ mine: true });
+  if (isLoading) return <LoadingBlock />;
+  if (isError) return <ErrorState onRetry={refetch} />;
+  const mine = data?.results || [];
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex justify-end">
-        <Link to="/requests/new">
-          <Button>+ Nouvelle demande</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/requests/new">
+            <Plus className="size-4" /> Nouvelle demande
+          </Link>
+        </Button>
       </div>
-      {mine.length === 0 && (
-        <Card>
-          <p className="text-neutral-500">Vous n'avez pas encore publié de demandes.</p>
-        </Card>
+      {mine.length === 0 ? (
+        <EmptyState
+          icon={ClipboardList}
+          title="Aucune demande"
+          description="Publiez une demande pour recevoir des propositions de rédacteurs."
+          action={
+            <Button asChild>
+              <Link to="/requests/new">Publier une demande</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {mine.map((r) => (
+            <RequestCard key={r.id} request={r} />
+          ))}
+        </div>
       )}
-      {mine.map((r) => (
-        <Card key={r.id} className="flex items-center justify-between">
-          <div>
-            <Link to={`/requests/${r.id}`} className="font-medium text-neutral-900">
-              {r.title}
-            </Link>
-            <p className="text-sm text-neutral-500">
-              {r.specialty} · échéance {r.deadline} · {r.proposals_count ?? 0} propositions
-            </p>
-          </div>
-          <StatusBadge status={r.status} />
+    </div>
+  );
+}
+
+function ProposalsReceivedTab() {
+  const user = useAuthStore((s) => s.user);
+  const { data, isLoading, isError, refetch } = useAllProposals();
+  const decide = useDecideProposal();
+
+  if (isLoading) return <LoadingBlock />;
+  if (isError) return <ErrorState onRetry={refetch} />;
+
+  // Proposals on the doctor's own requests (i.e. not authored by the doctor).
+  const received = (data?.results || []).filter((p) => p.writer?.id !== user?.id);
+  if (received.length === 0) {
+    return (
+      <EmptyState
+        icon={Inbox}
+        title="Aucune proposition reçue"
+        description="Les propositions envoyées à vos demandes apparaîtront ici."
+      />
+    );
+  }
+
+  // Group by request so the doctor sees offers per request.
+  const groups = received.reduce((acc, p) => {
+    (acc[p.request] ||= { title: p.request_title, items: [] }).items.push(p);
+    return acc;
+  }, {});
+
+  const onDecide = async (id, status) => {
+    try {
+      await decide.mutateAsync({ id, status });
+      toast.success(
+        status === "accepted" ? "Proposition acceptée — commande créée." : "Proposition rejetée.",
+      );
+    } catch (e) {
+      toast.error(errorMessage(e, "L'action a échoué."));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(groups).map(([requestId, group]) => (
+        <Card key={requestId}>
+          <CardHeader>
+            <CardTitle className="text-base">
+              <Link to={`/requests/${requestId}`} className="hover:text-primary hover:underline">
+                {group.title}
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="-my-1">
+            {group.items.map((p) => (
+              <ProposalRow
+                key={p.id}
+                proposal={p}
+                canDecide
+                deciding={decide.isPending}
+                onDecide={onDecide}
+              />
+            ))}
+          </CardContent>
         </Card>
       ))}
     </div>
   );
 }
 
-function ProposalsReceivedTab() {
-  return (
-    <Card>
-      <p className="text-neutral-500">
-        Ouvrez l'une de vos demandes pour consulter les propositions reçues.
-      </p>
-    </Card>
-  );
-}
-
 export default function DashboardDoctor() {
   const user = useAuthStore((s) => s.user);
   const activate = useActivateWriter();
+  const navigate = useNavigate();
+
+  const becomeWriter = async () => {
+    try {
+      await activate.mutateAsync();
+      toast.success("Mode rédacteur activé !");
+      navigate("/onboarding");
+    } catch (e) {
+      toast.error(errorMessage(e, "L'activation a échoué."));
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="container py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">Tableau de bord médecin</h1>
-          <p className="text-neutral-600">
-            Bon retour, {user?.first_name || user?.email}.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
+          <p className="text-muted-foreground">Bon retour, {fullName(user)}.</p>
         </div>
         {!user?.is_writer && (
-          <Button
-            variant="outline"
-            onClick={() => activate.mutate()}
-            disabled={activate.isPending}
-          >
+          <Button variant="outline" onClick={becomeWriter} disabled={activate.isPending}>
             {activate.isPending ? "Activation…" : "Devenir rédacteur aussi"}
           </Button>
         )}

@@ -1,66 +1,134 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import Input from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import Spinner from "@/components/feedback/Spinner";
+import AuthLayout from "@/components/layout/AuthLayout";
+import { loginSchema } from "@/lib/schemas/auth";
+import { errorMessage } from "@/lib/format";
 import { useLogin } from "@/hooks/useAuth";
+
+const DEMO_ACCOUNTS = [
+  { label: "Médecin", email: "doctor@kessia.demo" },
+  { label: "Rédacteur", email: "writer@kessia.demo" },
+];
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const login = useLogin();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState(null);
+  const form = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const onSubmit = async (values) => {
     try {
-      await login.mutateAsync(form);
+      await login.mutateAsync(values);
       const dest = location.state?.from?.pathname || "/listings";
       navigate(dest, { replace: true });
     } catch (err) {
-      const detail = err.response?.data?.detail || "Identifiants invalides";
-      setError(detail);
+      toast.error(errorMessage(err, "Identifiants invalides."));
     }
   };
 
+  const fillDemo = (email) => {
+    form.setValue("email", email, { shouldValidate: true });
+    form.setValue("password", "demo1234", { shouldValidate: true });
+  };
+
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <Card>
-        <h1 className="text-2xl font-semibold text-neutral-900">Se connecter</h1>
-        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
-          <Input
-            label="E-mail"
-            name="email"
-            type="email"
-            required
-            value={form.email}
-            onChange={onChange}
-          />
-          <Input
-            label="Mot de passe"
-            name="password"
-            type="password"
-            required
-            value={form.password}
-            onChange={onChange}
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" disabled={login.isPending}>
-            {login.isPending ? "Connexion en cours…" : "Se connecter"}
-          </Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-neutral-600">
+    <AuthLayout
+      title="Se connecter"
+      subtitle="Accédez à votre espace Kessia."
+      footer={
+        <>
           Pas encore de compte ?{" "}
-          <Link to="/register" className="text-primary-700 hover:underline">
+          <Link to="/register" className="font-medium text-primary hover:underline">
             S'inscrire
           </Link>
+        </>
+      }
+    >
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>E-mail</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="vous@exemple.fr"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mot de passe</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={login.isPending}>
+            {login.isPending ? (
+              <>
+                <Spinner /> Connexion en cours…
+              </>
+            ) : (
+              "Se connecter"
+            )}
+          </Button>
+        </form>
+      </Form>
+
+      <div className="mt-6 rounded-lg border bg-muted/40 p-4">
+        <p className="text-xs font-medium text-muted-foreground">
+          Comptes de démonstration (mot de passe : demo1234)
         </p>
-      </Card>
-    </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {DEMO_ACCOUNTS.map((a) => (
+            <Button
+              key={a.email}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fillDemo(a.email)}
+            >
+              {a.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </AuthLayout>
   );
 }

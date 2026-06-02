@@ -7,14 +7,32 @@ from .models import User
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     ordering = ("-date_joined",)
-    list_display = ("email", "first_name", "last_name", "is_writer", "is_staff", "is_active")
-    list_filter = ("is_writer", "is_staff", "is_active")
-    search_fields = ("email", "first_name", "last_name")
+    list_display = (
+        "email",
+        "first_name",
+        "last_name",
+        "is_writer",
+        "is_verified",
+        "is_staff",
+        "is_active",
+    )
+    list_filter = ("is_writer", "is_verified", "is_staff", "is_active")
+    search_fields = ("email", "first_name", "last_name", "stripe_account_id")
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name", "bio")}),
-        ("Roles", {"fields": ("is_writer",)}),
+        ("Roles", {"fields": ("is_writer", "is_verified")}),
+        (
+            "Stripe Connect",
+            {
+                "fields": (
+                    "stripe_account_id",
+                    "stripe_charges_enabled",
+                    "stripe_payouts_enabled",
+                )
+            },
+        ),
         (
             "Permissions",
             {
