@@ -1,5 +1,6 @@
 import pytest
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -102,6 +103,72 @@ def test_email_only_on_first_unread(user, writer_user):
         format="json",
     )
     assert len(mail.outbox) == 1  # still unread -> no second email
+
+
+def _pdf(name="brief.pdf"):
+    return SimpleUploadedFile(name, b"%PDF-1.4 fake content", content_type="application/pdf")
+
+
+def test_send_message_with_attachment(user, writer_user):
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    response = _client(user).post(
+        reverse("conversation-messages", args=[conv.id]),
+        {"attachment": _pdf()},  # file-only message, no body
+        format="multipart",
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["attachment_name"] == "brief.pdf"
+    assert data["attachment_size"] > 0
+    assert Message.objects.get(pk=data["id"]).attachment
+
+
+def test_message_requires_body_or_attachment(user, writer_user):
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    response = _client(user).post(
+        reverse("conversation-messages", args=[conv.id]), {}, format="multipart"
+    )
+    assert response.status_code == 400
+
+
+def test_rejects_disallowed_attachment_type(user, writer_user):
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    bad = SimpleUploadedFile("evil.exe", b"MZ", content_type="application/octet-stream")
+    response = _client(user).post(
+        reverse("conversation-messages", args=[conv.id]),
+        {"attachment": bad},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert Message.objects.filter(conversation=conv).count() == 0
+
+
+def test_participant_can_download_attachment(user, writer_user):
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    _client(user).post(
+        reverse("conversation-messages", args=[conv.id]),
+        {"attachment": _pdf()},
+        format="multipart",
+    )
+    msg = Message.objects.get(conversation=conv)
+    response = _client(writer_user).get(
+        reverse("conversation-download-attachment", args=[conv.id, msg.id])
+    )
+    assert response.status_code == 200
+
+
+def test_non_participant_cannot_download_attachment(user, writer_user, other_writer_user):
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    _client(user).post(
+        reverse("conversation-messages", args=[conv.id]),
+        {"attachment": _pdf()},
+        format="multipart",
+    )
+    msg = Message.objects.get(conversation=conv)
+    response = _client(other_writer_user).get(
+        reverse("conversation-download-attachment", args=[conv.id, msg.id])
+    )
+    assert response.status_code == 404
 
 
 def test_post_message_broadcasts_to_conversation_group(user, writer_user):

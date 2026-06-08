@@ -1,5 +1,8 @@
+import os
+
 from django.contrib.auth import get_user_model
 from django.db.models import F, Max, Q
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
@@ -13,6 +16,23 @@ from .serializers import ConversationSerializer, MessageSerializer
 from .services import get_or_create_conversation, post_message
 
 User = get_user_model()
+
+# Chat attachment limits (kept conservative; tighten/loosen as needed).
+MAX_ATTACHMENT_MB = 10
+ALLOWED_ATTACHMENT_EXTS = {
+    ".pdf", ".doc", ".docx", ".txt", ".csv", ".xls", ".xlsx",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".zip",
+}
+
+
+def _attachment_error(upload) -> str | None:
+    """Return a French error string if the upload is too big or a bad type."""
+    ext = os.path.splitext(upload.name)[1].lower()
+    if ext not in ALLOWED_ATTACHMENT_EXTS:
+        return "Type de fichier non autorisé."
+    if upload.size > MAX_ATTACHMENT_MB * 1024 * 1024:
+        return f"Le fichier dépasse la taille maximale de {MAX_ATTACHMENT_MB} Mo."
+    return None
 
 
 class ConversationViewSet(
@@ -80,10 +100,35 @@ class ConversationViewSet(
             return Response(MessageSerializer(msgs, many=True).data)
 
         body = (request.data.get("body") or "").strip()
-        if not body:
+        attachment = request.FILES.get("attachment")
+        if not body and not attachment:
             return Response(
                 {"detail": "Le message ne peut pas être vide."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        message = post_message(conversation, request.user, body)
+        if attachment:
+            error = _attachment_error(attachment)
+            if error:
+                return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        message = post_message(conversation, request.user, body, attachment=attachment)
         return Response(MessageSerializer(message).data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=("get",),
+        url_path=r"messages/(?P<message_id>[^/.]+)/download",
+    )
+    def download_attachment(self, request, pk=None, message_id=None):
+        # get_object() restricts to the user's own conversations, so a
+        # non-participant gets a 404 here.
+        conversation = self.get_object()
+        message = get_object_or_404(conversation.messages, pk=message_id)
+        if not message.attachment:
+            return Response(
+                {"detail": "Aucune pièce jointe."}, status=status.HTTP_404_NOT_FOUND
+            )
+        return FileResponse(
+            message.attachment.open("rb"),
+            as_attachment=True,
+            filename=os.path.basename(message.attachment.name),
+        )

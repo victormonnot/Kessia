@@ -40,7 +40,7 @@ export function useStartConversation() {
 export function useSendMessage(conversationId) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body) => messagingApi.sendMessage(conversationId, body),
+    mutationFn: (payload) => messagingApi.sendMessage(conversationId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["messages", conversationId] });
       qc.invalidateQueries({ queryKey: ["conversations"] });

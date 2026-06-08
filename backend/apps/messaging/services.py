@@ -43,7 +43,7 @@ def get_or_create_conversation(user_a, user_b, order=None) -> Conversation:
     return conversation
 
 
-def post_message(conversation: Conversation, sender, body: str) -> Message:
+def post_message(conversation: Conversation, sender, body: str, attachment=None) -> Message:
     """Create a message and email the recipient on the first unread (no spam)."""
     recipient = conversation.other(sender)
     already_pending = (
@@ -51,7 +51,9 @@ def post_message(conversation: Conversation, sender, body: str) -> Message:
         .exclude(sender=recipient)
         .exists()
     )
-    message = Message.objects.create(conversation=conversation, sender=sender, body=body)
+    message = Message.objects.create(
+        conversation=conversation, sender=sender, body=body, attachment=attachment
+    )
     broadcast_message(conversation, message)
     if not already_pending:
         send_notification(
