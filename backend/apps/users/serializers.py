@@ -5,6 +5,7 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 from .models import User
+from .tokens import email_verification_token
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "email",
+            "is_email_verified",
             "first_name",
             "last_name",
             "bio",
@@ -20,7 +22,14 @@ class UserSerializer(serializers.ModelSerializer):
             "is_verified",
             "date_joined",
         )
-        read_only_fields = ("id", "email", "is_writer", "is_verified", "date_joined")
+        read_only_fields = (
+            "id",
+            "email",
+            "is_email_verified",
+            "is_writer",
+            "is_verified",
+            "date_joined",
+        )
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -92,6 +101,33 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["password"])
         user.save(update_fields=["password"])
+        return user
+
+
+class EmailVerifySerializer(serializers.Serializer):
+    """Validates the emailed uid/token from the signup confirmation link."""
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+
+    def validate(self, attrs):
+        try:
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = User.objects.get(pk=user_id, is_active=True)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError({"uid": "Lien de confirmation invalide."}) from None
+        if not email_verification_token.check_token(user, attrs["token"]):
+            raise serializers.ValidationError(
+                {"token": "Lien de confirmation invalide ou expiré."}
+            )
+        attrs["user"] = user
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+        if not user.is_email_verified:
+            user.is_email_verified = True
+            user.save(update_fields=["is_email_verified"])
         return user
 
 

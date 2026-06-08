@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.users.cookies import CSRF_COOKIE, REFRESH_COOKIE
 from apps.users.models import User
+from apps.users.tokens import email_verification_token
 
 pytestmark = pytest.mark.django_db
 
@@ -178,3 +179,78 @@ def test_password_reset_confirm_rejects_weak_password(api_client, user):
         format="json",
     )
     assert response.status_code == 400
+
+
+# --- Email verification ----------------------------------------------------
+
+
+def test_register_creates_unverified_user_and_sends_verification_email(api_client, db):
+    response = api_client.post(
+        reverse("auth-register"),
+        {
+            "email": "fresh@example.com",
+            "password": "SuperSecret123!",
+            "first_name": "Fresh",
+            "last_name": "User",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.json()["user"]["is_email_verified"] is False
+    user = User.objects.get(email="fresh@example.com")
+    assert user.is_email_verified is False
+    assert len(mail.outbox) == 1
+    assert "fresh@example.com" in mail.outbox[0].to
+
+
+def test_email_verify_marks_address_confirmed(api_client, user):
+    assert user.is_email_verified is False
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = email_verification_token.make_token(user)
+    response = api_client.post(
+        reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json"
+    )
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.is_email_verified is True
+
+
+def test_email_verify_rejects_bad_token(api_client, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    response = api_client.post(
+        reverse("auth-email-verify"), {"uid": uid, "token": "bogus"}, format="json"
+    )
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.is_email_verified is False
+
+
+def test_email_verify_token_is_single_use(api_client, user):
+    # Once the address is confirmed, the same token must stop validating.
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = email_verification_token.make_token(user)
+    api_client.post(reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json")
+    replay = api_client.post(
+        reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json"
+    )
+    assert replay.status_code == 400
+
+
+def test_email_verify_resend_sends_email(auth_client, user):
+    response = auth_client.post(reverse("auth-email-verify-resend"))
+    assert response.status_code == 200
+    assert len(mail.outbox) == 1
+    assert user.email in mail.outbox[0].to
+
+
+def test_email_verify_resend_noop_when_already_verified(auth_client, user):
+    user.is_email_verified = True
+    user.save(update_fields=["is_email_verified"])
+    response = auth_client.post(reverse("auth-email-verify-resend"))
+    assert response.status_code == 200
+    assert len(mail.outbox) == 0
+
+
+def test_email_verify_resend_requires_auth(api_client):
+    response = api_client.post(reverse("auth-email-verify-resend"))
+    assert response.status_code == 401

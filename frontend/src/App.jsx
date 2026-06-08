@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Router from "@/router";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import EmailVerificationBanner from "@/components/layout/EmailVerificationBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 import { Toaster } from "@/components/ui/sonner";
@@ -49,6 +50,7 @@ export default function App() {
         Aller au contenu
       </a>
       <Navbar />
+      <EmailVerificationBanner />
       <main id="main-content" className="flex-1">
         <ErrorBoundary>
           <Router />

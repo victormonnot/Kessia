@@ -13,6 +13,7 @@ const Register = lazy(() => import("@/pages/Register"));
 const Login = lazy(() => import("@/pages/Login"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const Listings = lazy(() => import("@/pages/Listings"));
 const ListingDetail = lazy(() => import("@/pages/ListingDetail"));
 const ListingFormPage = lazy(() => import("@/pages/ListingFormPage"));
@@ -58,6 +59,8 @@ export default function Router() {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Reachable while logged in (you're signed in right after registering). */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         <Route path="/listings" element={<Listings />} />
         <Route path="/listings/:id" element={<ListingDetail />} />

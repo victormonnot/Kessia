@@ -171,7 +171,7 @@ class Command(BaseCommand):
             email=email,
             defaults={
                 "first_name": first, "last_name": last, "is_writer": True,
-                "is_verified": verified, "bio": bio,
+                "is_verified": verified, "is_email_verified": True, "bio": bio,
             },
         )
         self._track(created)
@@ -184,7 +184,10 @@ class Command(BaseCommand):
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(
             email=email,
-            defaults={"first_name": first, "last_name": last, "is_writer": False},
+            defaults={
+                "first_name": first, "last_name": last, "is_writer": False,
+                "is_email_verified": True,
+            },
         )
         self._track(created)
         if created:

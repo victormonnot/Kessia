@@ -7,6 +7,9 @@ from .managers import UserManager
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
+    # Whether the user confirmed ownership of `email` via the signup link.
+    # Distinct from `is_verified` below (the admin-gated writer credential badge).
+    is_email_verified = models.BooleanField(default=False)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     bio = models.TextField(blank=True)
