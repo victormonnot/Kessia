@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
+import GuestRoute from "@/components/layout/GuestRoute";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 
 // Route-based code splitting: each page is its own chunk so the initial bundle
@@ -39,8 +40,22 @@ export default function Router() {
     >
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
