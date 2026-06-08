@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Select,
   SelectContent,
@@ -80,6 +81,39 @@ export function SelectField({ control, name, label, options, placeholder, descri
               ))}
             </SelectContent>
           </Select>
+          {description && <FormDescription>{description}</FormDescription>}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+export function ComboboxField({
+  control,
+  name,
+  label,
+  options,
+  placeholder,
+  searchPlaceholder,
+  description,
+}) {
+  // No FormControl/Slot here: Combobox isn't a forwardRef element. FormMessage
+  // still reads the field state from FormField's context, so errors show.
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className="flex flex-col">
+          {label && <FormLabel>{label}</FormLabel>}
+          <Combobox
+            value={field.value}
+            onChange={field.onChange}
+            options={options}
+            placeholder={placeholder}
+            searchPlaceholder={searchPlaceholder}
+          />
           {description && <FormDescription>{description}</FormDescription>}
           <FormMessage />
         </FormItem>

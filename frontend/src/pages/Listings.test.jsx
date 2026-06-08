@@ -19,7 +19,7 @@ vi.mock("@/hooks/useListings", () => ({
           writer_is_verified: true,
           writer_rating: 4.5,
           writer_reviews_count: 3,
-          specialty: "cardiology",
+          specialty: "cardiologie",
           deliverable_type: "research_paper",
           turnaround_days: 7,
         },

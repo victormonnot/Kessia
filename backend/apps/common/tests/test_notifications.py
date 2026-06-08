@@ -14,6 +14,7 @@ def _rich_context():
         "conversation": MagicMock(),
         "user": MagicMock(),
         "reset_url": "https://kessia.test/reset-password?uid=x&token=y",
+        "verify_url": "https://kessia.test/verify-email?uid=x&token=y",
         "recipient_name": "Dr Dupont",
         "sender_name": "Alice Martin",
     }

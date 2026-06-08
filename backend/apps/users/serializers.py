@@ -1,10 +1,12 @@
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 from .models import User
+from .tokens import email_verification_token
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "email",
+            "is_email_verified",
             "first_name",
             "last_name",
             "bio",
@@ -20,7 +23,14 @@ class UserSerializer(serializers.ModelSerializer):
             "is_verified",
             "date_joined",
         )
-        read_only_fields = ("id", "email", "is_writer", "is_verified", "date_joined")
+        read_only_fields = (
+            "id",
+            "email",
+            "is_email_verified",
+            "is_writer",
+            "is_verified",
+            "date_joined",
+        )
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -36,17 +46,29 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )
+    accept_terms = serializers.BooleanField(write_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "email", "password", "first_name", "last_name")
+        fields = ("id", "email", "password", "first_name", "last_name", "accept_terms")
         extra_kwargs = {
             "first_name": {"required": False, "allow_blank": True},
             "last_name": {"required": False, "allow_blank": True},
         }
 
+    def validate_accept_terms(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "Vous devez accepter les CGU et la politique de confidentialité."
+            )
+        return value
+
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        validated_data.pop("accept_terms", None)
+        user = User.objects.create_user(**validated_data)
+        user.terms_accepted_at = timezone.now()
+        user.save(update_fields=["terms_accepted_at"])
+        return user
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -93,6 +115,87 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         user.set_password(self.validated_data["password"])
         user.save(update_fields=["password"])
         return user
+
+
+class EmailVerifySerializer(serializers.Serializer):
+    """Validates the emailed uid/token from the signup confirmation link."""
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+
+    def validate(self, attrs):
+        try:
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = User.objects.get(pk=user_id, is_active=True)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError({"uid": "Lien de confirmation invalide."}) from None
+        if not email_verification_token.check_token(user, attrs["token"]):
+            raise serializers.ValidationError(
+                {"token": "Lien de confirmation invalide ou expiré."}
+            )
+        attrs["user"] = user
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+        if not user.is_email_verified:
+            user.is_email_verified = True
+            user.save(update_fields=["is_email_verified"])
+        return user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Logged-in password change: re-check the current password first."""
+
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+    def save(self):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
+class ChangeEmailSerializer(serializers.Serializer):
+    """Change the account email; the new address starts out unverified."""
+
+    new_email = serializers.EmailField()
+    current_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+    def validate_new_email(self, value):
+        user = self.context["request"].user
+        if User.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Cette adresse e-mail est déjà utilisée.")
+        return value
+
+    def save(self):
+        user = self.context["request"].user
+        user.email = self.validated_data["new_email"]
+        user.is_email_verified = False
+        user.save(update_fields=["email", "is_email_verified"])
+        return user
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    """Account deletion requires the current password as a safety confirmation."""
+
+    current_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
 
 
 class PublicWriterSerializer(serializers.ModelSerializer):

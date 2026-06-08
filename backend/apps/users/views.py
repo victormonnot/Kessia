@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.db.models import ProtectedError
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, status
@@ -21,6 +22,10 @@ from .cookies import (
 )
 from .models import User
 from .serializers import (
+    ChangeEmailSerializer,
+    ChangePasswordSerializer,
+    DeleteAccountSerializer,
+    EmailVerifySerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PublicWriterSerializer,
@@ -28,6 +33,7 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
 )
+from .tokens import email_verification_token
 
 
 @api_view(["POST"])
@@ -36,6 +42,7 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
+    _send_email_verification(user)
     refresh = RefreshToken.for_user(user)
     response = Response(
         {
@@ -86,6 +93,33 @@ def password_reset_confirm(request):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return Response({"detail": "Votre mot de passe a été réinitialisé."})
+
+
+def _send_email_verification(user: User) -> None:
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = email_verification_token.make_token(user)
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?uid={uid}&token={token}"
+    send_notification("email_verification", user.email, {"user": user, "verify_url": verify_url})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def email_verify(request):
+    """Confirm an email address from the emailed uid/token. Idempotent."""
+    serializer = EmailVerifySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"detail": "Votre adresse e-mail a été confirmée."})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def email_verify_resend(request):
+    """Re-send the confirmation email to the current user (no-op if verified)."""
+    if request.user.is_email_verified:
+        return Response({"detail": "Votre adresse e-mail est déjà confirmée."})
+    _send_email_verification(request.user)
+    return Response({"detail": "E-mail de confirmation renvoyé."})
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):
@@ -161,6 +195,41 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserSerializer(request.user).data)
+
+    def delete(self, request):
+        """Hard-delete the account (password-confirmed) and clear auth cookies."""
+        serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            request.user.delete()
+        except ProtectedError:
+            return Response(
+                {"detail": "Votre compte est lié à des éléments protégés et ne peut pas être supprimé."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        clear_auth_cookies(response)
+        return response
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"detail": "Mot de passe mis à jour."})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_email(request):
+    serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    user = serializer.save()
+    # The new address is unverified — send a fresh confirmation link.
+    _send_email_verification(user)
+    return Response(UserSerializer(user).data)
 
 
 @api_view(["POST"])

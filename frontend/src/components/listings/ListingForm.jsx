@@ -3,7 +3,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { TextField, TextareaField, SelectField, SwitchField } from "@/components/form/fields";
+import {
+  TextField,
+  TextareaField,
+  SelectField,
+  SwitchField,
+  ComboboxField,
+} from "@/components/form/fields";
 import Spinner from "@/components/feedback/Spinner";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS } from "@/lib/choices";
 import { listingSchema } from "@/lib/schemas/listing";
@@ -11,7 +17,7 @@ import { listingSchema } from "@/lib/schemas/listing";
 const DEFAULTS = {
   title: "",
   description: "",
-  specialty: "general_medicine",
+  specialty: "",
   deliverable_type: "research_paper",
   price: "",
   turnaround_days: 7,
@@ -25,7 +31,7 @@ export default function ListingForm({ initial, onSubmit, submitting }) {
       ? {
           title: initial.title ?? "",
           description: initial.description ?? "",
-          specialty: initial.specialty ?? "general_medicine",
+          specialty: initial.specialty ?? "",
           deliverable_type: initial.deliverable_type ?? "research_paper",
           price: initial.price ?? "",
           turnaround_days: initial.turnaround_days ?? 7,
@@ -58,12 +64,13 @@ export default function ListingForm({ initial, onSubmit, submitting }) {
           placeholder="Décrivez votre service, votre méthodologie, ce qui est inclus…"
         />
         <div className="grid gap-5 sm:grid-cols-2">
-          <SelectField
+          <ComboboxField
             control={form.control}
             name="specialty"
             label="Spécialité"
             options={SPECIALTY_OPTIONS}
             placeholder="Choisir une spécialité"
+            searchPlaceholder="Rechercher une spécialité…"
           />
           <SelectField
             control={form.control}

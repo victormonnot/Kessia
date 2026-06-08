@@ -1,0 +1,9 @@
+Bonjour {{ user.get_full_name|default:user.email }},
+
+Bienvenue sur Kessia ! Confirmez votre adresse e-mail en cliquant sur le lien
+ci-dessous :
+{{ verify_url }}
+
+Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail.
+
+— L'équipe Kessia

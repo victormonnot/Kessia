@@ -49,6 +49,10 @@ class Conversation(models.Model):
         return f"Conversation #{self.pk}"
 
 
+def message_attachment_path(instance: "Message", filename: str) -> str:
+    return f"chat/conversation_{instance.conversation_id}/{filename}"
+
+
 class Message(models.Model):
     conversation = models.ForeignKey(
         Conversation, on_delete=models.CASCADE, related_name="messages"
@@ -56,7 +60,10 @@ class Message(models.Model):
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_messages"
     )
-    body = models.TextField()
+    # A message carries text, a file attachment, or both (at least one required,
+    # enforced at the API layer).
+    body = models.TextField(blank=True)
+    attachment = models.FileField(upload_to=message_attachment_path, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
 

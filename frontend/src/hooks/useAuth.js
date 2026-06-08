@@ -81,6 +81,58 @@ export function useConfirmPasswordReset() {
   });
 }
 
+export function useVerifyEmail() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => authApi.verifyEmail(payload),
+    onSuccess: async () => {
+      // If someone is logged in, re-sync their profile so the banner clears.
+      if (useAuthStore.getState().accessToken) {
+        const me = await authApi.me();
+        setUser(me);
+        qc.setQueryData(["currentUser"], me);
+      }
+    },
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: authApi.resendVerification,
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (payload) => authApi.changePassword(payload),
+  });
+}
+
+export function useChangeEmail() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => authApi.changeEmail(payload),
+    onSuccess: (user) => {
+      setUser(user);
+      qc.setQueryData(["currentUser"], user);
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  const clear = useAuthStore((s) => s.clear);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => authApi.deleteAccount(payload),
+    onSuccess: () => {
+      clear();
+      qc.clear();
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const setUser = useAuthStore((s) => s.setUser);
   const qc = useQueryClient();
