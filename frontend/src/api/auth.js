@@ -7,6 +7,12 @@ export const authApi = {
 
   logout: () => api.post("/auth/logout/").then((r) => r.data),
 
+  requestPasswordReset: (email) =>
+    api.post("/auth/password/reset/", { email }).then((r) => r.data),
+
+  confirmPasswordReset: (payload) =>
+    api.post("/auth/password/reset/confirm/", payload).then((r) => r.data),
+
   me: () => api.get("/users/me/").then((r) => r.data),
 
   updateMe: (payload) => api.patch("/users/me/", payload).then((r) => r.data),

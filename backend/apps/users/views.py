@@ -1,3 +1,7 @@
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -7,6 +11,8 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.common.notifications import send_notification
+
 from .cookies import (
     REFRESH_COOKIE,
     check_csrf,
@@ -15,6 +21,8 @@ from .cookies import (
 )
 from .models import User
 from .serializers import (
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     PublicWriterSerializer,
     RegisterSerializer,
     UserSerializer,
@@ -38,6 +46,46 @@ def register(request):
     )
     set_auth_cookies(response, str(refresh))
     return response
+
+
+def _send_password_reset_email(user: User) -> None:
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+    send_notification("password_reset", user.email, {"user": user, "reset_url": reset_url})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def password_reset_request(request):
+    """Email a reset link if the address matches an active account.
+
+    Always returns 200 with a generic message so the endpoint can't be used to
+    enumerate which emails have an account.
+    """
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    user = User.objects.filter(
+        email__iexact=serializer.validated_data["email"], is_active=True
+    ).first()
+    if user:
+        _send_password_reset_email(user)
+    return Response(
+        {
+            "detail": "Si un compte existe pour cette adresse, "
+            "un e-mail de réinitialisation vient d'être envoyé."
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def password_reset_confirm(request):
+    """Validate the emailed uid/token and set the new password."""
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"detail": "Votre mot de passe a été réinitialisé."})
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):

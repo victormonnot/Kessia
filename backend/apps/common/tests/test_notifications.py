@@ -12,6 +12,8 @@ def _rich_context():
         "order": MagicMock(),
         "proposal": MagicMock(),
         "conversation": MagicMock(),
+        "user": MagicMock(),
+        "reset_url": "https://kessia.test/reset-password?uid=x&token=y",
         "recipient_name": "Dr Dupont",
         "sender_name": "Alice Martin",
     }

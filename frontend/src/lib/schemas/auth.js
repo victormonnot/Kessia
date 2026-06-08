@@ -13,3 +13,17 @@ export const registerSchema = z.object({
   first_name: z.string().trim().min(1, "Le prénom est requis."),
   last_name: z.string().trim().min(1, "Le nom est requis."),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "L'e-mail est requis.").email("Adresse e-mail invalide."),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Au moins 8 caractères."),
+    confirm: z.string().min(1, "Confirmez le mot de passe."),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: "Les mots de passe ne correspondent pas.",
+    path: ["confirm"],
+  });

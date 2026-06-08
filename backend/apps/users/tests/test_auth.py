@@ -1,5 +1,9 @@
 import pytest
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient
 
 from apps.users.cookies import CSRF_COOKIE, REFRESH_COOKIE
@@ -117,3 +121,60 @@ def test_activate_writer_flips_flag(auth_client, user):
     assert response.status_code == 200
     user.refresh_from_db()
     assert user.is_writer is True
+
+
+# --- Password reset --------------------------------------------------------
+
+
+def test_password_reset_request_sends_email_for_existing_user(api_client, user):
+    response = api_client.post(
+        reverse("auth-password-reset"), {"email": user.email}, format="json"
+    )
+    assert response.status_code == 200
+    assert len(mail.outbox) == 1
+    assert user.email in mail.outbox[0].to
+
+
+def test_password_reset_request_unknown_email_is_silent(api_client, db):
+    # Same 200 + generic message as a hit, and no email: no account enumeration.
+    response = api_client.post(
+        reverse("auth-password-reset"), {"email": "nobody@example.com"}, format="json"
+    )
+    assert response.status_code == 200
+    assert len(mail.outbox) == 0
+
+
+def test_password_reset_confirm_sets_new_password(api_client, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    response = api_client.post(
+        reverse("auth-password-reset-confirm"),
+        {"uid": uid, "token": token, "password": "BrandNewPass123!"},
+        format="json",
+    )
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.check_password("BrandNewPass123!")
+
+
+def test_password_reset_confirm_rejects_bad_token(api_client, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    response = api_client.post(
+        reverse("auth-password-reset-confirm"),
+        {"uid": uid, "token": "bogus-token", "password": "BrandNewPass123!"},
+        format="json",
+    )
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert not user.check_password("BrandNewPass123!")
+
+
+def test_password_reset_confirm_rejects_weak_password(api_client, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    response = api_client.post(
+        reverse("auth-password-reset-confirm"),
+        {"uid": uid, "token": token, "password": "123"},
+        format="json",
+    )
+    assert response.status_code == 400

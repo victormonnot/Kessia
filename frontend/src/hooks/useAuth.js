@@ -69,6 +69,18 @@ export function useActivateWriter() {
   });
 }
 
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (email) => authApi.requestPasswordReset(email),
+  });
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: authApi.confirmPasswordReset,
+  });
+}
+
 export function useUpdateProfile() {
   const setUser = useAuthStore((s) => s.setUser);
   const qc = useQueryClient();
