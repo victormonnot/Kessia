@@ -26,29 +26,29 @@ DEMO_PASSWORD = "demo1234"
 
 # (email, first, last, specialty, verified, bio)
 WRITERS = [
-    ("writer@kessia.demo", "Alice", "Martin", Specialty.CARDIOLOGY, True,
+    ("writer@kessia.demo", "Alice", "Martin", Specialty.CARDIOLOGIE, True,
      "Rédactrice médicale freelance, 8 ans d'expérience auprès de laboratoires "
      "et de groupes hospitaliers. Spécialités : cardiologie, oncologie."),
-    ("paul.nguyen@kessia.demo", "Paul", "Nguyen", Specialty.ONCOLOGY, True,
+    ("paul.nguyen@kessia.demo", "Paul", "Nguyen", Specialty.ONCOLOGIE, True,
      "Docteur en biologie, rédacteur scientifique spécialisé en oncologie et "
      "immunothérapie. Publications dans des revues à comité de lecture."),
-    ("sophie.bernard@kessia.demo", "Sophie", "Bernard", Specialty.NEUROLOGY, True,
+    ("sophie.bernard@kessia.demo", "Sophie", "Bernard", Specialty.NEUROLOGIE, True,
      "Neurologue de formation, j'accompagne les équipes dans la rédaction "
      "d'articles et de revues systématiques."),
-    ("karim.haddad@kessia.demo", "Karim", "Haddad", Specialty.PEDIATRICS, False,
+    ("karim.haddad@kessia.demo", "Karim", "Haddad", Specialty.PEDIATRIE, False,
      "Rédacteur médical, focus pédiatrie et études de cas cliniques (CARE)."),
-    ("elena.rossi@kessia.demo", "Elena", "Rossi", Specialty.DERMATOLOGY, True,
+    ("elena.rossi@kessia.demo", "Elena", "Rossi", Specialty.DERMATOLOGIE, True,
      "Spécialiste de la rédaction en dermatologie : séries de cas, revues, "
      "résumés de congrès."),
-    ("thomas.leroy@kessia.demo", "Thomas", "Leroy", Specialty.RADIOLOGY, False,
+    ("thomas.leroy@kessia.demo", "Thomas", "Leroy", Specialty.RADIOLOGIE, False,
      "Ingénieur biomédical et rédacteur, imagerie et radiologie diagnostique."),
-    ("nadia.benali@kessia.demo", "Nadia", "Benali", Specialty.PSYCHIATRY, True,
+    ("nadia.benali@kessia.demo", "Nadia", "Benali", Specialty.PSYCHIATRIE, True,
      "Rédactrice en santé mentale et psychiatrie, sensible aux enjeux éthiques."),
-    ("marc.dubois@kessia.demo", "Marc", "Dubois", Specialty.SURGERY, False,
+    ("marc.dubois@kessia.demo", "Marc", "Dubois", Specialty.NEUROCHIRURGIE, False,
      "Ancien interne en chirurgie, rédaction d'articles chirurgicaux et de protocoles."),
-    ("clara.fontaine@kessia.demo", "Clara", "Fontaine", Specialty.ENDOCRINOLOGY, True,
+    ("clara.fontaine@kessia.demo", "Clara", "Fontaine", Specialty.ENDOCRINOLOGIE, True,
      "Endocrinologie et métabolisme : articles originaux et méta-analyses."),
-    ("hugo.moreau@kessia.demo", "Hugo", "Moreau", Specialty.GASTROENTEROLOGY, False,
+    ("hugo.moreau@kessia.demo", "Hugo", "Moreau", Specialty.GASTROENTEROLOGIE, False,
      "Rédacteur médical, gastro-entérologie et hépatologie."),
 ]
 
@@ -64,43 +64,43 @@ DOCTORS = [
 
 # Two listing ideas per specialty: (title, deliverable_type).
 SPECIALTY_LISTINGS = {
-    Specialty.CARDIOLOGY: [
+    Specialty.CARDIOLOGIE: [
         ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.REVIEW_ARTICLE),
         ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.CASE_REPORT),
     ],
-    Specialty.ONCOLOGY: [
+    Specialty.ONCOLOGIE: [
         ("Article original — immunothérapie en oncologie thoracique", DeliverableType.RESEARCH_PAPER),
         ("Résumé pour congrès international d'oncologie", DeliverableType.ABSTRACT),
     ],
-    Specialty.NEUROLOGY: [
+    Specialty.NEUROLOGIE: [
         ("Revue narrative sur la prise en charge post-AVC", DeliverableType.REVIEW_ARTICLE),
         ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.RESEARCH_PAPER),
     ],
-    Specialty.PEDIATRICS: [
+    Specialty.PEDIATRIE: [
         ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.CASE_REPORT),
         ("Résumé pour journées de pédiatrie", DeliverableType.ABSTRACT),
     ],
-    Specialty.DERMATOLOGY: [
+    Specialty.DERMATOLOGIE: [
         ("Série de cas en dermatologie inflammatoire", DeliverableType.CASE_REPORT),
         ("Revue sur les biothérapies du psoriasis", DeliverableType.REVIEW_ARTICLE),
     ],
-    Specialty.RADIOLOGY: [
+    Specialty.RADIOLOGIE: [
         ("Relecture et reformulation d'un résumé radiologique", DeliverableType.ABSTRACT),
         ("Article original — IA et imagerie diagnostique", DeliverableType.RESEARCH_PAPER),
     ],
-    Specialty.PSYCHIATRY: [
+    Specialty.PSYCHIATRIE: [
         ("Revue sur les troubles anxieux et la TCC", DeliverableType.REVIEW_ARTICLE),
         ("Étude de cas en psychiatrie de liaison", DeliverableType.CASE_REPORT),
     ],
-    Specialty.SURGERY: [
+    Specialty.NEUROCHIRURGIE: [
         ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.RESEARCH_PAPER),
         ("Étude de cas chirurgical rare", DeliverableType.CASE_REPORT),
     ],
-    Specialty.ENDOCRINOLOGY: [
+    Specialty.ENDOCRINOLOGIE: [
         ("Méta-analyse sur le diabète de type 2", DeliverableType.RESEARCH_PAPER),
         ("Revue sur les analogues du GLP-1", DeliverableType.REVIEW_ARTICLE),
     ],
-    Specialty.GASTROENTEROLOGY: [
+    Specialty.GASTROENTEROLOGIE: [
         ("Revue sur les MICI et les biothérapies", DeliverableType.REVIEW_ARTICLE),
         ("Étude de cas en hépatologie", DeliverableType.CASE_REPORT),
     ],
@@ -126,12 +126,12 @@ REVIEW_RATINGS = [5, 5, 4, 5, 4, 5, 4, 5, 5, 4]
 
 # (doctor_index, title, specialty, budget, deadline_in_days)
 REQUESTS = [
-    (1, "Recherche d'un rédacteur pour un article de neurologie", Specialty.NEUROLOGY, Decimal("1200.00"), 30),
-    (2, "Aide pour une série de cas en dermatologie", Specialty.DERMATOLOGY, Decimal("600.00"), 21),
-    (0, "Relecture d'un résumé pour un congrès de radiologie", Specialty.RADIOLOGY, Decimal("250.00"), 14),
-    (3, "Méta-analyse sur le diabète de type 2", Specialty.ENDOCRINOLOGY, Decimal("1500.00"), 45),
-    (4, "Article original en oncologie thoracique", Specialty.ONCOLOGY, Decimal("1100.00"), 28),
-    (5, "Étude de cas en gastro-entérologie", Specialty.GASTROENTEROLOGY, Decimal("500.00"), 18),
+    (1, "Recherche d'un rédacteur pour un article de neurologie", Specialty.NEUROLOGIE, Decimal("1200.00"), 30),
+    (2, "Aide pour une série de cas en dermatologie", Specialty.DERMATOLOGIE, Decimal("600.00"), 21),
+    (0, "Relecture d'un résumé pour un congrès de radiologie", Specialty.RADIOLOGIE, Decimal("250.00"), 14),
+    (3, "Méta-analyse sur le diabète de type 2", Specialty.ENDOCRINOLOGIE, Decimal("1500.00"), 45),
+    (4, "Article original en oncologie thoracique", Specialty.ONCOLOGIE, Decimal("1100.00"), 28),
+    (5, "Étude de cas en gastro-entérologie", Specialty.GASTROENTEROLOGIE, Decimal("500.00"), 18),
 ]
 
 ORDER_STATUSES = [

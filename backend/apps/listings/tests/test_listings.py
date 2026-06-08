@@ -12,7 +12,7 @@ def _payload(**overrides):
     base = {
         "title": "Cardio review article",
         "description": "I will write your review article.",
-        "specialty": Specialty.CARDIOLOGY,
+        "specialty": Specialty.CARDIOLOGIE,
         "deliverable_type": DeliverableType.REVIEW_ARTICLE,
         "price": "300.00",
         "turnaround_days": 10,
@@ -70,13 +70,13 @@ def test_writer_can_delete_own_listing(writer_auth_client, writer_user):
 
 
 def test_filter_by_specialty(api_client):
-    ListingFactory(specialty=Specialty.CARDIOLOGY)
-    ListingFactory(specialty=Specialty.NEUROLOGY)
-    response = api_client.get(reverse("listing-list"), {"specialty": Specialty.NEUROLOGY})
+    ListingFactory(specialty=Specialty.CARDIOLOGIE)
+    ListingFactory(specialty=Specialty.NEUROLOGIE)
+    response = api_client.get(reverse("listing-list"), {"specialty": Specialty.NEUROLOGIE})
     assert response.status_code == 200
     results = response.json()["results"]
     assert len(results) == 1
-    assert results[0]["specialty"] == Specialty.NEUROLOGY
+    assert results[0]["specialty"] == Specialty.NEUROLOGIE
 
 
 def test_search_by_title(api_client):

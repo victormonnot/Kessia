@@ -17,7 +17,7 @@ vi.mock("@/hooks/useRequests", () => ({
           status: "open",
           deadline: "2026-07-15",
           budget: "400.00",
-          specialty: "oncology",
+          specialty: "oncologie",
           proposals_count: 2,
         },
       ],

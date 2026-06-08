@@ -14,7 +14,7 @@ def _request_payload(**overrides):
     base = {
         "title": "Need an oncology paper",
         "description": "Looking for help",
-        "specialty": Specialty.ONCOLOGY,
+        "specialty": Specialty.ONCOLOGIE,
         "deadline": (date.today() + timedelta(days=30)).isoformat(),
         "budget": "500.00",
     }

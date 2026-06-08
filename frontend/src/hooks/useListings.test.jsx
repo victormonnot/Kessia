@@ -10,7 +10,7 @@ vi.mock("@/api/listings", () => ({
         {
           id: 1,
           title: "Test",
-          specialty: "cardiology",
+          specialty: "cardiologie",
           deliverable_type: "research_paper",
           price: "100.00",
           turnaround_days: 5,
@@ -33,11 +33,11 @@ function wrapper({ children }) {
 
 describe("useListings", () => {
   it("returns paginated results from the API", async () => {
-    const { result } = renderHook(() => useListings({ specialty: "cardiology" }), {
+    const { result } = renderHook(() => useListings({ specialty: "cardiologie" }), {
       wrapper,
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(listingsApi.list).toHaveBeenCalledWith({ specialty: "cardiology" });
+    expect(listingsApi.list).toHaveBeenCalledWith({ specialty: "cardiologie" });
     expect(result.current.data.count).toBe(1);
     expect(result.current.data.results[0].title).toBe("Test");
   });

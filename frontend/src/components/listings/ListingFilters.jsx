@@ -1,12 +1,18 @@
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS } from "@/lib/choices";
 
 const RATING_OPTIONS = [
   { value: "3", label: "3★ et plus" },
   { value: "4", label: "4★ et plus" },
   { value: "4.5", label: "4,5★ et plus" },
+];
+
+const SPECIALTY_FILTER_OPTIONS = [
+  { value: "", label: "Toutes les spécialités" },
+  ...SPECIALTY_OPTIONS,
 ];
 
 export default function ListingFilters({ value, onChange }) {
@@ -16,13 +22,16 @@ export default function ListingFilters({ value, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Select
-        label="Spécialité"
-        placeholder="Toutes les spécialités"
-        options={SPECIALTY_OPTIONS}
-        value={value.specialty || ""}
-        onChange={(e) => update("specialty", e.target.value)}
-      />
+      <div>
+        <label className="mb-1.5 block text-sm font-medium">Spécialité</label>
+        <Combobox
+          options={SPECIALTY_FILTER_OPTIONS}
+          value={value.specialty || ""}
+          onChange={(v) => update("specialty", v)}
+          placeholder="Toutes les spécialités"
+          searchPlaceholder="Rechercher une spécialité…"
+        />
+      </div>
       <Select
         label="Type de livrable"
         placeholder="Tous les livrables"

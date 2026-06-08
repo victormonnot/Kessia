@@ -10,9 +10,9 @@ pytestmark = pytest.mark.django_db
 def test_public_writer_profile_lists_published_listings_and_specialties(
     api_client, writer_user
 ):
-    ListingFactory(writer=writer_user, specialty=Specialty.CARDIOLOGY, is_published=True)
-    ListingFactory(writer=writer_user, specialty=Specialty.ONCOLOGY, is_published=True)
-    ListingFactory(writer=writer_user, specialty=Specialty.NEUROLOGY, is_published=False)
+    ListingFactory(writer=writer_user, specialty=Specialty.CARDIOLOGIE, is_published=True)
+    ListingFactory(writer=writer_user, specialty=Specialty.ONCOLOGIE, is_published=True)
+    ListingFactory(writer=writer_user, specialty=Specialty.NEUROLOGIE, is_published=False)
 
     # Public: no authentication.
     response = api_client.get(reverse("public-writer", args=[writer_user.id]))
@@ -21,7 +21,7 @@ def test_public_writer_profile_lists_published_listings_and_specialties(
     assert body["id"] == writer_user.id
     assert body["is_verified"] is False
     assert len(body["listings"]) == 2  # only published
-    assert set(body["specialties"]) == {Specialty.CARDIOLOGY, Specialty.ONCOLOGY}
+    assert set(body["specialties"]) == {Specialty.CARDIOLOGIE, Specialty.ONCOLOGIE}
     assert body["reviews_count"] == 0  # placeholder until reviews land
 
 
