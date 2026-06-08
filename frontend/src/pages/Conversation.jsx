@@ -8,21 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import Spinner from "@/components/feedback/Spinner";
-import { messagingApi } from "@/api/messaging";
+import MessageAttachment from "@/components/messaging/MessageAttachment";
 import { useConversation, useMessages, useSendMessage } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-import { errorMessage, formatDateTime, fullName, initials } from "@/lib/format";
+import { errorMessage, formatBytes, formatDateTime, fullName, initials } from "@/lib/format";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 const WS_BASE = API_BASE.replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "");
-
-function formatBytes(bytes) {
-  if (bytes == null) return "";
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
 
 export default function Conversation() {
   const { id } = useParams();
@@ -85,22 +78,6 @@ export default function Conversation() {
     e.target.value = ""; // allow re-picking the same file
   };
 
-  const downloadAttachment = async (m) => {
-    try {
-      const blob = await messagingApi.downloadAttachment(id, m.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = m.attachment_name || "piece-jointe";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast.error(errorMessage(err, "Le téléchargement a échoué."));
-    }
-  };
-
   const other = conversation?.other_user;
 
   return (
@@ -157,22 +134,7 @@ export default function Conversation() {
                   >
                     {m.body && <p className="whitespace-pre-line">{m.body}</p>}
                     {m.attachment_name && (
-                      <button
-                        type="button"
-                        onClick={() => downloadAttachment(m)}
-                        className={cn(
-                          "flex max-w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs hover:underline",
-                          mine ? "bg-primary-foreground/15" : "bg-background",
-                        )}
-                      >
-                        <Paperclip className="size-3.5 shrink-0" />
-                        <span className="truncate">{m.attachment_name}</span>
-                        {m.attachment_size != null && (
-                          <span className="shrink-0 opacity-70">
-                            {formatBytes(m.attachment_size)}
-                          </span>
-                        )}
-                      </button>
+                      <MessageAttachment conversationId={id} message={m} mine={mine} />
                     )}
                   </div>
                   <span className="mt-1 px-1 text-[11px] text-muted-foreground">

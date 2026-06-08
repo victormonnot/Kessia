@@ -48,6 +48,14 @@ export function formatRelative(value) {
   return formatDate(value);
 }
 
+// Human-readable file size (FR units: o / Ko / Mo).
+export function formatBytes(bytes) {
+  if (bytes == null) return "";
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
 // Normalize a DRF/axios error into a displayable French message.
 export function errorMessage(error, fallback = "Une erreur est survenue.") {
   const data = error?.response?.data;

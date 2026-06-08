@@ -37,6 +37,22 @@ export function useStartConversation() {
   });
 }
 
+// Fetches an auth-gated attachment as an object URL, cached for the session so
+// thread polling / re-renders don't re-download it. `enabled` gates lazy loads:
+// images load immediately; PDFs (and other files) only when previewed.
+export function useAttachmentUrl(conversationId, messageId, enabled) {
+  return useQuery({
+    queryKey: ["attachment", conversationId, messageId],
+    queryFn: async () => {
+      const blob = await messagingApi.downloadAttachment(conversationId, messageId);
+      return URL.createObjectURL(blob);
+    },
+    enabled: Boolean(enabled && conversationId && messageId),
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+  });
+}
+
 export function useSendMessage(conversationId) {
   const qc = useQueryClient();
   return useMutation({
