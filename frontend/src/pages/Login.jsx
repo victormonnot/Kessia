@@ -99,6 +99,14 @@ export default function Login() {
               </FormItem>
             )}
           />
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <Button type="submit" className="w-full" disabled={login.isPending}>
             {login.isPending ? (
               <>

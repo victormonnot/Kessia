@@ -29,6 +29,7 @@ NOTIFICATION_SUBJECTS: dict[str, str] = {
     "new_proposal": "Nouvelle proposition reçue sur Kessia",
     "proposal_accepted": "Votre proposition a été acceptée",
     "new_message": "Nouveau message sur Kessia",
+    "password_reset": "Réinitialisation de votre mot de passe Kessia",
 }
 
 

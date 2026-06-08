@@ -1,4 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 from .models import User
@@ -50,6 +53,46 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("first_name", "last_name", "bio")
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Step 1: the user submits their email to receive a reset link."""
+
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Step 2: the user submits the emailed uid/token plus a new password.
+
+    Tokens come from Django's ``default_token_generator``: they are signed,
+    time-limited (``PASSWORD_RESET_TIMEOUT``) and self-invalidate once the
+    password changes (the token hash folds in the current password hash).
+    """
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, attrs):
+        try:
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = User.objects.get(pk=user_id, is_active=True)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError(
+                {"uid": "Lien de réinitialisation invalide."}
+            ) from None
+        if not default_token_generator.check_token(user, attrs["token"]):
+            raise serializers.ValidationError(
+                {"token": "Lien de réinitialisation invalide ou expiré."}
+            )
+        attrs["user"] = user
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["password"])
+        user.save(update_fields=["password"])
+        return user
 
 
 class PublicWriterSerializer(serializers.ModelSerializer):
