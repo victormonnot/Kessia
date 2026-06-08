@@ -19,6 +19,14 @@ export const authApi = {
   resendVerification: () =>
     api.post("/auth/email/verify/resend/").then((r) => r.data),
 
+  changePassword: (payload) =>
+    api.post("/users/me/password/", payload).then((r) => r.data),
+
+  changeEmail: (payload) => api.post("/users/me/email/", payload).then((r) => r.data),
+
+  deleteAccount: (payload) =>
+    api.delete("/users/me/", { data: payload }).then((r) => r.data),
+
   me: () => api.get("/users/me/").then((r) => r.data),
 
   updateMe: (payload) => api.patch("/users/me/", payload).then((r) => r.data),

@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/Badge";
 import ProfileForm from "@/components/settings/ProfileForm";
+import ChangePasswordForm from "@/components/settings/ChangePasswordForm";
+import ChangeEmailForm from "@/components/settings/ChangeEmailForm";
+import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
 import ConnectCard from "@/components/payments/ConnectCard";
 import VerificationCard from "@/components/verification/VerificationCard";
 import { useActivateWriter } from "@/hooks/useAuth";
@@ -75,12 +78,34 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sécurité</CardTitle>
+            <CardDescription>Gérez votre adresse e-mail et votre mot de passe.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <ChangeEmailForm />
+            <div className="border-t pt-8">
+              <ChangePasswordForm />
+            </div>
+          </CardContent>
+        </Card>
+
         {user?.is_writer && (
           <>
             <ConnectCard />
             <VerificationCard />
           </>
         )}
+
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">Zone de danger</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DeleteAccountSection />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

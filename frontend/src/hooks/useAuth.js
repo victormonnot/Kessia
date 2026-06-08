@@ -103,6 +103,36 @@ export function useResendVerification() {
   });
 }
 
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (payload) => authApi.changePassword(payload),
+  });
+}
+
+export function useChangeEmail() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => authApi.changeEmail(payload),
+    onSuccess: (user) => {
+      setUser(user);
+      qc.setQueryData(["currentUser"], user);
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  const clear = useAuthStore((s) => s.clear);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => authApi.deleteAccount(payload),
+    onSuccess: () => {
+      clear();
+      qc.clear();
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const setUser = useAuthStore((s) => s.setUser);
   const qc = useQueryClient();

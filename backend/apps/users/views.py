@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.db.models import ProtectedError
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, status
@@ -21,6 +22,9 @@ from .cookies import (
 )
 from .models import User
 from .serializers import (
+    ChangeEmailSerializer,
+    ChangePasswordSerializer,
+    DeleteAccountSerializer,
     EmailVerifySerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -191,6 +195,41 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserSerializer(request.user).data)
+
+    def delete(self, request):
+        """Hard-delete the account (password-confirmed) and clear auth cookies."""
+        serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            request.user.delete()
+        except ProtectedError:
+            return Response(
+                {"detail": "Votre compte est lié à des éléments protégés et ne peut pas être supprimé."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        clear_auth_cookies(response)
+        return response
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response({"detail": "Mot de passe mis à jour."})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_email(request):
+    serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    user = serializer.save()
+    # The new address is unverified — send a fresh confirmation link.
+    _send_email_verification(user)
+    return Response(UserSerializer(user).data)
 
 
 @api_view(["POST"])

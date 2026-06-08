@@ -131,6 +131,60 @@ class EmailVerifySerializer(serializers.Serializer):
         return user
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    """Logged-in password change: re-check the current password first."""
+
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+    def save(self):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
+class ChangeEmailSerializer(serializers.Serializer):
+    """Change the account email; the new address starts out unverified."""
+
+    new_email = serializers.EmailField()
+    current_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+    def validate_new_email(self, value):
+        user = self.context["request"].user
+        if User.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Cette adresse e-mail est déjà utilisée.")
+        return value
+
+    def save(self):
+        user = self.context["request"].user
+        user.email = self.validated_data["new_email"]
+        user.is_email_verified = False
+        user.save(update_fields=["email", "is_email_verified"])
+        return user
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    """Account deletion requires the current password as a safety confirmation."""
+
+    current_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+
 class PublicWriterSerializer(serializers.ModelSerializer):
     """Shareable public profile for a writer: bio, specialties, active listings,
     verified badge and rating. The rating fields are placeholders until reviews

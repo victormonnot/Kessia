@@ -254,3 +254,105 @@ def test_email_verify_resend_noop_when_already_verified(auth_client, user):
 def test_email_verify_resend_requires_auth(api_client):
     response = api_client.post(reverse("auth-email-verify-resend"))
     assert response.status_code == 401
+
+
+# --- Account settings: change password -------------------------------------
+
+
+def test_change_password_succeeds_with_correct_current(auth_client, user):
+    response = auth_client.post(
+        reverse("users-change-password"),
+        {"current_password": "testpass123", "new_password": "BrandNewPass123!"},
+        format="json",
+    )
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.check_password("BrandNewPass123!")
+
+
+def test_change_password_rejects_wrong_current(auth_client, user):
+    response = auth_client.post(
+        reverse("users-change-password"),
+        {"current_password": "wrong", "new_password": "BrandNewPass123!"},
+        format="json",
+    )
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.check_password("testpass123")  # unchanged
+
+
+def test_change_password_rejects_weak_new(auth_client, user):
+    response = auth_client.post(
+        reverse("users-change-password"),
+        {"current_password": "testpass123", "new_password": "123"},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+def test_change_password_requires_auth(api_client):
+    response = api_client.post(reverse("users-change-password"))
+    assert response.status_code == 401
+
+
+# --- Account settings: change email ----------------------------------------
+
+
+def test_change_email_updates_and_unverifies(auth_client, user):
+    user.is_email_verified = True
+    user.save(update_fields=["is_email_verified"])
+    response = auth_client.post(
+        reverse("users-change-email"),
+        {"new_email": "moved@example.com", "current_password": "testpass123"},
+        format="json",
+    )
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.email == "moved@example.com"
+    assert user.is_email_verified is False
+    assert len(mail.outbox) == 1  # confirmation sent to the new address
+    assert "moved@example.com" in mail.outbox[0].to
+
+
+def test_change_email_rejects_wrong_password(auth_client, user):
+    response = auth_client.post(
+        reverse("users-change-email"),
+        {"new_email": "moved@example.com", "current_password": "nope"},
+        format="json",
+    )
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.email == "doctor@example.com"
+
+
+def test_change_email_rejects_duplicate(auth_client, user, writer_user):
+    response = auth_client.post(
+        reverse("users-change-email"),
+        {"new_email": writer_user.email, "current_password": "testpass123"},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+# --- Account settings: delete account --------------------------------------
+
+
+def test_delete_account_removes_user(auth_client, user):
+    response = auth_client.delete(
+        reverse("users-me"), {"current_password": "testpass123"}, format="json"
+    )
+    assert response.status_code == 204
+    assert not User.objects.filter(pk=user.pk).exists()
+
+
+def test_delete_account_rejects_wrong_password(auth_client, user):
+    response = auth_client.delete(
+        reverse("users-me"), {"current_password": "nope"}, format="json"
+    )
+    assert response.status_code == 400
+    assert User.objects.filter(pk=user.pk).exists()
+
+
+def test_delete_account_requires_auth(api_client):
+    response = api_client.delete(reverse("users-me"), {"current_password": "x"}, format="json")
+    assert response.status_code == 401
