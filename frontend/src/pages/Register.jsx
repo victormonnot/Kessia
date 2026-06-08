@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -24,7 +25,13 @@ export default function Register() {
   const register = useRegister();
   const form = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", first_name: "", last_name: "" },
+    defaultValues: {
+      email: "",
+      password: "",
+      first_name: "",
+      last_name: "",
+      accept_terms: false,
+    },
   });
 
   const onSubmit = async (values) => {
@@ -112,6 +119,43 @@ export default function Register() {
                     {...field}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="accept_terms"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-start gap-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="mt-0.5"
+                    />
+                  </FormControl>
+                  <FormLabel className="text-sm font-normal leading-snug">
+                    J'accepte les{" "}
+                    <Link
+                      to="/cgu"
+                      target="_blank"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      conditions générales
+                    </Link>{" "}
+                    et la{" "}
+                    <Link
+                      to="/confidentialite"
+                      target="_blank"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      politique de confidentialité
+                    </Link>
+                    .
+                  </FormLabel>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

@@ -24,6 +24,7 @@ def test_register_sets_refresh_cookie_and_returns_access(api_client):
         "password": "SuperSecret123!",
         "first_name": "New",
         "last_name": "User",
+        "accept_terms": True,
     }
     response = api_client.post(reverse("auth-register"), payload, format="json")
     assert response.status_code == 201
@@ -34,6 +35,27 @@ def test_register_sets_refresh_cookie_and_returns_access(api_client):
     assert response.cookies[REFRESH_COOKIE]["httponly"]
     assert CSRF_COOKIE in response.cookies
     assert User.objects.filter(email="new@example.com").exists()
+
+
+def test_register_records_consent_timestamp(api_client, db):
+    response = api_client.post(
+        reverse("auth-register"),
+        {"email": "consent@example.com", "password": "SuperSecret123!", "accept_terms": True},
+        format="json",
+    )
+    assert response.status_code == 201
+    user = User.objects.get(email="consent@example.com")
+    assert user.terms_accepted_at is not None
+
+
+def test_register_requires_accepting_terms(api_client, db):
+    response = api_client.post(
+        reverse("auth-register"),
+        {"email": "noconsent@example.com", "password": "SuperSecret123!", "accept_terms": False},
+        format="json",
+    )
+    assert response.status_code == 400
+    assert not User.objects.filter(email="noconsent@example.com").exists()
 
 
 def test_login_sets_cookie_and_returns_access(api_client, user):
@@ -192,6 +214,7 @@ def test_register_creates_unverified_user_and_sends_verification_email(api_clien
             "password": "SuperSecret123!",
             "first_name": "Fresh",
             "last_name": "User",
+            "accept_terms": True,
         },
         format="json",
     )

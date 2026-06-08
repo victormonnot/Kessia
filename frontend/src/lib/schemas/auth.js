@@ -12,6 +12,9 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Au moins 8 caractères."),
   first_name: z.string().trim().min(1, "Le prénom est requis."),
   last_name: z.string().trim().min(1, "Le nom est requis."),
+  accept_terms: z.boolean().refine((v) => v === true, {
+    message: "Vous devez accepter les CGU et la politique de confidentialité.",
+  }),
 });
 
 export const forgotPasswordSchema = z.object({

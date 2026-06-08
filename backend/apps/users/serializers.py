@@ -1,5 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
@@ -45,17 +46,29 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )
+    accept_terms = serializers.BooleanField(write_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "email", "password", "first_name", "last_name")
+        fields = ("id", "email", "password", "first_name", "last_name", "accept_terms")
         extra_kwargs = {
             "first_name": {"required": False, "allow_blank": True},
             "last_name": {"required": False, "allow_blank": True},
         }
 
+    def validate_accept_terms(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "Vous devez accepter les CGU et la politique de confidentialité."
+            )
+        return value
+
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        validated_data.pop("accept_terms", None)
+        user = User.objects.create_user(**validated_data)
+        user.terms_accepted_at = timezone.now()
+        user.save(update_fields=["terms_accepted_at"])
+        return user
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
