@@ -1,4 +1,4 @@
-Bonjour {{ user.get_full_name|default:user.email }},
+{% autoescape off %}Bonjour {{ user.get_full_name|default:user.email }},
 
 Bienvenue sur Kessia ! Confirmez votre adresse e-mail en cliquant sur le lien
 ci-dessous :
@@ -6,4 +6,4 @@ ci-dessous :
 
 Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail.
 
-— L'équipe Kessia
+— L'équipe Kessia{% endautoescape %}
