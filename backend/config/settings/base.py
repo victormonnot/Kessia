@@ -163,12 +163,22 @@ AUTH_COOKIE_SAMESITE = config("AUTH_COOKIE_SAMESITE", default="Lax")
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 
 # Transactional email. Dev overrides EMAIL_BACKEND to the console and tests use
-# locmem; in prod the SMTP settings below are driven by env (e.g. SendGrid:
-# host=smtp.sendgrid.net, port=587, user="apikey", password=<API key>, TLS).
+# locmem (both override EMAIL_BACKEND, so the logic here only affects prod).
+#
+# Sending method, in order of preference:
+#   1. Brevo HTTPS API (django-anymail) when BREVO_API_KEY is set — used in prod
+#      because hosts like Render block outbound SMTP ports (25/465/587), so the
+#      API over HTTPS is the only path that works there.
+#   2. SMTP otherwise (EMAIL_HOST/USER/PASSWORD), e.g. for hosts that allow it.
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kessia <no-reply@kessia.local>")
-EMAIL_BACKEND = config(
-    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
-)
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
+if BREVO_API_KEY:
+    EMAIL_BACKEND = config("EMAIL_BACKEND", default="anymail.backends.brevo.EmailBackend")
+    ANYMAIL = {"BREVO_API_KEY": BREVO_API_KEY}
+else:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+    )
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
