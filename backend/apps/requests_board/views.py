@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.listings.permissions import IsWriter
 
 from .filters import RequestFilter
@@ -47,16 +48,16 @@ class RequestViewSet(viewsets.ModelViewSet):
         if self.action in {"list", "retrieve"}:
             return [AllowAny()]
         if self.action == "create":
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsEmailVerified()]
         if self.action in {"update", "partial_update", "destroy"}:
-            return [IsAuthenticated(), IsRequestOwner()]
+            return [IsAuthenticated(), IsEmailVerified(), IsRequestOwner()]
         return [IsAuthenticated()]
 
     @action(
         detail=True,
         methods=("get", "post"),
         url_path="proposals",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=(IsAuthenticated, IsEmailVerified),
     )
     def proposals(self, request, pk=None):
         request_obj = self.get_object()
@@ -110,9 +111,9 @@ class ProposalViewSet(
         if self.action == "list":
             return [IsAuthenticated()]
         if self.action == "destroy":
-            return [IsAuthenticated(), IsWriter(), IsProposalWriter()]
-        # update / partial_update
-        return [IsAuthenticated(), IsProposalRequestOwner()]
+            return [IsAuthenticated(), IsEmailVerified(), IsWriter(), IsProposalWriter()]
+        # update / partial_update (accept / reject a proposal)
+        return [IsAuthenticated(), IsEmailVerified(), IsProposalRequestOwner()]
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -7,8 +7,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.orders.models import Order
 
 from .models import Conversation
@@ -41,6 +43,9 @@ class ConversationViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = ConversationSerializer
+    # Safe methods stay open (unverified users can read threads); creating a
+    # conversation or sending a message (POST) requires a verified email.
+    permission_classes = [IsAuthenticated, IsEmailVerified]
 
     def get_queryset(self):
         user = self.request.user

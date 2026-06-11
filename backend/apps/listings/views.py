@@ -2,6 +2,8 @@ from django.db.models import Avg, Count
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
+from apps.common.permissions import IsEmailVerified
+
 from .filters import ListingFilter
 from .models import Listing
 from .permissions import IsListingOwner, IsWriter
@@ -39,6 +41,6 @@ class ListingViewSet(viewsets.ModelViewSet):
         if self.action in {"list", "retrieve"}:
             return [AllowAny()]
         if self.action == "create":
-            return [IsAuthenticated(), IsWriter()]
+            return [IsAuthenticated(), IsEmailVerified(), IsWriter()]
         # update / partial_update / destroy
-        return [IsAuthenticated(), IsWriter(), IsListingOwner()]
+        return [IsAuthenticated(), IsEmailVerified(), IsWriter(), IsListingOwner()]

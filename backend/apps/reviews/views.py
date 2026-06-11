@@ -2,6 +2,8 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
+
 from .models import Review
 from .serializers import ReviewCreateSerializer, ReviewSerializer
 
@@ -25,7 +27,7 @@ class ReviewViewSet(
 
     def get_permissions(self):
         if self.action == "create":
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsEmailVerified()]
         return [AllowAny()]
 
     def create(self, request, *args, **kwargs):

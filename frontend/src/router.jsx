@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
 import GuestRoute from "@/components/layout/GuestRoute";
+import VerifiedRoute from "@/components/layout/VerifiedRoute";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 
 // Route-based code splitting: each page is its own chunk so the initial bundle
@@ -68,7 +69,9 @@ export default function Router() {
           path="/listings/new"
           element={
             <WriterRoute>
-              <ListingFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une annonce.">
+                <ListingFormPage />
+              </VerifiedRoute>
             </WriterRoute>
           }
         />
@@ -76,7 +79,9 @@ export default function Router() {
           path="/listings/:id/edit"
           element={
             <WriterRoute>
-              <ListingFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une annonce.">
+                <ListingFormPage />
+              </VerifiedRoute>
             </WriterRoute>
           }
         />
@@ -89,7 +94,9 @@ export default function Router() {
           path="/requests/new"
           element={
             <ProtectedRoute>
-              <RequestFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une demande.">
+                <RequestFormPage />
+              </VerifiedRoute>
             </ProtectedRoute>
           }
         />
@@ -97,7 +104,9 @@ export default function Router() {
           path="/requests/:id/edit"
           element={
             <ProtectedRoute>
-              <RequestFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une demande.">
+                <RequestFormPage />
+              </VerifiedRoute>
             </ProtectedRoute>
           }
         />
