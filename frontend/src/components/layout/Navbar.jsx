@@ -7,7 +7,6 @@ import {
   Menu,
   MessageSquare,
   Settings,
-  Stethoscope,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,8 +83,8 @@ export default function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-72">
               <SheetHeader>
-                <SheetTitle className="flex items-center gap-2 text-primary">
-                  <Stethoscope className="size-5" /> Kessia
+                <SheetTitle className="font-display text-xl font-semibold tracking-tight">
+                  Kessia<span className="text-accent-500">.</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1">
@@ -143,11 +142,8 @@ export default function Navbar() {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold text-primary">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Stethoscope className="size-5" />
-            </span>
-            <span className="hidden sm:inline">Kessia</span>
+          <Link to="/" className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Kessia<span className="text-accent-500">.</span>
           </Link>
 
           <nav className="ml-4 hidden items-center gap-1 md:flex">

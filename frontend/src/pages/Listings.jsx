@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { FileText, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +70,7 @@ export default function Listings() {
     <div className="container py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Annonces</h1>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Annonces</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isLoading
               ? "Recherche en cours…"
@@ -155,7 +155,7 @@ export default function Listings() {
             </div>
           ) : total === 0 ? (
             <EmptyState
-              icon={FileText}
+              image="/img/engravings/botanique.jpg"
               title="Aucune annonce trouvée"
               description="Essayez d'élargir vos critères ou de réinitialiser les filtres."
             />

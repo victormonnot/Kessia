@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Stethoscope } from "lucide-react";
 
 import { useAuthStore } from "@/store/authStore";
 
@@ -43,11 +42,11 @@ export default function Footer() {
   const columns = [PLATFORM_COLUMN, accountColumn, LEGAL_COLUMN];
 
   return (
-    <footer className="border-t bg-card">
-      <div className="container grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
+    <footer className="border-t-2 border-foreground bg-background">
+      <div className="container grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Link to="/" className="flex items-center gap-2 font-bold text-primary">
-            <Stethoscope className="size-5" /> Kessia
+          <Link to="/" className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Kessia<span className="text-accent-500">.</span>
           </Link>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             La marketplace de la rédaction médicale.
