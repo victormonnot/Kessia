@@ -10,6 +10,7 @@ from rest_framework.decorators import (
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.orders.models import Order
 
 from . import services
@@ -17,7 +18,7 @@ from .models import StripeEvent
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def connect_onboard(request):
     if not request.user.is_writer:
         return Response({"detail": "Réservé aux rédacteurs."}, status=status.HTTP_403_FORBIDDEN)
@@ -44,7 +45,7 @@ def connect_status(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def pay_order(request, order_id):
     order = get_object_or_404(Order, pk=order_id)
     if order.doctor_id != request.user.id:
@@ -69,7 +70,7 @@ def pay_order(request, order_id):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def confirm_payment(request, order_id):
     """Sync the order with Stripe after the client confirms a payment.
 

@@ -147,8 +147,9 @@ export default function Conversation() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Composer */}
-        <form onSubmit={submit} className="border-t p-3">
+        {/* Composer — sending requires a verified email; reading stays open. */}
+        {me?.is_email_verified ? (
+          <form onSubmit={submit} className="border-t p-3">
           {file && (
             <div className="mb-2 flex items-center gap-2 rounded-md border bg-muted/40 px-2.5 py-1.5 text-xs">
               <Paperclip className="size-3.5 shrink-0" />
@@ -199,7 +200,12 @@ export default function Conversation() {
               {send.isPending ? <Spinner /> : <Send className="size-4" />}
             </Button>
           </div>
-        </form>
+          </form>
+        ) : (
+          <div className="border-t p-3 text-center text-sm text-muted-foreground">
+            Confirmez votre adresse e-mail pour envoyer des messages.
+          </div>
+        )}
       </div>
     </div>
   );

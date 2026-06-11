@@ -226,32 +226,32 @@ def test_register_creates_unverified_user_and_sends_verification_email(api_clien
     assert "fresh@example.com" in mail.outbox[0].to
 
 
-def test_email_verify_marks_address_confirmed(api_client, user):
-    assert user.is_email_verified is False
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    token = email_verification_token.make_token(user)
+def test_email_verify_marks_address_confirmed(api_client, unverified_user):
+    assert unverified_user.is_email_verified is False
+    uid = urlsafe_base64_encode(force_bytes(unverified_user.pk))
+    token = email_verification_token.make_token(unverified_user)
     response = api_client.post(
         reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json"
     )
     assert response.status_code == 200
-    user.refresh_from_db()
-    assert user.is_email_verified is True
+    unverified_user.refresh_from_db()
+    assert unverified_user.is_email_verified is True
 
 
-def test_email_verify_rejects_bad_token(api_client, user):
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
+def test_email_verify_rejects_bad_token(api_client, unverified_user):
+    uid = urlsafe_base64_encode(force_bytes(unverified_user.pk))
     response = api_client.post(
         reverse("auth-email-verify"), {"uid": uid, "token": "bogus"}, format="json"
     )
     assert response.status_code == 400
-    user.refresh_from_db()
-    assert user.is_email_verified is False
+    unverified_user.refresh_from_db()
+    assert unverified_user.is_email_verified is False
 
 
-def test_email_verify_token_is_single_use(api_client, user):
+def test_email_verify_token_is_single_use(api_client, unverified_user):
     # Once the address is confirmed, the same token must stop validating.
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    token = email_verification_token.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(unverified_user.pk))
+    token = email_verification_token.make_token(unverified_user)
     api_client.post(reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json")
     replay = api_client.post(
         reverse("auth-email-verify"), {"uid": uid, "token": token}, format="json"
@@ -259,11 +259,11 @@ def test_email_verify_token_is_single_use(api_client, user):
     assert replay.status_code == 400
 
 
-def test_email_verify_resend_sends_email(auth_client, user):
-    response = auth_client.post(reverse("auth-email-verify-resend"))
+def test_email_verify_resend_sends_email(unverified_client, unverified_user):
+    response = unverified_client.post(reverse("auth-email-verify-resend"))
     assert response.status_code == 200
     assert len(mail.outbox) == 1
-    assert user.email in mail.outbox[0].to
+    assert unverified_user.email in mail.outbox[0].to
 
 
 def test_email_verify_resend_noop_when_already_verified(auth_client, user):

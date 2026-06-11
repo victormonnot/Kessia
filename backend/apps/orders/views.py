@@ -10,6 +10,8 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
+
 from .models import Order
 from .permissions import IsOrderParticipant
 from .serializers import (
@@ -56,9 +58,12 @@ class OrderViewSet(
         return OrderDetailSerializer
 
     def get_permissions(self):
+        # IsEmailVerified allows safe methods, so reads (retrieve, deliverables
+        # GET, download, earnings) stay open; only writes (create, status PATCH,
+        # deliverable upload) are gated.
         if self.action in {"update", "partial_update", "retrieve"}:
-            return [IsAuthenticated(), IsOrderParticipant()]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsEmailVerified(), IsOrderParticipant()]
+        return [IsAuthenticated(), IsEmailVerified()]
 
     def create(self, request, *args, **kwargs):
         create_serializer = self.get_serializer(data=request.data)

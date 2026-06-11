@@ -3,6 +3,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.listings.permissions import IsWriter
 
 from .models import VerificationRequest
@@ -30,7 +31,7 @@ class VerificationViewSet(
 
     def get_permissions(self):
         if self.action == "create":
-            return [IsAuthenticated(), IsWriter()]
+            return [IsAuthenticated(), IsEmailVerified(), IsWriter()]
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
