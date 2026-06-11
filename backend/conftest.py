@@ -1,7 +1,16 @@
 import pytest
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.users.models import User
+
+
+@pytest.fixture(autouse=True)
+def _isolate_throttle_state():
+    """Throttle counters live in the cache, which (unlike the DB) persists
+    across tests in a process. Clear it so each test starts unthrottled."""
+    cache.clear()
+    yield
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@ from django.db.models import ProtectedError
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +13,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.common.notifications import send_notification
+from apps.common.throttles import (
+    EmailChangeThrottle,
+    EmailResendThrottle,
+    LoginThrottle,
+    PasswordResetThrottle,
+    RegisterThrottle,
+)
 
 from .cookies import (
     REFRESH_COOKIE,
@@ -38,6 +45,7 @@ from .tokens import email_verification_token
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterThrottle])
 def register(request):
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -64,6 +72,7 @@ def _send_password_reset_email(user: User) -> None:
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([PasswordResetThrottle])
 def password_reset_request(request):
     """Email a reset link if the address matches an active account.
 
@@ -114,6 +123,7 @@ def email_verify(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([EmailResendThrottle])
 def email_verify_resend(request):
     """Re-send the confirmation email to the current user (no-op if verified)."""
     if request.user.is_email_verified:
@@ -124,6 +134,8 @@ def email_verify_resend(request):
 
 class CookieTokenObtainPairView(TokenObtainPairView):
     """Login: return the access token in the body, the refresh in an httpOnly cookie."""
+
+    throttle_classes = (LoginThrottle,)
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -223,6 +235,7 @@ def change_password(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([EmailChangeThrottle])
 def change_email(request):
     serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)

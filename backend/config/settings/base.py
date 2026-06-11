@@ -120,6 +120,16 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Rates for the abuse-prone endpoints (see apps/common/throttles.py).
+    # Email senders are tight (each hit sends a real email and the Brevo free
+    # tier is 300/day); login is anti-bruteforce.
+    "DEFAULT_THROTTLE_RATES": {
+        "auth-login": "10/min",
+        "auth-register": "10/hour",
+        "password-reset": "3/hour",
+        "email-resend": "3/hour",
+        "email-change": "3/hour",
+    },
 }
 
 SIMPLE_JWT = {
