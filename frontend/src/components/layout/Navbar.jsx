@@ -84,7 +84,7 @@ export default function Navbar() {
             <SheetContent side="left" className="w-72">
               <SheetHeader>
                 <SheetTitle className="font-display text-xl font-semibold tracking-tight">
-                  Kessia<span className="text-accent-500">.</span>
+                  Kessia<span className="text-primary">.</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1">
@@ -143,7 +143,7 @@ export default function Navbar() {
           </Sheet>
 
           <Link to="/" className="font-display text-xl font-semibold tracking-tight text-foreground">
-            Kessia<span className="text-accent-500">.</span>
+            Kessia<span className="text-primary">.</span>
           </Link>
 
           <nav className="ml-4 hidden items-center gap-1 md:flex">
@@ -184,7 +184,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 px-2" aria-label="Menu du compte">
                     <Avatar className="size-8">
-                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
                         {initials(user)}
                       </AvatarFallback>
                     </Avatar>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { FileText, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,14 +148,14 @@ export default function Listings() {
           {isError ? (
             <ErrorState title="Échec du chargement des annonces" onRetry={refetch} />
           ) : isLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <ListingCardSkeleton key={i} />
               ))}
             </div>
           ) : total === 0 ? (
             <EmptyState
-              image="/img/engravings/botanique.jpg"
+              icon={FileText}
               title="Aucune annonce trouvée"
               description="Essayez d'élargir vos critères ou de réinitialiser les filtres."
             />
@@ -163,7 +163,7 @@ export default function Listings() {
             <>
               <div
                 className={cn(
-                  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+                  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
                   isFetching && "opacity-60 transition-opacity",
                 )}
               >

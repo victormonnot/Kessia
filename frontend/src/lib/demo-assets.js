@@ -1,8 +1,8 @@
 // Assets démo locaux (public/img) en attendant les champs avatar / couverture
-// côté backend. Provenance et licences des gravures : public/img/README.md.
+// côté backend. Provenance et licences des photos : public/img/README.md.
 
-// Spécialités avec leur propre planche gravée (fichier homonyme).
-const DIRECT_PLATES = new Set([
+// Spécialités avec leur propre photo de couverture (fichier homonyme).
+const DIRECT_COVERS = new Set([
   "cardiologie",
   "neurologie",
   "pneumologie",
@@ -14,24 +14,22 @@ const DIRECT_PLATES = new Set([
   "radiologie",
 ]);
 
-// Spécialités sans planche dédiée → famille visuellement la plus proche.
-const PLATE_FAMILIES = {
+// Spécialités sans photo dédiée → famille visuellement la plus proche.
+const COVER_FAMILIES = {
   neurochirurgie: "neurologie",
   hepatologie: "gastroenterologie",
-  diabetologie: "gastroenterologie", // le pancréas est sur la planche
+  diabetologie: "gastroenterologie",
   urologie: "gastroenterologie",
   nephrologie: "gastroenterologie",
-  endocrinologie: "pneumologie", // la planche montre aussi la thyroïde
   allergologie: "pneumologie",
   addictologie: "psychiatrie",
-  odontologie: "orl", // planche des os du crâne
-  pharmacologie: "botanique", // la digitale, plante médicinale
+  odontologie: "orl",
 };
 
-// Couverture gravée d'une annonce ; repli générique : la digitale pourprée.
-export function engravingFor(specialty) {
-  if (DIRECT_PLATES.has(specialty)) return `/img/engravings/${specialty}.jpg`;
-  return `/img/engravings/${PLATE_FAMILIES[specialty] ?? "botanique"}.jpg`;
+// Couverture photo d'une annonce ; repli générique : le microscope.
+export function coverFor(specialty) {
+  if (DIRECT_COVERS.has(specialty)) return `/img/covers/${specialty}.jpg`;
+  return `/img/covers/${COVER_FAMILIES[specialty] ?? "generique"}.jpg`;
 }
 
 // Portrait démo déterministe : même nom → même visage (01.jpg à 12.jpg).

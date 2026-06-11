@@ -42,11 +42,11 @@ export default function Footer() {
   const columns = [PLATFORM_COLUMN, accountColumn, LEGAL_COLUMN];
 
   return (
-    <footer className="border-t-2 border-foreground bg-background">
+    <footer className="border-t bg-background">
       <div className="container grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Link to="/" className="font-display text-2xl font-semibold tracking-tight text-foreground">
-            Kessia<span className="text-accent-500">.</span>
+            Kessia<span className="text-primary">.</span>
           </Link>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             La marketplace de la rédaction médicale.

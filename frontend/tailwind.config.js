@@ -8,7 +8,8 @@ export default {
     container: {
       center: true,
       padding: "1rem",
-      screens: { "2xl": "1280px" },
+      // Large, façon Malt/Fiverr — le contenu occupe l'écran.
+      screens: { "2xl": "1480px" },
     },
     extend: {
       colors: {
@@ -40,44 +41,43 @@ export default {
           foreground: "hsl(var(--destructive-foreground))",
         },
         // `primary` and `accent` keep numeric scales alongside the semantic
-        // DEFAULT/foreground. Identité « La Revue » : sapin + terracotta.
+        // DEFAULT/foreground. Identité v3 : orange (CTA) + ambre (étoiles).
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          // Vert sapin — la marque (#1B4D3E = 800).
-          50: "#f2f7f4",
-          100: "#dfede6",
-          200: "#c2dcce",
-          300: "#9bc4ae",
-          400: "#6fa68b",
-          500: "#4c886d",
-          600: "#356c55",
-          700: "#275848",
-          800: "#1b4d3e",
-          900: "#143c30",
+          // Orange — la marque (#F2620F = 500), à usage parcimonieux.
+          50: "#fff4ed",
+          100: "#ffe6d5",
+          200: "#feccaa",
+          300: "#fda974",
+          400: "#fb7e3c",
+          500: "#f2620f",
+          600: "#e14f09",
+          700: "#bb3d0a",
+          800: "#953110",
+          900: "#782b10",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
-          // Terracotta — surlignages, prix, touches chaudes (#C65F3D = 500).
-          400: "#d97e5f",
-          500: "#c65f3d",
-          600: "#ac4e2f",
-          700: "#8e4026",
+          // Ambre — étoiles et badges de note uniquement.
+          400: "#fbbf24",
+          500: "#f59e0b",
+          600: "#d97706",
+          700: "#b45309",
         },
-        // Stone (gris chauds Tailwind) — remplace l'ancien slate, trop froid
-        // pour le fond papier.
+        // Slate — gris bleutés froids, accordés au texte bleu nuit.
         neutral: {
-          50: "#fafaf9",
-          100: "#f5f5f4",
-          200: "#e7e5e4",
-          300: "#d6d3d1",
-          400: "#a8a29e",
-          500: "#78716c",
-          600: "#57534e",
-          700: "#44403c",
-          800: "#292524",
-          900: "#1c1917",
+          50: "#f8fafc",
+          100: "#f1f5f9",
+          200: "#e2e8f0",
+          300: "#cbd5e1",
+          400: "#94a3b8",
+          500: "#64748b",
+          600: "#475569",
+          700: "#334155",
+          800: "#1e293b",
+          900: "#0f172a",
         },
       },
       borderRadius: {
@@ -86,10 +86,10 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        // UI : Public Sans, neutre et crédible.
-        sans: ["Public Sans Variable", "ui-sans-serif", "system-ui", "sans-serif"],
-        // Titres : Fraunces, serif d'édition — la voix de la marque.
-        display: ["Fraunces Variable", "Georgia", "ui-serif", "serif"],
+        // Une seule famille : Archivo, anguleuse et efficace.
+        sans: ["Archivo Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Alias conservé pour les composants qui utilisent `font-display`.
+        display: ["Archivo Variable", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
