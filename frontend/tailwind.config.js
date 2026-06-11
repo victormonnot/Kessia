@@ -39,43 +39,45 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-        // `primary` and `accent` keep their legacy numeric scales alongside the
-        // semantic DEFAULT/foreground so not-yet-refonted screens still render.
+        // `primary` and `accent` keep numeric scales alongside the semantic
+        // DEFAULT/foreground. Identité « La Revue » : sapin + terracotta.
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          50: "#f0fdfa",
-          100: "#ccfbf1",
-          200: "#99f6e4",
-          300: "#5eead4",
-          400: "#2dd4bf",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-          900: "#134e4a",
+          // Vert sapin — la marque (#1B4D3E = 800).
+          50: "#f2f7f4",
+          100: "#dfede6",
+          200: "#c2dcce",
+          300: "#9bc4ae",
+          400: "#6fa68b",
+          500: "#4c886d",
+          600: "#356c55",
+          700: "#275848",
+          800: "#1b4d3e",
+          900: "#143c30",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
-          // Sky blue, kept for marketing gradients / accents on the landing.
-          400: "#38bdf8",
-          500: "#0ea5e9",
-          600: "#0284c7",
-          700: "#0369a1",
+          // Terracotta — surlignages, prix, touches chaudes (#C65F3D = 500).
+          400: "#d97e5f",
+          500: "#c65f3d",
+          600: "#ac4e2f",
+          700: "#8e4026",
         },
-        // Slate scale preserved from v1 (Tailwind's default `neutral` differs).
+        // Stone (gris chauds Tailwind) — remplace l'ancien slate, trop froid
+        // pour le fond papier.
         neutral: {
-          50: "#f8fafc",
-          100: "#f1f5f9",
-          200: "#e2e8f0",
-          300: "#cbd5e1",
-          400: "#94a3b8",
-          500: "#64748b",
-          600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
+          50: "#fafaf9",
+          100: "#f5f5f4",
+          200: "#e7e5e4",
+          300: "#d6d3d1",
+          400: "#a8a29e",
+          500: "#78716c",
+          600: "#57534e",
+          700: "#44403c",
+          800: "#292524",
+          900: "#1c1917",
         },
       },
       borderRadius: {
@@ -84,7 +86,10 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // UI : Public Sans, neutre et crédible.
+        sans: ["Public Sans Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Titres : Fraunces, serif d'édition — la voix de la marque.
+        display: ["Fraunces Variable", "Georgia", "ui-serif", "serif"],
       },
       keyframes: {
         "accordion-down": {

@@ -2,61 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Identité « La Revue » — maison d'édition scientifique.
+ * Papier ivoire, encre brun-noir, vert sapin, accents terracotta.
+ * Tout passe par ces variables HSL : les primitives shadcn suivent.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Papier ivoire (#F9F6F0) — fond général chaud, anti-blanc-pur. */
+    --background: 39 44% 96%;
+    /* Encre brun-noir (#1F1B16). */
+    --foreground: 33 17% 10%;
 
+    /* Les cards restent blanches : elles « flottent » sur le papier. */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 33 17% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 33 17% 10%;
 
-    /* Brand teal (matches primary-600 #0d9488). */
-    --primary: 175 84% 32%;
-    --primary-foreground: 0 0% 100%;
+    /* Vert sapin (#1B4D3E) — CTA, liens, marque. */
+    --primary: 162 48% 20%;
+    --primary-foreground: 40 38% 97%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Sauge pâle — pills de spécialité, boutons secondaires. */
+    --secondary: 160 28% 91%;
+    --secondary-foreground: 162 45% 16%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Papier assombri — fonds discrets, texte secondaire chaud. */
+    --muted: 39 32% 92%;
+    --muted-foreground: 33 9% 38%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Lavis papier au survol (menus, listes). */
+    --accent: 40 36% 92%;
+    --accent-foreground: 33 17% 10%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    /* Rouge brique — reste dans la gamme chaude. */
+    --destructive: 8 64% 44%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 175 84% 32%;
+    /* Filets fins, chauds (#E8E2D6). */
+    --border: 38 24% 86%;
+    --input: 38 24% 86%;
+    --ring: 162 40% 30%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
 
   /* Prepared for a future dark theme — inactive until `.dark` is toggled. */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 172 66% 50%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 172 66% 50%;
+    --background: 160 15% 8%;
+    --foreground: 40 30% 92%;
+    --card: 160 12% 11%;
+    --card-foreground: 40 30% 92%;
+    --popover: 160 12% 11%;
+    --popover-foreground: 40 30% 92%;
+    --primary: 160 30% 55%;
+    --primary-foreground: 162 50% 10%;
+    --secondary: 160 10% 18%;
+    --secondary-foreground: 40 30% 92%;
+    --muted: 160 10% 18%;
+    --muted-foreground: 40 10% 62%;
+    --accent: 160 10% 18%;
+    --accent-foreground: 40 30% 92%;
+    --destructive: 8 55% 40%;
+    --destructive-foreground: 40 30% 92%;
+    --border: 160 10% 20%;
+    --input: 160 10% 20%;
+    --ring: 160 30% 50%;
   }
 }
 
@@ -69,6 +82,17 @@
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
   }
 
+  /* Les titres portent la voix éditoriale : serif Fraunces partout. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-accent-500/25;
+  }
+
   /* Respect users who prefer reduced motion across Framer Motion / CSS. */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -78,5 +102,19 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
     }
+  }
+}
+
+@layer utilities {
+  /*
+   * Traitement « planche gravée » : monochrome sapin fondu dans le papier.
+   * À poser sur un <img> de gravure (domaine public) affiché sur un fond
+   * papier/ivoire — le blend multiply fait disparaître le fond du scan.
+   * Un seul endroit à régler si on ajuste la teinte de la marque.
+   */
+  .img-engraving {
+    filter: grayscale(1) sepia(0.4) hue-rotate(110deg) saturate(0.85)
+      contrast(1.05) brightness(0.97);
+    mix-blend-mode: multiply;
   }
 }
