@@ -40,11 +40,11 @@ export const SPECIALTY_OPTIONS = [
 ];
 
 export const DELIVERABLE_OPTIONS = [
-  { value: "research_paper", label: "Article de recherche" },
-  { value: "review_article", label: "Article de revue" },
-  { value: "case_report", label: "Étude de cas" },
-  { value: "abstract", label: "Résumé" },
-  { value: "other", label: "Autre" },
+  { value: "protocole_recherche", label: "Protocole de recherche" },
+  { value: "vulgarisation", label: "Vulgarisation scientifique" },
+  { value: "synopsis_recherche", label: "Synopsis de recherche" },
+  { value: "resume_recherche", label: "Résumé de recherche" },
+  { value: "autres", label: "Autres" },
 ];
 
 export const STATUS_LABELS = {

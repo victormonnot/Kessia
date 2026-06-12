@@ -13,7 +13,7 @@ def _payload(**overrides):
         "title": "Cardio review article",
         "description": "I will write your review article.",
         "specialty": Specialty.CARDIOLOGIE,
-        "deliverable_type": DeliverableType.REVIEW_ARTICLE,
+        "deliverable_type": DeliverableType.VULGARISATION,
         "price": "300.00",
         "turnaround_days": 10,
         "is_published": True,

@@ -41,8 +41,8 @@ class Specialty(models.TextChoices):
 
 
 class DeliverableType(models.TextChoices):
-    RESEARCH_PAPER = "research_paper", "Research paper"
-    REVIEW_ARTICLE = "review_article", "Review article"
-    CASE_REPORT = "case_report", "Case report"
-    ABSTRACT = "abstract", "Abstract"
-    OTHER = "other", "Other"
+    PROTOCOLE_RECHERCHE = "protocole_recherche", "Protocole de recherche"
+    VULGARISATION = "vulgarisation", "Vulgarisation scientifique"
+    SYNOPSIS_RECHERCHE = "synopsis_recherche", "Synopsis de recherche"
+    RESUME_RECHERCHE = "resume_recherche", "Résumé de recherche"
+    AUTRES = "autres", "Autres"

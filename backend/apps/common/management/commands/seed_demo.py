@@ -65,54 +65,54 @@ DOCTORS = [
 # Two listing ideas per specialty: (title, deliverable_type).
 SPECIALTY_LISTINGS = {
     Specialty.CARDIOLOGIE: [
-        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.CASE_REPORT),
+        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
+        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
     Specialty.ONCOLOGIE: [
-        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.RESEARCH_PAPER),
-        ("Résumé pour congrès international d'oncologie", DeliverableType.ABSTRACT),
+        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Résumé pour congrès international d'oncologie", DeliverableType.RESUME_RECHERCHE),
     ],
     Specialty.NEUROLOGIE: [
-        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.REVIEW_ARTICLE),
-        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.RESEARCH_PAPER),
+        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
+        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.PROTOCOLE_RECHERCHE),
     ],
     Specialty.PEDIATRIE: [
-        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.CASE_REPORT),
-        ("Résumé pour journées de pédiatrie", DeliverableType.ABSTRACT),
+        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
+        ("Résumé pour journées de pédiatrie", DeliverableType.RESUME_RECHERCHE),
     ],
     Specialty.DERMATOLOGIE: [
-        ("Série de cas en dermatologie inflammatoire", DeliverableType.CASE_REPORT),
-        ("Revue sur les biothérapies du psoriasis", DeliverableType.REVIEW_ARTICLE),
+        ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
+        ("Revue sur les biothérapies du psoriasis", DeliverableType.VULGARISATION),
     ],
     Specialty.RADIOLOGIE: [
-        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.ABSTRACT),
-        ("Article original — IA et imagerie diagnostique", DeliverableType.RESEARCH_PAPER),
+        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
+        ("Article original — IA et imagerie diagnostique", DeliverableType.PROTOCOLE_RECHERCHE),
     ],
     Specialty.PSYCHIATRIE: [
-        ("Revue sur les troubles anxieux et la TCC", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas en psychiatrie de liaison", DeliverableType.CASE_REPORT),
+        ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
+        ("Étude de cas en psychiatrie de liaison", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
     Specialty.NEUROCHIRURGIE: [
-        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.RESEARCH_PAPER),
-        ("Étude de cas chirurgical rare", DeliverableType.CASE_REPORT),
+        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Étude de cas chirurgical rare", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
     Specialty.ENDOCRINOLOGIE: [
-        ("Méta-analyse sur le diabète de type 2", DeliverableType.RESEARCH_PAPER),
-        ("Revue sur les analogues du GLP-1", DeliverableType.REVIEW_ARTICLE),
+        ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Revue sur les analogues du GLP-1", DeliverableType.VULGARISATION),
     ],
     Specialty.GASTROENTEROLOGIE: [
-        ("Revue sur les MICI et les biothérapies", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas en hépatologie", DeliverableType.CASE_REPORT),
+        ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
+        ("Étude de cas en hépatologie", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
 }
 
 # (price, turnaround_days) per deliverable type.
 PRICING = {
-    DeliverableType.RESEARCH_PAPER: (Decimal("900.00"), 21),
-    DeliverableType.REVIEW_ARTICLE: (Decimal("750.00"), 14),
-    DeliverableType.CASE_REPORT: (Decimal("350.00"), 7),
-    DeliverableType.ABSTRACT: (Decimal("200.00"), 5),
-    DeliverableType.OTHER: (Decimal("400.00"), 10),
+    DeliverableType.PROTOCOLE_RECHERCHE: (Decimal("900.00"), 21),
+    DeliverableType.VULGARISATION: (Decimal("750.00"), 14),
+    DeliverableType.SYNOPSIS_RECHERCHE: (Decimal("350.00"), 7),
+    DeliverableType.RESUME_RECHERCHE: (Decimal("200.00"), 5),
+    DeliverableType.AUTRES: (Decimal("400.00"), 10),
 }
 
 REVIEW_COMMENTS = [
