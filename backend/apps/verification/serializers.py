@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.common.uploads import VERIFICATION_DOC_RULES, upload_error
+
 from .models import VerificationRequest
 
 
@@ -14,6 +16,14 @@ class VerificationRequestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = VerificationRequest
         fields = ("credentials", "document")
+
+    def validate_document(self, value):
+        # The document is optional (credential-text-only requests are allowed).
+        if value:
+            error = upload_error(value, VERIFICATION_DOC_RULES)
+            if error:
+                raise serializers.ValidationError(error)
+        return value
 
     def validate(self, attrs):
         user = self.context["request"].user

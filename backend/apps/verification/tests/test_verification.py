@@ -1,4 +1,5 @@
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.verification import services
@@ -15,6 +16,30 @@ def test_writer_can_submit_verification_request(writer_auth_client, writer_user)
     )
     assert response.status_code == 201
     assert VerificationRequest.objects.filter(writer=writer_user).count() == 1
+
+
+def test_verification_document_rejects_disallowed_type(writer_auth_client):
+    response = writer_auth_client.post(
+        reverse("verification-list"),
+        {
+            "credentials": "MD",
+            "document": SimpleUploadedFile("diplome.exe", b"MZ"),
+        },
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert VerificationRequest.objects.count() == 0
+
+
+def test_verification_document_rejects_oversized_file(writer_auth_client):
+    too_big = SimpleUploadedFile("diplome.pdf", b"x" * (10 * 1024 * 1024 + 1))
+    response = writer_auth_client.post(
+        reverse("verification-list"),
+        {"credentials": "MD", "document": too_big},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert VerificationRequest.objects.count() == 0
 
 
 def test_non_writer_cannot_submit(auth_client):
