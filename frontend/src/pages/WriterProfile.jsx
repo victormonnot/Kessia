@@ -43,11 +43,11 @@ export default function WriterProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.user);
-  const { data: writer, isLoading, isError, refetch } = useWriter(id);
+  const { data: writer, isLoading, isError, isFetching, refetch } = useWriter(id);
   const { data: reviews, isLoading: reviewsLoading } = useWriterReviews(id);
   const startConversation = useStartConversation();
 
-  if (isLoading) return <ProfileSkeleton />;
+  if (isLoading || (isError && isFetching)) return <ProfileSkeleton />;
   if (isError || !writer) {
     return (
       <div className="container py-10">

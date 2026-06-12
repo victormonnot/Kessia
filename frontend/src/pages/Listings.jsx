@@ -145,9 +145,11 @@ export default function Listings() {
         </aside>
 
         <section>
-          {isError ? (
+          {/* A settled error only: while a refetch is recovering from a cached
+              error, show the skeleton instead of flashing the error state. */}
+          {isError && !isFetching ? (
             <ErrorState title="Échec du chargement des annonces" onRetry={refetch} />
-          ) : isLoading ? (
+          ) : isLoading || isError ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <ListingCardSkeleton key={i} />

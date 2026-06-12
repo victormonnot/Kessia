@@ -13,7 +13,7 @@ import { formatRelative, fullName, initials } from "@/lib/format";
 import { useConversations } from "@/hooks/useMessaging";
 
 export default function Inbox() {
-  const { data, isLoading, isError, refetch } = useConversations();
+  const { data, isLoading, isError, isFetching, refetch } = useConversations();
   const [query, setQuery] = useState("");
 
   const conversations = data?.results || [];
@@ -27,9 +27,9 @@ export default function Inbox() {
     <div className="container max-w-3xl py-8">
       <h1 className="text-2xl font-bold tracking-tight">Messagerie</h1>
 
-      {isError ? (
+      {isError && !isFetching ? (
         <ErrorState className="mt-6" title="Impossible de charger vos messages" onRetry={refetch} />
-      ) : isLoading ? (
+      ) : isLoading || isError ? (
         <div className="mt-6 space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-[4.5rem] w-full rounded-lg" />

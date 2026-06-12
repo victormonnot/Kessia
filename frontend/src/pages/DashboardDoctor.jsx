@@ -32,8 +32,8 @@ function MyOrdersTab() {
 }
 
 function MyRequestsTab() {
-  const { data, isLoading, isError, refetch } = useRequests({ mine: true });
-  if (isLoading) return <LoadingBlock />;
+  const { data, isLoading, isError, isFetching, refetch } = useRequests({ mine: true });
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
   const mine = data?.results || [];
 
@@ -70,10 +70,10 @@ function MyRequestsTab() {
 
 function ProposalsReceivedTab() {
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, isError, refetch } = useAllProposals();
+  const { data, isLoading, isError, isFetching, refetch } = useAllProposals();
   const decide = useDecideProposal();
 
-  if (isLoading) return <LoadingBlock />;
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   // Proposals on the doctor's own requests (i.e. not authored by the doctor).
