@@ -195,6 +195,10 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 
+# "Sign in with Google": OAuth client ID used to verify the ID tokens posted by
+# the frontend's Google button. Blank = the feature is disabled.
+GOOGLE_OAUTH_CLIENT_ID = config("GOOGLE_OAUTH_CLIENT_ID", default="")
+
 # Stripe Connect (test mode). The platform charges the doctor, holds the funds,
 # and on completion transfers (amount - commission) to the writer's connected
 # account. Keys are blank in dev/test; tests mock the Stripe SDK entirely.

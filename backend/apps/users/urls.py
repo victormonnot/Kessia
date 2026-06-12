@@ -11,6 +11,7 @@ from .views import (
     change_password,
     email_verify,
     email_verify_resend,
+    google_login,
     password_reset_confirm,
     password_reset_request,
     register,
@@ -19,6 +20,7 @@ from .views import (
 urlpatterns = [
     path("auth/register/", register, name="auth-register"),
     path("auth/login/", CookieTokenObtainPairView.as_view(), name="auth-login"),
+    path("auth/google/", google_login, name="auth-google"),
     path("auth/refresh/", CookieTokenRefreshView.as_view(), name="auth-refresh"),
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("auth/password/reset/", password_reset_request, name="auth-password-reset"),

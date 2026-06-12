@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import Spinner from "@/components/feedback/Spinner";
 import AuthLayout from "@/components/layout/AuthLayout";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { loginSchema } from "@/lib/schemas/auth";
 import { errorMessage } from "@/lib/format";
 import { useLogin } from "@/hooks/useAuth";
@@ -118,6 +119,8 @@ export default function Login() {
           </Button>
         </form>
       </Form>
+
+      <GoogleLoginButton />
 
       <div className="mt-6 rounded-lg border bg-muted/40 p-4">
         <p className="text-xs font-medium text-muted-foreground">
