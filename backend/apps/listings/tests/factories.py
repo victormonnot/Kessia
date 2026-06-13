@@ -15,7 +15,7 @@ class ListingFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: f"Listing {n}")
     description = "A medical writing service."
     specialty = Specialty.CARDIOLOGIE
-    deliverable_type = DeliverableType.RESEARCH_PAPER
+    deliverable_type = DeliverableType.PROTOCOLE_RECHERCHE
     price = Decimal("250.00")
     turnaround_days = 7
     is_published = True

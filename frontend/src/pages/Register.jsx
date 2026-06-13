@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import Spinner from "@/components/feedback/Spinner";
 import AuthLayout from "@/components/layout/AuthLayout";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { registerSchema } from "@/lib/schemas/auth";
 import { errorMessage } from "@/lib/format";
 import { useRegister } from "@/hooks/useAuth";
@@ -171,6 +172,8 @@ export default function Register() {
           </Button>
         </form>
       </Form>
+
+      <GoogleLoginButton />
     </AuthLayout>
   );
 }

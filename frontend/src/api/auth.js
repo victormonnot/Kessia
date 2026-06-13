@@ -5,6 +5,9 @@ export const authApi = {
 
   login: (email, password) => api.post("/auth/login/", { email, password }).then((r) => r.data),
 
+  googleLogin: (credential) =>
+    api.post("/auth/google/", { credential }).then((r) => r.data),
+
   logout: () => api.post("/auth/logout/").then((r) => r.data),
 
   requestPasswordReset: (email) =>

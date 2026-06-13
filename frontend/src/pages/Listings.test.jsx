@@ -20,7 +20,7 @@ vi.mock("@/hooks/useListings", () => ({
           writer_rating: 4.5,
           writer_reviews_count: 3,
           specialty: "cardiologie",
-          deliverable_type: "research_paper",
+          deliverable_type: "protocole_recherche",
           turnaround_days: 7,
         },
       ],

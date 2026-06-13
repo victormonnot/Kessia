@@ -36,12 +36,12 @@ function DetailSkeleton() {
 export default function RequestDetail() {
   const { id } = useParams();
   const user = useAuthStore((s) => s.user);
-  const { data: request, isLoading, isError, refetch } = useRequest(id);
+  const { data: request, isLoading, isError, isFetching, refetch } = useRequest(id);
   const { data: proposals = [] } = useProposals(user ? id : null);
   const createProposal = useCreateProposal(id);
   const updateProposal = useUpdateProposal(id);
 
-  if (isLoading) return <DetailSkeleton />;
+  if (isLoading || (isError && isFetching)) return <DetailSkeleton />;
   if (isError) {
     return (
       <div className="container py-10">

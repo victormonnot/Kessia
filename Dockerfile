@@ -9,6 +9,10 @@ RUN npm ci
 COPY frontend/ ./
 # Same-origin API in production:
 ENV VITE_API_BASE_URL=/api/v1
+# Vite bakes env vars at build time. Render exposes its env vars as Docker
+# build args, so declaring the ARG lets VITE_GOOGLE_CLIENT_ID reach the build.
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # --- Stage 2: Django backend ---

@@ -23,10 +23,10 @@ import { errorMessage, formatPrice, fullName } from "@/lib/format";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 function MyListingsTab() {
-  const { data, isLoading, isError, refetch } = useListings({ mine: true });
+  const { data, isLoading, isError, isFetching, refetch } = useListings({ mine: true });
   const remove = useDeleteListing();
 
-  if (isLoading) return <LoadingBlock />;
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
   const listings = data?.results || [];
 
@@ -112,8 +112,8 @@ function OrdersReceivedTab() {
 
 function MyProposalsTab() {
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, isError, refetch } = useAllProposals();
-  if (isLoading) return <LoadingBlock />;
+  const { data, isLoading, isError, isFetching, refetch } = useAllProposals();
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   const mine = (data?.results || []).filter((p) => p.writer?.id === user?.id);

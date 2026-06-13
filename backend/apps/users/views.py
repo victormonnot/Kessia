@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import ProtectedError
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -130,6 +133,69 @@ def email_verify_resend(request):
         return Response({"detail": "Votre adresse e-mail est déjà confirmée."})
     _send_email_verification(request.user)
     return Response({"detail": "E-mail de confirmation renvoyé."})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([LoginThrottle])
+def google_login(request):
+    """Log in — or sign up — with a Google ID token from the Google button.
+
+    The frontend's Google Identity Services button hands us a signed ID token;
+    we verify it against Google's public keys (audience = our client ID), then
+    match-or-create the account by email. Google accounts have no usable
+    password and are email-verified by construction (Google proved ownership).
+    """
+    if not settings.GOOGLE_OAUTH_CLIENT_ID:
+        return Response(
+            {"detail": "La connexion Google n'est pas configurée."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    credential = request.data.get("credential")
+    if not credential:
+        return Response({"detail": "Jeton Google manquant."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        claims = google_id_token.verify_oauth2_token(
+            credential, google_requests.Request(), settings.GOOGLE_OAUTH_CLIENT_ID
+        )
+    except ValueError:
+        return Response(
+            {"detail": "Jeton Google invalide."}, status=status.HTTP_401_UNAUTHORIZED
+        )
+    if not claims.get("email_verified"):
+        return Response(
+            {"detail": "Votre adresse Google n'est pas vérifiée."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    email = claims["email"]
+    user = User.objects.filter(email__iexact=email).first()
+    created = user is None
+    if created:
+        # password=None -> unusable password (Google is the only way in).
+        # The button states that continuing accepts the CGU, hence the consent
+        # timestamp; Google already verified the address.
+        user = User.objects.create_user(
+            email=email,
+            first_name=claims.get("given_name", ""),
+            last_name=claims.get("family_name", ""),
+            is_email_verified=True,
+            terms_accepted_at=timezone.now(),
+        )
+    elif not user.is_active:
+        return Response({"detail": "Compte désactivé."}, status=status.HTTP_403_FORBIDDEN)
+    elif not user.is_email_verified:
+        # Google just proved they own this address.
+        user.is_email_verified = True
+        user.save(update_fields=["is_email_verified"])
+
+    refresh = RefreshToken.for_user(user)
+    response = Response(
+        {"user": UserSerializer(user).data, "access": str(refresh.access_token)},
+        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+    )
+    set_auth_cookies(response, str(refresh))
+    return response
 
 
 class CookieTokenObtainPairView(TokenObtainPairView):

@@ -11,7 +11,7 @@ vi.mock("@/api/listings", () => ({
           id: 1,
           title: "Test",
           specialty: "cardiologie",
-          deliverable_type: "research_paper",
+          deliverable_type: "protocole_recherche",
           price: "100.00",
           turnaround_days: 5,
           writer: 9,

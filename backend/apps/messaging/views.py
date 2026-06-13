@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.permissions import IsEmailVerified
+from apps.common.uploads import CHAT_ATTACHMENT_RULES, upload_error
 from apps.orders.models import Order
 
 from .models import Conversation
@@ -18,23 +19,6 @@ from .serializers import ConversationSerializer, MessageSerializer
 from .services import get_or_create_conversation, post_message
 
 User = get_user_model()
-
-# Chat attachment limits (kept conservative; tighten/loosen as needed).
-MAX_ATTACHMENT_MB = 10
-ALLOWED_ATTACHMENT_EXTS = {
-    ".pdf", ".doc", ".docx", ".txt", ".csv", ".xls", ".xlsx",
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".zip",
-}
-
-
-def _attachment_error(upload) -> str | None:
-    """Return a French error string if the upload is too big or a bad type."""
-    ext = os.path.splitext(upload.name)[1].lower()
-    if ext not in ALLOWED_ATTACHMENT_EXTS:
-        return "Type de fichier non autorisé."
-    if upload.size > MAX_ATTACHMENT_MB * 1024 * 1024:
-        return f"Le fichier dépasse la taille maximale de {MAX_ATTACHMENT_MB} Mo."
-    return None
 
 
 class ConversationViewSet(
@@ -112,7 +96,7 @@ class ConversationViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if attachment:
-            error = _attachment_error(attachment)
+            error = upload_error(attachment, CHAT_ATTACHMENT_RULES)
             if error:
                 return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         message = post_message(conversation, request.user, body, attachment=attachment)

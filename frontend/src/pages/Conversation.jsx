@@ -22,7 +22,7 @@ export default function Conversation() {
   const me = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: conversation } = useConversation(id);
-  const { data: messages = [], isLoading, isError } = useMessages(id);
+  const { data: messages = [], isLoading, isError, isFetching } = useMessages(id);
   const send = useSendMessage(id);
   const [body, setBody] = useState("");
   const [file, setFile] = useState(null);
@@ -107,7 +107,7 @@ export default function Conversation() {
 
         {/* Messages */}
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
-          {isLoading ? (
+          {isLoading || (isError && isFetching) ? (
             <div className="space-y-3">
               <Skeleton className="h-10 w-2/3" />
               <Skeleton className="ml-auto h-10 w-1/2" />

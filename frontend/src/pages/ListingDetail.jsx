@@ -33,11 +33,13 @@ function DetailSkeleton() {
 
 export default function ListingDetail() {
   const { id } = useParams();
-  const { data: listing, isLoading, isError, refetch } = useListing(id);
+  const { data: listing, isLoading, isError, isFetching, refetch } = useListing(id);
   const user = useAuthStore((s) => s.user);
   const [orderOpen, setOrderOpen] = useState(false);
 
-  if (isLoading) return <DetailSkeleton />;
+  // Recovering from a cached error (refetch in flight) renders as loading, not
+  // as a flash of the error state.
+  if (isLoading || (isError && isFetching)) return <DetailSkeleton />;
   if (isError) {
     return (
       <div className="container py-10">

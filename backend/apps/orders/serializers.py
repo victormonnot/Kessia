@@ -2,6 +2,7 @@ import os
 
 from rest_framework import serializers
 
+from apps.common.uploads import DELIVERABLE_RULES, upload_error
 from apps.listings.serializers import ListingListSerializer
 from apps.users.serializers import UserPublicSerializer
 
@@ -25,6 +26,12 @@ class DeliverableUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deliverable
         fields = ("file", "note")
+
+    def validate_file(self, value):
+        error = upload_error(value, DELIVERABLE_RULES)
+        if error:
+            raise serializers.ValidationError(error)
+        return value
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):

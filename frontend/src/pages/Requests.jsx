@@ -137,9 +137,9 @@ export default function Requests() {
         </aside>
 
         <section>
-          {isError ? (
+          {isError && !isFetching ? (
             <ErrorState title="Échec du chargement des demandes" onRetry={refetch} />
-          ) : isLoading ? (
+          ) : isLoading || isError ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <RequestCardSkeleton key={i} />
