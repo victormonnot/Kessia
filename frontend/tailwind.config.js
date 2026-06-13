@@ -8,8 +8,9 @@ export default {
     container: {
       center: true,
       padding: "1rem",
-      // Large, façon Malt/Fiverr — le contenu occupe l'écran.
-      screens: { "2xl": "1480px" },
+      // Large, façon Malt/Fiverr — le contenu occupe l'écran, mais resserré
+      // d'un cran pour ne pas s'étaler jusqu'aux bords.
+      screens: { "2xl": "1400px" },
     },
     extend: {
       colors: {
