@@ -27,7 +27,7 @@ export default function RequestCard({ request }) {
       </div>
 
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
           {labelFor(request.specialty, SPECIALTY_OPTIONS)}
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">

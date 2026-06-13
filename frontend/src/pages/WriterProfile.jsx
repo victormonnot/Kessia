@@ -79,7 +79,7 @@ export default function WriterProfile() {
       {/* Header */}
       <div className="rounded-xl border bg-card p-6 shadow-sm sm:flex sm:items-start sm:gap-6">
         <Avatar className="mx-auto size-20 sm:mx-0">
-          <AvatarFallback className="bg-primary/10 text-2xl font-semibold text-primary">
+          <AvatarFallback className="bg-secondary text-2xl font-semibold text-foreground">
             {initials(writer)}
           </AvatarFallback>
         </Avatar>
@@ -102,7 +102,7 @@ export default function WriterProfile() {
           {writer.specialties?.length > 0 && (
             <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
               {writer.specialties.map((s) => (
-                <Badge key={s} variant="primary">
+                <Badge key={s} variant="neutral">
                   {labelFor(s, SPECIALTY_OPTIONS)}
                 </Badge>
               ))}

@@ -44,7 +44,7 @@ export default function VerifyEmail() {
     return (
       <AuthLayout title="Adresse confirmée" subtitle="Votre compte est désormais vérifié.">
         <div className="rounded-lg border bg-muted/40 p-6 text-center">
-          <CheckCircle2 className="mx-auto size-10 text-primary" />
+          <CheckCircle2 className="mx-auto size-10 text-emerald-600" />
           <p className="mt-4 text-sm text-foreground">
             Merci ! Votre adresse e-mail a bien été confirmée.
           </p>

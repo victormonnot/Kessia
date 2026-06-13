@@ -52,7 +52,7 @@ export default function PlaceOrderModal({ listing, open, onClose }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
           <span className="font-medium">{listing?.title}</span>
-          <span className="font-semibold text-primary">{formatPrice(listing?.price)}</span>
+          <span className="font-semibold text-foreground">{formatPrice(listing?.price)}</span>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="order-message">Consignes (optionnel)</Label>

@@ -176,7 +176,7 @@ export default function DashboardWriter() {
     <div className="container py-8">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-        <Badge variant="primary">Rédacteur</Badge>
+        <Badge variant="info">Rédacteur</Badge>
         {user?.is_verified && <Badge variant="success">Vérifié</Badge>}
       </div>
       <p className="mt-1 text-muted-foreground">Bon retour, {fullName(user)}.</p>

@@ -13,7 +13,7 @@ export default function OrderCard({ order, role }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <Avatar className="size-10">
-            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
               {initials(counterparty)}
             </AvatarFallback>
           </Avatar>

@@ -70,7 +70,7 @@ export default function Inbox() {
                   className="flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/40"
                 >
                   <Avatar className="size-11">
-                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                    <AvatarFallback className="bg-secondary text-sm font-semibold text-foreground">
                       {initials(c.other_user)}
                     </AvatarFallback>
                   </Avatar>

@@ -79,7 +79,7 @@ export default function ListingDetail() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
                 {labelFor(listing.specialty, SPECIALTY_OPTIONS)}
               </span>
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
@@ -109,7 +109,7 @@ export default function ListingDetail() {
             <CardContent>
               <div className="flex items-start gap-4">
                 <Avatar className="size-12">
-                  <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                  <AvatarFallback className="bg-secondary font-semibold text-foreground">
                     {initials(writer)}
                   </AvatarFallback>
                 </Avatar>
@@ -146,7 +146,7 @@ export default function ListingDetail() {
 
         <aside>
           <div className="sticky top-20 rounded-lg border bg-card p-6 shadow-sm">
-            <p className="text-3xl font-bold text-primary">{formatPrice(listing.price)}</p>
+            <p className="text-3xl font-bold text-foreground">{formatPrice(listing.price)}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Livraison estimée sous {listing.turnaround_days} jours
             </p>

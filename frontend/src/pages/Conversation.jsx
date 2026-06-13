@@ -91,7 +91,7 @@ export default function Conversation() {
             </Link>
           </Button>
           <Avatar className="size-10">
-            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
               {initials(other)}
             </AvatarFallback>
           </Avatar>
@@ -128,7 +128,7 @@ export default function Conversation() {
                     className={cn(
                       "max-w-[75%] space-y-1.5 rounded-2xl px-3.5 py-2 text-sm",
                       mine
-                        ? "rounded-br-sm bg-primary text-primary-foreground"
+                        ? "rounded-br-sm bg-foreground text-background"
                         : "rounded-bl-sm bg-muted text-foreground",
                     )}
                   >

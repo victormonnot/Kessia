@@ -105,7 +105,7 @@ export default function PaymentModal({ order, open, onClose }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
           <span className="font-medium">{order.listing?.title || "Commande"}</span>
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-foreground">
             {formatPrice(order.amount, order.currency)}
           </span>
         </div>

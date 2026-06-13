@@ -21,7 +21,7 @@ export default function ProposalRow({ proposal, canDecide, onDecide, deciding })
     <div className="flex flex-col gap-3 border-b py-4 last:border-0 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex gap-3">
         <Avatar className="size-9">
-          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+          <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
             {initials(proposal.writer)}
           </AvatarFallback>
         </Avatar>

@@ -4,13 +4,13 @@ import { STATUS_LABELS } from "@/lib/choices";
 const statusToVariant = {
   pending: "warning",
   accepted: "success",
-  in_progress: "primary",
-  delivered: "primary",
+  in_progress: "info",
+  delivered: "info",
   completed: "success",
   cancelled: "neutral",
   declined: "danger",
   rejected: "danger",
-  open: "primary",
+  open: "info",
   closed: "neutral",
 };
 
