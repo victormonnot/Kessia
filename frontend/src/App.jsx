@@ -4,7 +4,7 @@ import Router from "@/router";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import EmailVerificationBanner from "@/components/layout/EmailVerificationBanner";
-import CookieConsent from "@/components/layout/CookieConsent";
+import ConsentBanner from "@/components/layout/ConsentBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 import { Toaster } from "@/components/ui/sonner";
@@ -58,7 +58,7 @@ export default function App() {
         </ErrorBoundary>
       </main>
       <Footer />
-      <CookieConsent />
+      <ConsentBanner />
       <Toaster richColors closeButton position="top-right" />
     </div>
   );

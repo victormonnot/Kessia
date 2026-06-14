@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
+// Nom volontairement neutre (pas « cookie/consent » dans le chemin) : en dev,
+// Vite sert le module par son nom de fichier, et les bloqueurs de pub coupent
+// les URL type « CookieConsent » → page blanche. Voir aussi STORAGE_KEY.
 const STORAGE_KEY = "kessia-cookie-consent";
 
 function readChoice() {
@@ -16,7 +19,7 @@ function readChoice() {
 
 // Site-wide cookie notice. Kessia only sets essential (auth) cookies, so this is
 // informational consent: either choice dismisses it and is remembered locally.
-export default function CookieConsent() {
+export default function ConsentBanner() {
   const [choice, setChoice] = useState(readChoice);
 
   if (choice) return null;
