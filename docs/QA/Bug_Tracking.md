@@ -14,7 +14,7 @@
 | ID | Title | Severity | Area | Root cause | Resolution |
 |----|-------|----------|------|------------|------------|
 | KES-01 | Production emails never delivered | **Critical** | Email / Deploy | Render blocks outbound SMTP ports (25/465/587), so every send timed out | Switched sending to the **Brevo HTTPS API** (`django-anymail`); SMTP retained as fallback |
-| KES-02 | Verification / reset email links broken | **High** | Email | Django template auto-escaping turned `&` into `&amp;`, corrupting the `?uid=…&token=…` query | Wrapped the plain-text email templates in `{% autoescape off %}` |
+| KES-02 | Verification / reset email links broken | **High** | Email | Django template auto-escaping turned `&` into `&amp;`, corrupting the `?uid=…&token=…` query | Wrapped the plain-text email templates in an `autoescape off` … `endautoescape` block (disables Django auto-escaping) |
 | KES-03 | Google sign-in popup blank in production | **High** | Auth / Deploy | Django's default `Cross-Origin-Opener-Policy: same-origin` severed the popup↔page link; invisible locally (Vite serves the dev page without the header) | Set `SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"` |
 | KES-04 | Brevo rejected all sends (`Unauthorized IP`) | **High** | Email / Config | Brevo's "authorised IPs" security setting was enabled, blocking the dynamic Render IP | Disabled IP restriction (provider side); key kept secret in env vars |
 | KES-05 | `DEFAULT_FROM_EMAIL` rejected by provider | Medium | Email / Config | Value was a concatenated `Name<email>` (no space/brackets) → not a verified sender | Corrected to the `Name <email>` format using the verified sender |
