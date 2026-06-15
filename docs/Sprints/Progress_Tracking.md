@@ -7,13 +7,13 @@
 
 ## 1. Stand-up cadence
 
-A two-person developer team in different schedules favoured a **lightweight,
-mostly-async** stand-up:
+A two-person developer team favoured short, frequent **in-person syncs**:
 
-- **Daily async stand-up** — each developer posts on the WhatsApp group: *what I
-  shipped, what I'm on, any blocker.* PRs on GitHub serve as the living "done" log.
+- **Daily sync** — the two developers met briefly (in person) to share *what
+  shipped, what's in progress, any blocker.* PRs on GitHub serve as the living
+  "done" log.
 - **Monday weekly sync** (with the PO) — review the previous week, plan the current
-  one, update the Trello board.
+  one.
 - **Thursday mid-week unblock** — the two developers clear blockers and re-balance
   scope if a task is slipping.
 
@@ -24,10 +24,9 @@ today? Blockers?*
 
 | Tool | Use |
 |------|-----|
-| **Trello** | Sprint board (Backlog → To Do → In Progress → Review → Done) |
-| **GitHub** | Branches, Pull Requests (peer review), Issues for bugs |
+| **GitHub** | Branches, Pull Requests (peer review), Issues for task & bug tracking |
 | **GitHub commit history** | Objective record of delivered work (Conventional Commits) |
-| **CI (`pytest` / `vitest` / linters)** | Quality gate — a task isn't "Done" on red |
+| **Local test suites (`pytest` / `vitest` / linters)** | Quality gate — a task isn't "Done" while red |
 
 ## 3. Velocity
 
@@ -49,11 +48,11 @@ features) rather than abstract story points — a more honest signal for a small
 | Sprint | Planned scope | Completed | % |
 |--------|---------------|-----------|---|
 | 0 | Full technical specification | Delivered & PO-signed | 100% |
-| 1 | All Must-Have + Should-Have core | Delivered (payments, messaging, reviews, verification all in) | ~100% |
-| 2 | Should-Have lifecycle + Could-Have polish + production | Delivered; **production live** | ~100% |
+| 1 | All Must-Have + Should-Have core | Delivered (messaging, reviews, verification all in) | ~100% |
+| 2 | Should-Have lifecycle + Could-Have polish + deployment | Delivered; **deployed to staging** | ~100% |
 
 Notably, several **Could-Have** items (chat attachments + preview, Google OAuth,
-Brevo production email) were pulled forward and completed — the team ran **ahead**
+Brevo transactional email) were pulled forward and completed — the team ran **ahead**
 of the High-Level Plan, which had MVP development scheduled through Jul 5.
 
 ## 5. Quality metrics (end of Sprint 2)
@@ -63,14 +62,14 @@ of the High-Level Plan, which had MVP development scheduled through Jul 5.
 | Backend automated tests (`pytest`) | **161 passing** |
 | Frontend automated tests (`vitest`) | **22 passing** |
 | Linters | `ruff` (backend) + `ESLint` (frontend) — **clean** |
-| Django apps | 8 (`users, listings, orders, requests_board, payments, reviews, messaging, verification`) + `common` |
+| Django apps | 7 (`users, listings, orders, requests_board, reviews, messaging, verification`) + `common` |
 | Logged bugs | see [`../QA/Bug_Tracking.md`](../QA/Bug_Tracking.md) |
 | Bug resolution rate | 100% of logged bugs resolved before the next review |
 
 ## 6. Adjustments made mid-flight
 
 - **Scope pull-forward:** with the core MVP done early (Sprint 1), the team pulled
-  Could-Have items (OAuth, chat attachments, production email) into Sprint 2 instead
+  Could-Have items (OAuth, chat attachments, transactional email) into Sprint 2 instead
   of waiting for the closure phase.
 - **Re-prioritisation after PO feedback:** Meeting 3 flagged the UI as "too
   monotone" → a dedicated restyle task was added to Sprint 2.

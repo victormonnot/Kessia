@@ -38,7 +38,6 @@
 - Place an order; the full order status machine; deliverable upload/download.
 - Requests board; submit a proposal; **accept a proposal → order created atomically**.
 - Doctor & writer dashboards; public writer profiles.
-- **Stripe Connect** pay-after-accept with escrow; release on completion; auto-refund.
 - **Real-time messaging** between users.
 - Reviews gated to completed orders; the verified-writer badge flow.
 - Event emails across the order lifecycle.
@@ -48,7 +47,6 @@
 - UI feels **"too monotone and soulless"** → plan a colour/identity revision.
 - Add the **writer's profile photo** to offer cards to make the catalogue personal.
 - Rework the **landing copy** around "a team of experts at your disposal".
-- Commission fixed at **15%**; Stripe wiring to be finalised.
 - PO to research the definitive **badge requirements**.
 - Local-AI assistant noted as a **post-MVP** idea.
 
@@ -67,8 +65,9 @@
   message), per-endpoint **rate-limiting**, and upload size/type limits.
 - **Chat file attachments** with inline image and PDF preview.
 - The **restyled UI** ("La Revue" identity) addressing the Meeting 3 feedback.
-- The application running in **production** on Render with transactional email
-  delivered through Brevo and the data on a managed Neon PostgreSQL database.
+- The application running on the **deployed (staging) Render environment** with
+  transactional email delivered through Brevo and the data on a managed Neon
+  PostgreSQL database.
 - Updated **specialty** and **paper-type** taxonomies from the PO's domain lists.
 
 **Expected discussion points:** field-expert feedback on the writer verification

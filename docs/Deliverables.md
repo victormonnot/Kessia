@@ -18,7 +18,7 @@ execution, monitoring, reviews, retrospectives, and final QA).
 | **Testing evidence & results** | [`QA/QA_and_Testing.md`](QA/QA_and_Testing.md) |
 | **Bug tracking** | [`QA/Bug_Tracking.md`](QA/Bug_Tracking.md) · GitHub Issues: ⟨repo⟩/issues |
 | **Source repository** | <https://github.com/victormonnot/Kessia> |
-| **Production environment** | <https://kessia-j1mk.onrender.com> · API docs: <https://kessia-j1mk.onrender.com/api/docs/> |
+| **Staging environment** | <https://kessia-j1mk.onrender.com> · API docs: <https://kessia-j1mk.onrender.com/api/docs/> |
 | **Technical Manual Review prep** | [`Technical_Manual_Review.md`](Technical_Manual_Review.md) |
 
 ## Supporting documentation (existing)
@@ -38,12 +38,12 @@ execution, monitoring, reviews, retrospectives, and final QA).
 | Member | Role | Owned deliverables |
 |--------|------|--------------------|
 | **Soumia Taoui** | Product Owner & Sponsor | Backlog prioritisation, sprint reviews / acceptance, domain lists |
-| **Yasi Philippe Hübner** | Backend Lead · SCM · Deployment | Backend & DB, source-control process, production deploy, security/QA (backend) |
+| **Yasi Philippe Hübner** | Backend Lead · SCM · Deployment | Backend & DB, source-control process, deployment, security/QA (backend) |
 | **Victor Monnot** | Frontend Lead · QA | Frontend SPA, UI/UX, QA coordination, wireframes |
 
 ## Status at submission
 
-- ✅ Functional MVP, deployed to **production** (Render).
+- ✅ Functional MVP, deployed to a **staging environment** (Render).
 - ✅ 161 backend tests + 22 frontend tests passing; linters clean.
 - ✅ Three sprints completed; the team ran **ahead** of the High-Level Plan schedule.
 - ⏳ Remaining: closure phase (demo script, slides, dry-runs) and the Technical

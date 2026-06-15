@@ -12,7 +12,7 @@
 
 ## 1. What to have ready on the day
 
-- [x] **Functional application** — deployed to production: <https://kessia-j1mk.onrender.com>
+- [x] **Functional application** — deployed to a staging environment: <https://kessia-j1mk.onrender.com>
 - [x] **Application architecture diagram** — §3 below (+ [`Architecture Diagram.png`](<Architecture Diagram.png>))
 - [x] **Database diagram** — §4 below
 - [x] **Clean, professional README** — on the code branch, with architecture + DB diagram links
@@ -25,17 +25,17 @@
 
 ## 2. Project status — completion
 
-A **functional MVP with no known blocking bugs**, live in production. It delivers
-the full two-sided marketplace plus payments, real-time chat, reviews, a verified
-badge, the complete account lifecycle, and Google sign-in. Scope **exceeded** the
-Stage-3 MVP (5 models → 10 models across 8 apps).
+A **functional MVP with no known blocking bugs**, deployed to a staging
+environment. It delivers the full two-sided marketplace with real-time chat,
+reviews, a verified badge, the complete account lifecycle, and Google sign-in.
+Scope **exceeded** the Stage-3 MVP (5 models → 10 models across 7 apps).
 
 ---
 
 ## 3. System architecture (as built)
 
 Three-tier app: a React SPA, a Django REST + Channels (ASGI) API, and PostgreSQL —
-plus three external services. In production a **single Render web service** serves
+plus two external services. When deployed, a **single Render web service** serves
 both the built SPA (via WhiteNoise) and the API on one origin.
 
 ```mermaid
@@ -51,11 +51,10 @@ flowchart TB
         WN["WhiteNoise — serves the built SPA"]
         DRF["Django REST Framework — /api/v1/"]
         CH["Django Channels — WebSocket /ws/"]
-        DJ["Django apps: users, listings, orders,\nrequests_board, payments, reviews,\nmessaging, verification, common"]
+        DJ["Django apps: users, listings, orders,\nrequests_board, reviews, messaging,\nverification, common"]
     end
 
     DB[("PostgreSQL — Neon (managed)")]
-    Stripe["Stripe Connect (escrow payments)"]
     Brevo["Brevo (transactional email, HTTPS API)"]
     Google["Google Identity (OAuth ID token)"]
 
@@ -67,7 +66,6 @@ flowchart TB
     DRF --> DJ
     CH --> DJ
     DJ -->|ORM| DB
-    DJ -->|charges / transfers / webhooks| Stripe
     DJ -->|send email| Brevo
     DRF -->|verify ID token| Google
 ```
@@ -85,7 +83,7 @@ conversation group; messages POSTed over REST are broadcast to the group.
 
 ## 4. Database diagram (as built)
 
-10 models across 8 apps.
+10 models across 7 apps.
 
 ```mermaid
 erDiagram
@@ -112,7 +110,6 @@ erDiagram
         boolean is_writer
         boolean is_verified "badge"
         boolean is_email_verified
-        varchar stripe_account_id
         timestamptz terms_accepted_at
     }
     LISTING {
@@ -131,8 +128,6 @@ erDiagram
         bigint writer_id FK
         varchar status
         decimal amount "snapshot"
-        varchar payment_status
-        varchar stripe_payment_intent_id
     }
     DELIVERABLE {
         bigint id PK
@@ -182,11 +177,6 @@ erDiagram
         varchar status
         bigint reviewed_by_id FK "SET_NULL"
     }
-    STRIPEEVENT {
-        bigint id PK
-        varchar event_id UK "webhook idempotency"
-        varchar type
-    }
 ```
 
 **Key relational decisions to be ready to explain**
@@ -198,7 +188,6 @@ erDiagram
 - **One review per order**, gated to *completed* orders — reviews can't be faked.
 - **Canonical conversation pairs** (`user_low_id < user_high_id`) + partial-unique
   constraints dedupe threads regardless of who starts them.
-- **`StripeEvent`** stores processed webhook IDs for **idempotency** (no double-pay).
 - **Indexes** on filtered columns (`specialty`, `status`, …) back the catalogue.
 
 ---
@@ -209,27 +198,25 @@ erDiagram
 |--------|-----------|
 | **Django + DRF** | Batteries-included: ORM, admin, auth, serializers, permissions, filtering, pagination. (Pivoted from FastAPI in Sprint 0 — decided before any feature code.) |
 | **SimpleJWT + httpOnly cookie** | Short-lived access token (15 min) in memory + rotating refresh token in an httpOnly cookie = XSS-resistant; CSRF double-submit guards the cookie endpoints. |
-| **PostgreSQL (Neon in prod)** | Relational integrity for a marketplace; real locking for atomic proposal acceptance; Neon's free tier is durable (Render's free Postgres expires). |
+| **PostgreSQL (Neon when deployed)** | Relational integrity for a marketplace; real locking for atomic proposal acceptance; Neon's free tier is durable (Render's free Postgres expires). |
 | **Django Channels (ASGI/Daphne)** | Real-time chat without polling. |
 | **React + Vite + Tailwind** | Fast component-driven UI for role-conditional views; Vite for speed + built-in Vitest. |
 | **TanStack Query + Zustand** | Declarative server-cache + minimal auth store. |
 | **Brevo (HTTPS API)** | Transactional email that works where the host blocks SMTP (Render). |
-| **Stripe Connect** | Marketplace escrow: hold funds, release on completion, auto-refund. |
 | **Google Identity (OIDC)** | Password-less sign-in; we verify the signed ID token server-side. |
-| **Docker + Render** | One-command local stack; single-origin production deploy. |
+| **Docker + Render** | One-command local stack; single-origin deployment. |
 
 ---
 
 ## 6. Talking points by evaluation criterion
 
 **How does the application work?** → §3 (request, real-time, and refresh flows).
-Walk the demo: browse → order/propose → pay (escrow) → chat → deliver → complete
-(release) → review → badge.
+Walk the demo: browse → order/propose → chat → deliver → complete → review → badge.
 
 **How did you test it?** → [`QA/QA_and_Testing.md`](QA/QA_and_Testing.md): 161
-backend + 22 frontend tests, on real PostgreSQL, with Stripe/Google **mocked**;
-plus a manual end-to-end script and live production QA. Show a `pytest -q` run and
-the Swagger docs.
+backend + 22 frontend tests, on real PostgreSQL, with the **Google** token verifier
+mocked; plus a manual end-to-end script and live staging QA. Show a `pytest -q` run
+and the Swagger docs.
 
 **Team collaboration** → PO (Soumia) sets/accepts scope across bi-weekly meetings
 ([`Meetings/`](Meetings)); Backend Lead (Yasi) + Frontend Lead (Victor) split by
@@ -247,7 +234,7 @@ Conventional Commits; documentation isolated on `technical_doc`; tests as a merg
 - **RBAC / access control:** role flag (`is_writer`) + ownership permissions
   (`IsListingOwner`, `IsOrderParticipant`) + **email-verification gating**
   (`IsEmailVerified` — unverified = read-only) + admin via Django admin.
-- **Security:** escrowed payments, idempotent webhooks, access-gated file downloads,
+- **Security:** access-gated file downloads,
   upload size/type limits, **rate-limiting** (login/register/email senders), CORS +
   CSRF + secure cookies, COOP for OAuth popups, non-enumerating password reset.
 - **DB relations:** the `Order`-centric model, snapshots, `on_delete` policy, the
@@ -257,4 +244,4 @@ Conventional Commits; documentation isolated on `technical_doc`; tests as a merg
   `WriterRoute`, `GuestRoute`, `VerifiedRoute`).
 
 **Demo data / environment** → `seed_demo` for a populated demo;
-production at <https://kessia-j1mk.onrender.com>.
+deployed (staging) at <https://kessia-j1mk.onrender.com>.

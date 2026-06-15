@@ -12,7 +12,7 @@
 
 | Member | Primary role | Secondary responsibilities |
 |--------|--------------|-----------------------------|
-| **Soumia Taoui** | Product Owner & Project Sponsor | Backlog prioritisation, acceptance/sign-off, domain expertise, stakeholder liaison |
+| **Soumia Taoui** | Product Owner & Project Sponsor | Backlog prioritisation, acceptance/sign-off, domain expertise |
 | **Yasi Philippe Hübner** | Backend Lead | SCM (branching, PR reviews, merges), deployment & DevOps, security |
 | **Victor Monnot** | Frontend Lead | QA coordination, UI/UX, design system |
 
@@ -25,21 +25,21 @@
 - **Iteration length:** 2-week sprints, paced to the bi-weekly Product Owner review.
 - **Ceremonies:**
   - *Sprint Planning* — Monday weekly sync: pull and estimate the sprint backlog.
-  - *Daily stand-up* — async on the WhatsApp group + a Thursday mid-week unblock call
+  - *Daily stand-up* — short in-person syncs + a Thursday mid-week unblock call
     (see [`Progress_Tracking.md`](Progress_Tracking.md)).
   - *Sprint Review* — demo to the PO at the end-of-cycle meeting
     (see [`Sprint_Reviews.md`](Sprint_Reviews.md) and the [`Meetings/`](../Meetings) notes).
   - *Retrospective* — team-only, right after each review
     (see [`Retrospectives.md`](Retrospectives.md)).
-- **Tooling:** GitHub (code + PR reviews + issues), Trello (task board), shared
-  Google Drive (docs), WhatsApp (sync + PO communication).
+- **Tooling:** GitHub (code + PR reviews + issues), shared Google Drive (docs);
+  coordination through regular in-person meetings.
 
 ## 3. Branching & Definition of Done
 
 Branching follows the model declared in the Technical Documentation:
 
 ```
-feature/* , fix/*  ──PR──▶  dev  ──PR──▶  main (production)
+feature/* , fix/*  ──PR──▶  dev  ──PR──▶  main (deployed)
 technical_doc        (documentation lineage, this branch)
 ```
 
@@ -66,8 +66,7 @@ and refined with PO feedback across the three meetings.
 - Role dashboards (doctor / writer) and public writer profiles.
 - Mobile-responsive, French-only UI.
 
-### Should Have — trust, money, communication
-- Stripe Connect payments with escrow (release on completion, auto-refund on cancel).
+### Should Have — trust & communication
 - In-platform messaging (REST history + real-time delivery).
 - Reviews gated to completed orders, aggregated onto profiles & listings.
 - Verified-writer badge (credential submission → admin approval).
@@ -78,7 +77,7 @@ and refined with PO feedback across the three meetings.
 ### Could Have — convenience & polish
 - File attachments in chat (with image/PDF preview).
 - "Sign in with Google" (OAuth).
-- Production email delivery via a transactional provider (Brevo).
+- Transactional email delivery via a provider (Brevo).
 
 ### Won't Have (v1)
 - i18n / multi-currency / tax compliance.
@@ -117,20 +116,19 @@ and refined with PO feedback across the three meetings.
 - `listings` CRUD + filtered/paginated public catalogue.
 - `orders` status machine + deliverable upload/download + event emails.
 - `requests_board`: proposals + **atomic** acceptance (`select_for_update`) → order.
-- `payments`: Stripe Connect (pay-after-accept, escrow, release/refund, idempotent webhooks).
 - `messaging`: REST conversations + real-time delivery (Django Channels).
 - `reviews` (completed-order-gated) and `verification` (badge) apps.
 - Search/sort/pagination; role dashboards; public writer profiles.
 
 **Frontend (Victor)**
 - Auth (react-hook-form + zod), catalogue, listing detail/form.
-- Request board + proposals; doctor/writer dashboards; order actions & payment modal.
+- Request board + proposals; doctor/writer dashboards; order actions.
 - Reviews & public profile; messaging inbox + realtime conversation.
 - Account settings, guided writer onboarding, landing, legal pages, 404, route code-splitting.
 
 **Infra (Yasi)** — single-image Dockerfile; idempotent demo-seed command.
 
-**Dependencies:** auth precedes everything; orders precede payments/reviews;
+**Dependencies:** auth precedes everything; orders precede reviews;
 messaging realtime depends on the REST layer.
 
 **Deliverable:** MVP **V1**. **Review:** Meeting 3 (02 Jun).
@@ -138,7 +136,7 @@ messaging realtime depends on the REST layer.
 ---
 
 ### Sprint 2 — Hardening, trust & safety, delivery · **Jun 2 – Jun 16**
-*Goal: production-readiness — close the account lifecycle, harden security, ship to production.*
+*Goal: deployment-readiness — close the account lifecycle, harden security, ship a staging deployment.*
 
 | Theme | Tasks | Owner |
 |-------|-------|-------|
@@ -146,11 +144,11 @@ messaging realtime depends on the REST layer.
 | Trust & safety | CGU consent + cookie banner (RGPD), **unverified read-only mode** (RBAC), **rate-limiting** (anti-abuse), upload size/type limits | Both |
 | Chat | File attachments + image/PDF preview | Both |
 | Email delivery | **Brevo HTTPS API** (Render blocks SMTP), template fixes | Yasi |
-| Production | Render single-origin deploy, Neon Postgres, COOP fix for OAuth popup | Yasi |
+| Deployment | Render single-origin deploy, Neon Postgres, COOP fix for OAuth popup | Yasi |
 | Domain content | Specialty taxonomy + paper-type taxonomy (PO-sourced) | Both |
 | UI | "La Revue" restyle | Victor |
 
-**Deliverable:** production deployment at <https://kessia-j1mk.onrender.com>.
+**Deliverable:** staging deployment at <https://kessia-j1mk.onrender.com>.
 **Review:** Meeting 16 Jun (with two field experts).
 
 ---
