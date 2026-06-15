@@ -7,20 +7,25 @@ import { Input } from "@/components/ui/input";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
 import { useListings } from "@/hooks/useListings";
-import { coverFor } from "@/lib/demo-assets";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
-// Spécialités mises en avant (chips du héro et tuiles de catégories).
+// Chips in the hero (most-reached-for specialties).
 const POPULAR_SPECIALTIES = ["cardiologie", "oncologie", "neurologie", "pediatrie", "psychiatrie"];
-const CATEGORY_TILES = [
+
+// "Parcourir par spécialité" — modern cards (no photos), one per domain.
+const SPECIALTY_TILES = [
   "cardiologie",
+  "oncologie",
   "neurologie",
-  "pneumologie",
-  "gastroenterologie",
-  "ophtalmologie",
+  "pediatrie",
   "psychiatrie",
   "radiologie",
+  "dermatologie",
+  "pneumologie",
+  "gastroenterologie",
+  "endocrinologie",
   "rhumatologie",
+  "gynecologie",
 ];
 
 const STEPS = [
@@ -45,7 +50,33 @@ const FEATURES = [
   { icon: FileText, title: "Spécialisé médical", text: "36 spécialités, 5 types de livrables." },
 ];
 
-// Rangée d'annonces réelles — la vitrine du catalogue sur la page d'accueil.
+// Discreet, crisp (non-blurred) brand decoration that fills the white space to
+// the right of the hero and bleeds to the page edge. Desktop only, decorative.
+function HeroDecor() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 right-0 hidden w-[46%] overflow-hidden lg:block"
+    >
+      <div className="absolute inset-y-10 left-24 right-0 rounded-l-[4rem] bg-secondary/50" />
+      <svg
+        className="absolute right-12 top-14 h-44 w-60 text-neutral-300"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern id="hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="2" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#hero-dots)" />
+      </svg>
+      <div className="absolute bottom-14 right-24 size-36 rounded-full border-[10px] border-primary/15" />
+    </div>
+  );
+}
+
+// Real listings on the home page (hidden if the API is down or returns nothing).
 function PopularListings() {
   const { data, isLoading, isError } = useListings({ ordering: "-writer_rating" });
   const listings = (data?.results ?? []).slice(0, 4);
@@ -83,84 +114,88 @@ export default function Landing() {
 
   return (
     <div>
-      {/* Héro — recherche d'abord, sobre et direct. */}
-      <section className="border-b">
-        <div className="container py-12 sm:py-16 lg:py-20">
-          <h1 className="max-w-3xl text-balance text-3xl sm:text-4xl lg:text-5xl">
-            Trouvez le bon rédacteur médical pour vos publications
-          </h1>
-          <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Articles de recherche, études de cas, résumés — rédigés par des rédacteurs
-            scientifiques qualifiés et vérifiés.
-          </p>
+      {/* Héro — recherche d'abord, avec une déco discrète à droite. */}
+      <section className="relative overflow-hidden border-b">
+        <HeroDecor />
+        <div className="container relative py-12 sm:py-16 lg:py-20">
+          <div className="lg:max-w-[55%]">
+            <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+              Trouvez le bon rédacteur médical pour vos publications
+            </h1>
+            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
+              Articles de recherche, études de cas, résumés — rédigés par des rédacteurs
+              scientifiques qualifiés et vérifiés.
+            </p>
 
-          <form onSubmit={submitSearch} className="mt-7 flex w-full max-w-2xl gap-2">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Essayez « article de revue en cardiologie »…"
-                aria-label="Rechercher une annonce"
-                className="h-11 pl-9"
-              />
+            <form onSubmit={submitSearch} className="mt-7 flex w-full max-w-xl gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Essayez « article de revue en cardiologie »…"
+                  aria-label="Rechercher une annonce"
+                  className="h-11 pl-9"
+                />
+              </div>
+              <Button type="submit" size="lg" className="h-11">
+                Rechercher
+              </Button>
+            </form>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Populaire :</span>
+              {POPULAR_SPECIALTIES.map((s) => (
+                <Link
+                  key={s}
+                  to={`/listings?specialty=${s}`}
+                  className="rounded-full border bg-card px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
+                >
+                  {labelFor(s, SPECIALTY_OPTIONS)}
+                </Link>
+              ))}
             </div>
-            <Button type="submit" size="lg" className="h-11">
-              Rechercher
-            </Button>
-          </form>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Populaire :</span>
-            {POPULAR_SPECIALTIES.map((s) => (
-              <Link
-                key={s}
-                to={`/listings?specialty=${s}`}
-                className="rounded-full border px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
-              >
-                {labelFor(s, SPECIALTY_OPTIONS)}
-              </Link>
-            ))}
+            <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="size-4" /> Paiement sous séquestre
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <BadgeCheck className="size-4" /> Rédacteurs vérifiés
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <FileText className="size-4" /> 36 spécialités
+              </span>
+            </p>
           </div>
-
-          <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="size-4" /> Paiement sous séquestre
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <BadgeCheck className="size-4" /> Rédacteurs vérifiés
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <FileText className="size-4" /> 36 spécialités
-            </span>
-          </p>
         </div>
       </section>
 
       {/* Vraies annonces dès l'accueil (masquée si l'API ne répond pas). */}
       <PopularListings />
 
-      {/* Catégories — tuiles photo par spécialité. */}
+      {/* Catégories — cartes spécialités modernes (sans photo). */}
       <section className="container py-10 sm:py-14">
-        <h2 className="text-2xl sm:text-3xl">Parcourez par spécialité</h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
-          {CATEGORY_TILES.map((s) => (
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl">Parcourir par spécialité</h2>
+          <Link
+            to="/listings"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Toutes les spécialités <ArrowRight className="size-4" />
+          </Link>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {SPECIALTY_TILES.map((s) => (
             <Link
               key={s}
               to={`/listings?specialty=${s}`}
-              className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:border-neutral-300 hover:shadow-md"
+              className="group flex items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3.5 transition-colors hover:border-foreground"
             >
-              <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-                <img
-                  src={coverFor(s)}
-                  alt=""
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-              </div>
-              <p className="truncate px-3 py-2.5 text-sm font-medium" title={labelFor(s, SPECIALTY_OPTIONS)}>
+              <span className="truncate text-sm font-medium">
                 {labelFor(s, SPECIALTY_OPTIONS)}
-              </p>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
             </Link>
           ))}
         </div>
