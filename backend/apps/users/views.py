@@ -57,7 +57,7 @@ def register(request):
     refresh = RefreshToken.for_user(user)
     response = Response(
         {
-            "user": UserSerializer(user).data,
+            "user": UserSerializer(user, context={"request": request}).data,
             "access": str(refresh.access_token),
         },
         status=status.HTTP_201_CREATED,
@@ -191,7 +191,7 @@ def google_login(request):
 
     refresh = RefreshToken.for_user(user)
     response = Response(
-        {"user": UserSerializer(user).data, "access": str(refresh.access_token)},
+        {"user": UserSerializer(user, context={"request": request}).data, "access": str(refresh.access_token)},
         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
     set_auth_cookies(response, str(refresh))
@@ -266,13 +266,13 @@ class MeView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def delete(self, request):
         """Hard-delete the account (password-confirmed) and clear auth cookies."""
@@ -308,7 +308,7 @@ def change_email(request):
     user = serializer.save()
     # The new address is unverified — send a fresh confirmation link.
     _send_email_verification(user)
-    return Response(UserSerializer(user).data)
+    return Response(UserSerializer(user, context={"request": request}).data)
 
 
 @api_view(["POST"])
@@ -316,7 +316,7 @@ def change_email(request):
 def activate_writer(request):
     request.user.is_writer = True
     request.user.save(update_fields=["is_writer"])
-    return Response(UserSerializer(request.user).data)
+    return Response(UserSerializer(request.user, context={"request": request}).data)
 
 
 class PublicWriterView(generics.RetrieveAPIView):

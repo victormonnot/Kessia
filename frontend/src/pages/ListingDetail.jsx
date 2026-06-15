@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, Clock, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import Stars from "@/components/ui/Stars";
 import EmptyState from "@/components/feedback/EmptyState";
@@ -12,6 +12,7 @@ import ErrorState from "@/components/feedback/ErrorState";
 import PlaceOrderModal from "@/components/orders/PlaceOrderModal";
 import { useListing } from "@/hooks/useListings";
 import { useAuthStore } from "@/store/authStore";
+import { avatarFor } from "@/lib/demo-assets";
 import { formatPrice, fullName, initials } from "@/lib/format";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
@@ -111,6 +112,7 @@ export default function ListingDetail() {
             <CardContent>
               <div className="flex items-start gap-4">
                 <Avatar className="size-12">
+                  <AvatarImage src={writer?.avatar || avatarFor(fullName(writer))} alt="" />
                   <AvatarFallback className="bg-secondary font-semibold text-foreground">
                     {initials(writer)}
                   </AvatarFallback>

@@ -30,6 +30,7 @@ class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
     """Compact representation used for the public catalog."""
 
     writer_name = serializers.SerializerMethodField()
+    writer_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -43,6 +44,7 @@ class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "is_published",
             "writer",
             "writer_name",
+            "writer_avatar",
             "writer_rating",
             "writer_reviews_count",
             "writer_is_verified",
@@ -52,6 +54,13 @@ class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
 
     def get_writer_name(self, obj: Listing) -> str:
         return obj.writer.get_full_name() or obj.writer.email
+
+    def get_writer_avatar(self, obj: Listing) -> str | None:
+        if not obj.writer.avatar:
+            return None
+        url = obj.writer.avatar.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
 
 
 class ListingDetailSerializer(WriterRatingMixin, serializers.ModelSerializer):

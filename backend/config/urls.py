@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path, re_path
@@ -21,6 +22,11 @@ urlpatterns = [
         name="swagger-ui",
     ),
 ]
+
+# Dev only: serve uploaded media (avatars, etc.) through Django. In prod, media
+# is served by S3 (django-storages), so this no-ops when DEBUG is False.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Single-origin prod: WhiteNoise serves the SPA's files (index, /assets/…); this
 # catch-all returns index.html for client-side routes (e.g. /dashboard/writer).

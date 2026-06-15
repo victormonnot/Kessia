@@ -3,7 +3,7 @@ import { BadgeCheck, FileText, MessageSquare, Star } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import Badge from "@/components/ui/Badge";
 import Stars from "@/components/ui/Stars";
@@ -17,6 +17,7 @@ import { useWriterReviews } from "@/hooks/useReviews";
 import { useStartConversation } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
+import { avatarFor } from "@/lib/demo-assets";
 import { errorMessage, fullName, initials } from "@/lib/format";
 
 function ProfileSkeleton() {
@@ -79,6 +80,7 @@ export default function WriterProfile() {
       {/* Header */}
       <div className="rounded-xl border bg-card p-6 shadow-sm sm:flex sm:items-start sm:gap-6">
         <Avatar className="mx-auto size-20 sm:mx-0">
+          <AvatarImage src={writer.avatar || avatarFor(name)} alt="" />
           <AvatarFallback className="bg-secondary text-2xl font-semibold text-foreground">
             {initials(writer)}
           </AvatarFallback>

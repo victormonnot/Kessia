@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetClose,
@@ -184,6 +184,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 px-2" aria-label="Menu du compte">
                     <Avatar className="size-8">
+                      <AvatarImage src={user.avatar || undefined} alt="" />
                       <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
                         {initials(user)}
                       </AvatarFallback>

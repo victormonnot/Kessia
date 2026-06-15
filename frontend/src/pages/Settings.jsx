@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/Badge";
+import AvatarUpload from "@/components/settings/AvatarUpload";
 import ProfileForm from "@/components/settings/ProfileForm";
 import ChangePasswordForm from "@/components/settings/ChangePasswordForm";
 import ChangeEmailForm from "@/components/settings/ChangeEmailForm";
@@ -41,8 +42,11 @@ export default function Settings() {
               Ces informations sont visibles sur votre profil public.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ProfileForm />
+          <CardContent className="space-y-6">
+            <AvatarUpload />
+            <div className="border-t pt-6">
+              <ProfileForm />
+            </div>
           </CardContent>
         </Card>
 
@@ -63,7 +67,7 @@ export default function Settings() {
                 </p>
               </div>
               {user?.is_writer ? (
-                <Badge variant="primary">Rédacteur</Badge>
+                <Badge variant="info">Rédacteur</Badge>
               ) : (
                 <Button
                   variant="outline"

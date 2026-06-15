@@ -32,7 +32,7 @@ export default function ListingCard({ listing }) {
       <div className="flex flex-1 flex-col p-4">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Avatar className="size-7">
-            <AvatarImage src={avatarFor(listing.writer_name)} alt="" />
+            <AvatarImage src={listing.writer_avatar || avatarFor(listing.writer_name)} alt="" />
             <AvatarFallback className="bg-secondary text-xs font-semibold text-secondary-foreground">
               {writerInitials}
             </AvatarFallback>

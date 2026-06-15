@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
+from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -23,6 +25,28 @@ from apps.reviews.models import Review
 from apps.users.models import User
 
 DEMO_PASSWORD = "demo1234"
+
+# Demo portraits bundled with the backend (gender-matched to each seeded user).
+# Source: randomuser.me — demo use only, replaced by real uploads in prod.
+SEED_AVATARS_DIR = Path(__file__).resolve().parents[2] / "seed_assets" / "avatars"
+AVATARS = {
+    "writer@kessia.demo": "01.jpg",
+    "sophie.bernard@kessia.demo": "02.jpg",
+    "elena.rossi@kessia.demo": "03.jpg",
+    "nadia.benali@kessia.demo": "04.jpg",
+    "clara.fontaine@kessia.demo": "05.jpg",
+    "julie.petit@kessia.demo": "06.jpg",
+    "paul.nguyen@kessia.demo": "07.jpg",
+    "karim.haddad@kessia.demo": "08.jpg",
+    "thomas.leroy@kessia.demo": "09.jpg",
+    "marc.dubois@kessia.demo": "10.jpg",
+    "hugo.moreau@kessia.demo": "11.jpg",
+    "doctor@kessia.demo": "12.jpg",
+    "antoine.garcia@kessia.demo": "07.jpg",
+    "lea.fournier@kessia.demo": "01.jpg",
+    "mehdi.cherif@kessia.demo": "08.jpg",
+    "camille.roux@kessia.demo": "02.jpg",
+}
 
 # (email, first, last, specialty, verified, bio)
 WRITERS = [
@@ -178,6 +202,7 @@ class Command(BaseCommand):
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         user._specialty = specialty  # carried in-memory for listing seeding
         return user
 
@@ -193,7 +218,21 @@ class Command(BaseCommand):
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         return user
+
+    def _assign_avatar(self, user):
+        """Attach a bundled demo portrait once (skips if already set or missing)."""
+        if user.avatar:
+            return
+        filename = AVATARS.get(user.email)
+        if not filename:
+            return
+        path = SEED_AVATARS_DIR / filename
+        if not path.exists():
+            return
+        with path.open("rb") as fh:
+            user.avatar.save(f"{user.pk}_{filename}", File(fh), save=True)
 
     # -- listings -----------------------------------------------------------
     def _seed_listings(self, writers):

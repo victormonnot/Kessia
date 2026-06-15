@@ -13,6 +13,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     bio = models.TextField(blank=True)
+    # Profile photo (writers especially). Served from MEDIA in dev, S3 in prod.
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
     is_writer = models.BooleanField(default=False)
 
     # Verified-writer badge (admin-gated flag; see the verification app).

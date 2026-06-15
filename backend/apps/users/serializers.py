@@ -19,6 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "bio",
+            "avatar",
             "is_writer",
             "is_verified",
             "date_joined",
@@ -27,6 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "is_email_verified",
+            "avatar",
             "is_writer",
             "is_verified",
             "date_joined",
@@ -38,7 +40,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "bio", "is_writer")
+        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer")
         read_only_fields = fields
 
 
@@ -72,9 +74,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    # allow_null lets the client clear the photo (PATCH avatar=null).
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "bio")
+        fields = ("first_name", "last_name", "bio", "avatar")
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -215,6 +220,7 @@ class PublicWriterSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "bio",
+            "avatar",
             "is_verified",
             "specialties",
             "listings",
