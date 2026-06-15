@@ -4,8 +4,10 @@ import { ArrowRight, BadgeCheck, FileText, MessagesSquare, Search, ShieldCheck }
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { useListings } from "@/hooks/useListings";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
@@ -50,28 +52,32 @@ const FEATURES = [
   { icon: FileText, title: "Spécialisé médical", text: "36 spécialités, 5 types de livrables." },
 ];
 
-// Discreet, crisp (non-blurred) brand decoration that fills the white space to
-// the right of the hero and bleeds to the page edge. Desktop only, decorative.
-function HeroDecor() {
+// Floating card spotlighting the flagship feature: writers vetted by a committee.
+// It lives INSIDE the hero's right grid column, so it scales with the layout and
+// can never slip behind the left content. The photo pops out of the top-left
+// corner (white ring behind it); the badge sits at its top-right — positioned
+// RELATIVE TO THE PHOTO, so tweak its left-[..px] / top-[..px] freely.
+function VerifiedWriterCard() {
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 right-0 hidden w-[46%] overflow-hidden lg:block"
-    >
-      <div className="absolute inset-y-10 left-24 right-0 rounded-l-[4rem] bg-secondary/50" />
-      <svg
-        className="absolute right-12 top-14 h-44 w-60 text-neutral-300"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <defs>
-          <pattern id="hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="2" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#hero-dots)" />
-      </svg>
-      <div className="absolute bottom-14 right-24 size-36 rounded-full border-[10px] border-primary/15" />
+    <div className="relative mx-auto w-full max-w-xs rounded-2xl border bg-card p-6 pt-14 shadow-xl">
+      <div className="absolute -top-8 left-6">
+        <Avatar className="size-20 ring-4 ring-card">
+          <AvatarImage src="/img/avatars/05.jpg" alt="" />
+          <AvatarFallback className="bg-secondary text-lg font-semibold text-foreground">
+            CF
+          </AvatarFallback>
+        </Avatar>
+        <VerifiedBadge
+          solid
+          label="Vérifié par le comité"
+          className="absolute left-[56px] top-[-13px] whitespace-nowrap px-3.5 py-1.5 text-sm shadow-md"
+        />
+      </div>
+      <p className="font-semibold leading-tight">Dr Claire Fontaine</p>
+      <p className="text-sm text-muted-foreground">Cardiologie · Paris</p>
+      <p className="mt-3 font-semibold leading-snug">
+        Des rédacteurs vérifiés par notre comité
+      </p>
     </div>
   );
 }
@@ -114,59 +120,90 @@ export default function Landing() {
 
   return (
     <div>
-      {/* Héro — recherche d'abord, avec une déco discrète à droite. */}
+      {/* Héro — grille 2 colonnes : texte/recherche à gauche, carte à droite.
+          La grille rend tout responsive : la carte vit dans sa colonne, elle ne
+          peut donc plus déborder ni passer derrière le texte sur petit écran. */}
       <section className="relative overflow-hidden border-b">
-        <HeroDecor />
-        <div className="container relative py-12 sm:py-16 lg:py-20">
-          <div className="lg:max-w-[55%]">
-            <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
-              Trouvez le bon rédacteur médical pour vos publications
-            </h1>
-            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
-              Articles de recherche, études de cas, résumés — rédigés par des rédacteurs
-              scientifiques qualifiés et vérifiés.
-            </p>
+        {/* Fond gris qui file jusqu'au bord droit, derrière la grille (lg+). */}
+        <div
+          aria-hidden
+          className="absolute inset-y-12 right-0 hidden w-[44%] rounded-l-[4rem] bg-secondary/50 lg:block"
+        />
+        <div className="container relative pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pb-20 lg:pt-12">
+          <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+            {/* Colonne gauche : texte + recherche */}
+            <div>
+              <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+                Trouvez le bon rédacteur médical pour vos publications
+              </h1>
+              <p className="mt-10 max-w-xl text-base text-muted-foreground sm:text-lg">
+                Articles de recherche, études de cas, résumés, rédigés par des rédacteurs
+                scientifiques qualifiés et vérifiés.
+              </p>
 
-            <form onSubmit={submitSearch} className="mt-7 flex w-full max-w-xl gap-2">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Essayez « article de revue en cardiologie »…"
-                  aria-label="Rechercher une annonce"
-                  className="h-11 pl-9"
-                />
+              {/* Barre un peu plus large que sa colonne : elle déborde vers la
+                  droite (sur le fond gris) sans jamais atteindre la carte. */}
+              <form
+                onSubmit={submitSearch}
+                className="mt-10 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[112%]"
+              >
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Essayez « article de revue en cardiologie »…"
+                    aria-label="Rechercher une annonce"
+                    className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="h-11">
+                  Rechercher
+                </Button>
+              </form>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Populaire :</span>
+                {POPULAR_SPECIALTIES.map((s) => (
+                  <Link
+                    key={s}
+                    to={`/listings?specialty=${s}`}
+                    className="rounded-full border bg-card px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
+                  >
+                    {labelFor(s, SPECIALTY_OPTIONS)}
+                  </Link>
+                ))}
               </div>
-              <Button type="submit" size="lg" className="h-11">
-                Rechercher
-              </Button>
-            </form>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Populaire :</span>
-              {POPULAR_SPECIALTIES.map((s) => (
-                <Link
-                  key={s}
-                  to={`/listings?specialty=${s}`}
-                  className="rounded-full border bg-card px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
-                >
-                  {labelFor(s, SPECIALTY_OPTIONS)}
-                </Link>
-              ))}
+              <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4" /> Paiement sous séquestre
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <BadgeCheck className="size-4" /> Rédacteurs vérifiés
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <FileText className="size-4" /> 36 spécialités
+                </span>
+              </p>
             </div>
 
-            <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="size-4" /> Paiement sous séquestre
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <BadgeCheck className="size-4" /> Rédacteurs vérifiés
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="size-4" /> 36 spécialités
-              </span>
-            </p>
+            {/* Colonne droite : la carte (cachée en mobile) + points déco */}
+            <div className="relative hidden lg:block">
+              <svg
+                className="absolute -top-2 right-0 h-24 w-40 text-neutral-300"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <defs>
+                  <pattern id="hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="2" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#hero-dots)" />
+              </svg>
+              <VerifiedWriterCard />
+            </div>
           </div>
         </div>
       </section>
