@@ -1,7 +1,7 @@
 import { Component } from "react";
 import { AlertTriangle } from "lucide-react";
 
-import Button from "@/components/ui/Button";
+import Button from "@/components/ui/button";
 
 // App-level error boundary: catches render errors anywhere below it and shows a
 // recoverable fallback instead of a blank screen.

@@ -1,4 +1,4 @@
-import Badge from "./Badge";
+import Badge from "./badge";
 import { STATUS_LABELS } from "@/lib/choices";
 
 const statusToVariant = {

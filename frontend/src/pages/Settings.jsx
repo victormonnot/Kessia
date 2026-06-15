@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/ui/Badge";
+import Badge from "@/components/ui/badge";
 import AvatarUpload from "@/components/settings/AvatarUpload";
 import ProfileForm from "@/components/settings/ProfileForm";
 import ExperienceEditor from "@/components/settings/ExperienceEditor";

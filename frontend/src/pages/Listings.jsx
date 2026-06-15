@@ -4,7 +4,7 @@ import { FileText, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Select from "@/components/ui/Select";
+import Select from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";

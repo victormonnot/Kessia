@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import Button from "@/components/ui/Button";
+import Button from "@/components/ui/button";
 
 export default function Pagination({ page, hasPrev, hasNext, onPage }) {
   if (!hasPrev && !hasNext) return null;
