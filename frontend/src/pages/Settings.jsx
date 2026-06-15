@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/Badge";
 import AvatarUpload from "@/components/settings/AvatarUpload";
 import ProfileForm from "@/components/settings/ProfileForm";
+import ExperienceEditor from "@/components/settings/ExperienceEditor";
+import PublicationEditor from "@/components/settings/PublicationEditor";
 import ChangePasswordForm from "@/components/settings/ChangePasswordForm";
 import ChangeEmailForm from "@/components/settings/ChangeEmailForm";
 import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
@@ -49,6 +51,30 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {user?.is_writer && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Parcours</CardTitle>
+                <CardDescription>Votre expérience, affichée sur votre profil public.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ExperienceEditor />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Publications</CardTitle>
+                <CardDescription>Vos articles et papiers phares (avec liens).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PublicationEditor />
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         <Card>
           <CardHeader>

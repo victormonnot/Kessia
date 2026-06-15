@@ -6,7 +6,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -30,7 +30,7 @@ from .cookies import (
     clear_auth_cookies,
     set_auth_cookies,
 )
-from .models import User
+from .models import User, WriterExperience, WriterPublication
 from .serializers import (
     ChangeEmailSerializer,
     ChangePasswordSerializer,
@@ -42,6 +42,8 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    WriterExperienceSerializer,
+    WriterPublicationSerializer,
 )
 from .tokens import email_verification_token
 
@@ -325,3 +327,29 @@ class PublicWriterView(generics.RetrieveAPIView):
     queryset = User.objects.filter(is_writer=True)
     serializer_class = PublicWriterSerializer
     permission_classes = (AllowAny,)
+
+
+class WriterExperienceViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own career timeline."""
+
+    serializer_class = WriterExperienceSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterExperience.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class WriterPublicationViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own publications / portfolio."""
+
+    serializer_class = WriterPublicationSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterPublication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

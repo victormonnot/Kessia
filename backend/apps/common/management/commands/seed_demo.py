@@ -22,7 +22,9 @@ from apps.messaging.models import Conversation, Message
 from apps.orders.models import Order
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
-from apps.users.models import User
+from apps.users.models import User, WriterExperience, WriterPublication
+
+CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes", "Strasbourg"]
 
 DEMO_PASSWORD = "demo1234"
 
@@ -204,7 +206,53 @@ class Command(BaseCommand):
             user.save(update_fields=["password"])
         self._assign_avatar(user)
         user._specialty = specialty  # carried in-memory for listing seeding
+        self._enrich_writer(user, specialty)
         return user
+
+    def _enrich_writer(self, user, specialty):
+        """Fill a lifelike writer profile (headline, expertise, timeline, papers)."""
+        label = Specialty(specialty).label
+        fields = {}
+        if not user.headline:
+            fields["headline"] = f"Rédacteur médical · {label}"
+        if not user.city:
+            fields["city"] = CITIES[len(user.email) % len(CITIES)]
+        if not user.expertise_areas:
+            fields["expertise_areas"] = [
+                "Revue systématique",
+                "Article original",
+                "Méthodologie & biostatistiques",
+            ]
+        if user.years_experience is None:
+            fields["years_experience"] = 6 + (user.pk % 10)
+        if not user.google_scholar_url:
+            fields["google_scholar_url"] = "https://scholar.google.com/citations?user=DEMO"
+        if fields:
+            for key, value in fields.items():
+                setattr(user, key, value)
+            user.save(update_fields=list(fields))
+
+        if not user.experiences.exists():
+            WriterExperience.objects.create(
+                user=user, order=0, start_year=2019,
+                role="Médecin rédacteur indépendant", organization="Kessia",
+                description=f"Rédaction scientifique en {label.lower()} pour revues à comité de lecture.",
+            )
+            WriterExperience.objects.create(
+                user=user, order=1, start_year=2014, end_year=2019,
+                role=f"Praticien hospitalier — {label}", organization="CHU",
+            )
+        if not user.publications.exists():
+            WriterPublication.objects.create(
+                user=user, order=0, year=2023, is_featured=True,
+                title=f"Revue systématique et méta-analyse en {label.lower()}",
+                venue="La Revue Médicale", url="https://doi.org/10.0000/demo-1",
+            )
+            WriterPublication.objects.create(
+                user=user, order=1, year=2022,
+                title="Étude de cas clinique commentée", venue="Annales médicales",
+                url="https://doi.org/10.0000/demo-2",
+            )
 
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(

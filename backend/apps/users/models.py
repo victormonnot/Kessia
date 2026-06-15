@@ -20,6 +20,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Verified-writer badge (admin-gated flag; see the verification app).
     is_verified = models.BooleanField(default=False)
 
+    # --- Rich writer profile (all optional; mostly relevant for writers) ------
+    # Short tagline, e.g. "Médecin-rédacteur · cardiologie".
+    headline = models.CharField(max_length=160, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    google_scholar_url = models.URLField(blank=True)
+    years_experience = models.PositiveIntegerField(null=True, blank=True)
+    # Free-form expertise tags, e.g. ["Méta-analyses", "Essais cliniques"].
+    expertise_areas = models.JSONField(default=list, blank=True)
+    # Per-section visibility chosen by the writer, e.g. {"experiences": false}.
+    # A missing key means "visible when it has content" (see the serializer).
+    profile_sections = models.JSONField(default=dict, blank=True)
+
     # Stripe Connect (Express) state for writers receiving payouts.
     stripe_account_id = models.CharField(max_length=255, blank=True)
     stripe_charges_enabled = models.BooleanField(default=False)
@@ -48,3 +60,47 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_short_name(self) -> str:
         return self.first_name or self.email
+
+
+class WriterExperience(models.Model):
+    """A line of a writer's career / experience timeline."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="experiences",
+    )
+    role = models.CharField(max_length=160)
+    organization = models.CharField(max_length=160, blank=True)
+    start_year = models.PositiveIntegerField(null=True, blank=True)
+    end_year = models.PositiveIntegerField(null=True, blank=True)  # null = en cours
+    description = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order", "-start_year")
+
+    def __str__(self) -> str:
+        return f"{self.role} — {self.organization}".strip(" —")
+
+
+class WriterPublication(models.Model):
+    """A paper / article in a writer's portfolio (flagship = is_featured)."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="publications",
+    )
+    title = models.CharField(max_length=300)
+    url = models.URLField(blank=True)
+    venue = models.CharField(max_length=200, blank=True)  # revue / congrès
+    year = models.PositiveIntegerField(null=True, blank=True)
+    is_featured = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order", "-is_featured", "-year")
+
+    def __str__(self) -> str:
+        return self.title
