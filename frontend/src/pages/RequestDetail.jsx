@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import ProposalForm from "@/components/requests/ProposalForm";
@@ -95,6 +96,12 @@ export default function RequestDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">{request.title}</h1>
             <StatusBadge status={request.status} />
+            <FavoriteButton
+              type="request"
+              id={request.id}
+              favorited={request.is_favorited}
+              className="size-8"
+            />
           </div>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar className="size-7">

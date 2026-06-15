@@ -3,6 +3,7 @@ import { Clock } from "lucide-react";
 
 import Stars from "@/components/ui/Stars";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import { avatarFor } from "@/lib/demo-assets";
 import { formatPrice } from "@/lib/format";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
@@ -27,6 +28,12 @@ export default function ListingCard({ listing }) {
         {listing.writer_is_verified && (
           <VerifiedBadge solid label="Rédacteur vérifié" className="absolute left-2 top-2" />
         )}
+        <FavoriteButton
+          type="listing"
+          id={listing.id}
+          favorited={listing.is_favorited}
+          className="absolute right-2 top-2 size-8"
+        />
       </div>
 
       <div className="flex flex-1 flex-col p-4">

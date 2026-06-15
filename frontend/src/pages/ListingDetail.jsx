@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import WriterHeader from "@/components/writers/WriterHeader";
 import ExperienceList from "@/components/writers/ExperienceList";
 import PublicationList from "@/components/writers/PublicationList";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import PlaceOrderModal from "@/components/orders/PlaceOrderModal";
@@ -109,7 +110,14 @@ export default function ListingDetail() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
+              <FavoriteButton
+                type="listing"
+                id={listing.id}
+                favorited={listing.is_favorited}
+              />
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
                 {labelFor(listing.specialty, SPECIALTY_OPTIONS)}

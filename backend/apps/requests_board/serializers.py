@@ -5,7 +5,16 @@ from apps.users.serializers import UserPublicSerializer
 from .models import Proposal, Request
 
 
-class RequestListSerializer(serializers.ModelSerializer):
+class IsFavoritedMixin(serializers.Serializer):
+    """Exposes whether the current user saved this request (viewset annotation)."""
+
+    is_favorited = serializers.SerializerMethodField()
+
+    def get_is_favorited(self, obj):
+        return bool(getattr(obj, "is_favorited", False))
+
+
+class RequestListSerializer(IsFavoritedMixin, serializers.ModelSerializer):
     doctor = UserPublicSerializer(read_only=True)
     proposals_count = serializers.IntegerField(read_only=True, default=0)
 
@@ -20,12 +29,13 @@ class RequestListSerializer(serializers.ModelSerializer):
             "budget",
             "status",
             "proposals_count",
+            "is_favorited",
             "created_at",
         )
         read_only_fields = fields
 
 
-class RequestDetailSerializer(serializers.ModelSerializer):
+class RequestDetailSerializer(IsFavoritedMixin, serializers.ModelSerializer):
     doctor = UserPublicSerializer(read_only=True)
 
     class Meta:
@@ -39,6 +49,7 @@ class RequestDetailSerializer(serializers.ModelSerializer):
             "deadline",
             "budget",
             "status",
+            "is_favorited",
             "created_at",
             "updated_at",
         )

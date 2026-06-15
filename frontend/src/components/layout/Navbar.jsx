@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
+  Heart,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -108,6 +109,11 @@ export default function Navbar() {
                       </NavLink>
                     </SheetClose>
                     <SheetClose asChild>
+                      <NavLink to="/favoris" className={linkClass}>
+                        Mes favoris
+                      </NavLink>
+                    </SheetClose>
+                    <SheetClose asChild>
                       <NavLink to="/settings" className={linkClass}>
                         Paramètres
                       </NavLink>
@@ -210,6 +216,9 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/messages")}>
                     <MessageSquare className="size-4" /> Messagerie
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/favoris")}>
+                    <Heart className="size-4" /> Mes favoris
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="size-4" /> Paramètres

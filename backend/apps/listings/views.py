@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Exists, OuterRef
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -29,6 +29,19 @@ class ListingViewSet(viewsets.ModelViewSet):
     search_fields = ("title", "description")
     ordering_fields = ("created_at", "price", "turnaround_days", "writer_rating")
     ordering = ("-created_at",)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.is_authenticated:
+            from apps.favorites.models import Favorite
+
+            qs = qs.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user, listing=OuterRef("pk"))
+                )
+            )
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":

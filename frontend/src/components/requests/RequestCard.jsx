@@ -3,6 +3,7 @@ import { CalendarDays, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import { avatarFor } from "@/lib/demo-assets";
 import { formatDate, formatPrice, fullName, initials } from "@/lib/format";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
@@ -20,7 +21,15 @@ export default function RequestCard({ request }) {
         <h3 className="font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
           {request.title}
         </h3>
-        <StatusBadge status={request.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={request.status} />
+          <FavoriteButton
+            type="request"
+            id={request.id}
+            favorited={request.is_favorited}
+            className="size-8"
+          />
+        </div>
       </div>
 
       <div className="mt-3 flex items-center gap-2">

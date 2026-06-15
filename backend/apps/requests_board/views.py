@@ -1,4 +1,4 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -33,9 +33,19 @@ class RequestViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        return Request.objects.select_related("doctor").annotate(
+        qs = Request.objects.select_related("doctor").annotate(
             proposals_count=Count("proposals")
         )
+        user = self.request.user
+        if user.is_authenticated:
+            from apps.favorites.models import Favorite
+
+            qs = qs.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user, request=OuterRef("pk"))
+                )
+            )
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
