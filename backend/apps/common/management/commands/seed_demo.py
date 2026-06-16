@@ -48,14 +48,14 @@ AVATARS = {
     "julie.petit@kessia.demo": "06.jpg",
     "paul.nguyen@kessia.demo": "07.jpg",
     "karim.haddad@kessia.demo": "08.jpg",
-    "thomas.leroy@kessia.demo": "09.jpg",
-    "marc.dubois@kessia.demo": "10.jpg",
-    "hugo.moreau@kessia.demo": "11.jpg",
-    "doctor@kessia.demo": "12.jpg",
-    "antoine.garcia@kessia.demo": "07.jpg",
-    "lea.fournier@kessia.demo": "01.jpg",
-    "mehdi.cherif@kessia.demo": "08.jpg",
-    "camille.roux@kessia.demo": "02.jpg",
+    "thomas.leroy@kessia.demo": "01.jpg",
+    "marc.dubois@kessia.demo": "02.jpg",
+    "hugo.moreau@kessia.demo": "03.jpg",
+    "doctor@kessia.demo": "04.jpg",
+    "antoine.garcia@kessia.demo": "05.jpg",
+    "lea.fournier@kessia.demo": "06.jpg",
+    "mehdi.cherif@kessia.demo": "07.jpg",
+    "camille.roux@kessia.demo": "08.jpg",
 }
 
 # (email, first, last, specialty, verified, bio)
