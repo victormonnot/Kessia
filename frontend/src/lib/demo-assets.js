@@ -32,10 +32,10 @@ export function coverFor(specialty) {
   return `/img/covers/${COVER_FAMILIES[specialty] ?? "generique"}.jpg`;
 }
 
-// Portrait démo déterministe : même nom → même visage (01.jpg à 12.jpg).
+// Portrait démo déterministe : même nom → même visage (01.jpg à 08.jpg).
 export function avatarFor(seed) {
   if (!seed) return undefined;
   let h = 0;
   for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) % 997;
-  return `/img/avatars/${String((h % 12) + 1).padStart(2, "0")}.jpg`;
+  return `/img/avatars/${String((h % 8) + 1).padStart(2, "0")}.jpg`;
 }
