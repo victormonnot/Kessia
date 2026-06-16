@@ -5,7 +5,7 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
-from .models import User, WriterExperience, WriterPublication
+from .models import User, WriterExperience, WriterPortfolioItem, WriterPublication
 from .tokens import email_verification_token
 
 
@@ -19,6 +19,12 @@ class WriterPublicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = WriterPublication
         fields = ("id", "title", "url", "venue", "year", "is_featured", "order")
+
+
+class WriterPortfolioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WriterPortfolioItem
+        fields = ("id", "title", "kind", "url", "summary", "order")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -38,6 +44,8 @@ class UserSerializer(serializers.ModelSerializer):
             "years_experience",
             "expertise_areas",
             "profile_sections",
+            "languages",
+            "response_time",
             "is_writer",
             "is_verified",
             "date_joined",
@@ -108,6 +116,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "years_experience",
             "expertise_areas",
             "profile_sections",
+            "languages",
+            "response_time",
         )
 
 
@@ -241,8 +251,11 @@ class PublicWriterSerializer(serializers.ModelSerializer):
     listings = serializers.SerializerMethodField()
     avg_rating = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
+    rating_breakdown = serializers.SerializerMethodField()
+    completed_orders = serializers.SerializerMethodField()
     experiences = WriterExperienceSerializer(many=True, read_only=True)
     publications = WriterPublicationSerializer(many=True, read_only=True)
+    portfolio = WriterPortfolioSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -258,13 +271,19 @@ class PublicWriterSerializer(serializers.ModelSerializer):
             "years_experience",
             "expertise_areas",
             "profile_sections",
+            "languages",
+            "response_time",
+            "date_joined",
             "is_verified",
             "specialties",
             "listings",
             "experiences",
             "publications",
+            "portfolio",
             "avg_rating",
             "reviews_count",
+            "rating_breakdown",
+            "completed_orders",
         )
         read_only_fields = fields
 
@@ -292,3 +311,15 @@ class PublicWriterSerializer(serializers.ModelSerializer):
 
     def get_reviews_count(self, obj):
         return self._rating(obj)["count"]
+
+    def get_rating_breakdown(self, obj):
+        from django.db.models import Count
+
+        rows = obj.reviews_received.values("rating").annotate(n=Count("id"))
+        counts = {row["rating"]: row["n"] for row in rows}
+        return {str(star): counts.get(star, 0) for star in (5, 4, 3, 2, 1)}
+
+    def get_completed_orders(self, obj):
+        from apps.orders.models import Order
+
+        return obj.orders_received.filter(status=Order.Status.COMPLETED).count()

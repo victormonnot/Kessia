@@ -83,6 +83,7 @@ class ListingDetailSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "deliverable_type",
             "price",
             "turnaround_days",
+            "faq",
             "is_published",
             "writer_rating",
             "writer_reviews_count",
@@ -104,6 +105,7 @@ class ListingWriteSerializer(serializers.ModelSerializer):
             "deliverable_type",
             "price",
             "turnaround_days",
+            "faq",
             "is_published",
         )
 

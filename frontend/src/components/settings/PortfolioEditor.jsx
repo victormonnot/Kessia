@@ -6,65 +6,53 @@ import { Button } from "@/components/ui/button";
 import ConfirmButton from "@/components/ConfirmButton";
 import Spinner from "@/components/feedback/Spinner";
 import {
-  usePublications,
-  useCreatePublication,
-  useUpdatePublication,
-  useDeletePublication,
+  usePortfolio,
+  useCreatePortfolio,
+  useUpdatePortfolio,
+  useDeletePortfolio,
 } from "@/hooks/useProfileContent";
 import { errorMessage } from "@/lib/format";
 
-const EMPTY = { title: "", venue: "", year: "", url: "", is_featured: false };
+const EMPTY = { title: "", kind: "", url: "", summary: "" };
 
-// Normalised payload shared by create + update.
 function toPayload(form) {
-  return {
-    title: form.title,
-    venue: form.venue,
-    url: form.url,
-    is_featured: form.is_featured,
-    year: form.year ? Number(form.year) : null,
-  };
+  return { title: form.title, kind: form.kind, url: form.url, summary: form.summary };
 }
 
 function fromItem(it) {
   return {
     title: it.title || "",
-    venue: it.venue || "",
-    year: it.year ?? "",
+    kind: it.kind || "",
     url: it.url || "",
-    is_featured: Boolean(it.is_featured),
+    summary: it.summary || "",
   };
 }
 
 // Field set reused by the "add" form and the inline "edit" form.
-function PublicationFields({ form, setForm }) {
+function PortfolioFields({ form, setForm }) {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   return (
     <>
-      <Input label="Titre" value={form.title} onChange={set("title")} />
+      <Input label="Titre" value={form.title} onChange={set("title")} placeholder="Méta-analyse en cardiologie" />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Revue / congrès" value={form.venue} onChange={set("venue")} />
-        <Input label="Année" type="number" value={form.year} onChange={set("year")} />
-      </div>
-      <Input label="Lien" value={form.url} onChange={set("url")} placeholder="https://doi.org/…" />
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={form.is_featured}
-          onChange={(e) => setForm((f) => ({ ...f, is_featured: e.target.checked }))}
-          className="size-4 rounded border-input"
+        <Input
+          label="Type"
+          value={form.kind}
+          onChange={set("kind")}
+          placeholder="Article original, revue…"
         />
-        Mettre en avant (publication phare)
-      </label>
+        <Input label="Lien" value={form.url} onChange={set("url")} placeholder="https://…" />
+      </div>
+      <Input label="Description" value={form.summary} onChange={set("summary")} />
     </>
   );
 }
 
-export default function PublicationEditor() {
-  const { data: items = [] } = usePublications();
-  const create = useCreatePublication();
-  const update = useUpdatePublication();
-  const remove = useDeletePublication();
+export default function PortfolioEditor() {
+  const { data: items = [] } = usePortfolio();
+  const create = useCreatePortfolio();
+  const update = useUpdatePortfolio();
+  const remove = useDeletePortfolio();
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY);
@@ -78,7 +66,7 @@ export default function PublicationEditor() {
     try {
       await create.mutateAsync(toPayload(form));
       setForm(EMPTY);
-      toast.success("Publication ajoutée.");
+      toast.success("Réalisation ajoutée.");
     } catch (err) {
       toast.error(errorMessage(err, "L'ajout a échoué."));
     }
@@ -98,7 +86,7 @@ export default function PublicationEditor() {
     try {
       await update.mutateAsync({ id: editingId, data: toPayload(editForm) });
       setEditingId(null);
-      toast.success("Publication modifiée.");
+      toast.success("Réalisation modifiée.");
     } catch (err) {
       toast.error(errorMessage(err, "La modification a échoué."));
     }
@@ -108,7 +96,7 @@ export default function PublicationEditor() {
     try {
       await remove.mutateAsync(id);
       if (editingId === id) setEditingId(null);
-      toast.success("Publication supprimée.");
+      toast.success("Réalisation supprimée.");
     } catch (err) {
       toast.error(errorMessage(err, "La suppression a échoué."));
     }
@@ -122,7 +110,7 @@ export default function PublicationEditor() {
             editingId === it.id ? (
               <li key={it.id} className="rounded-lg border bg-background p-3">
                 <form onSubmit={saveEdit} className="space-y-3">
-                  <PublicationFields form={editForm} setForm={setEditForm} />
+                  <PortfolioFields form={editForm} setForm={setEditForm} />
                   <div className="flex gap-2">
                     <Button type="submit" size="sm" disabled={update.isPending}>
                       {update.isPending ? <Spinner /> : "Enregistrer"}
@@ -144,12 +132,9 @@ export default function PublicationEditor() {
                 className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {it.is_featured && "★ "}
-                    {it.title}
-                  </p>
+                  <p className="text-sm font-medium">{it.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {[it.venue, it.year].filter(Boolean).join(" · ")}
+                    {[it.kind, it.summary].filter(Boolean).join(" · ")}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -160,7 +145,7 @@ export default function PublicationEditor() {
                     size="sm"
                     variant="ghost"
                     destructive
-                    title="Supprimer cette publication ?"
+                    title="Supprimer cette réalisation ?"
                     confirmLabel="Supprimer"
                     onConfirm={() => del(it.id)}
                   >
@@ -174,9 +159,9 @@ export default function PublicationEditor() {
       )}
 
       <form onSubmit={add} className="space-y-3 rounded-lg border border-dashed p-4">
-        <PublicationFields form={form} setForm={setForm} />
+        <PortfolioFields form={form} setForm={setForm} />
         <Button type="submit" size="sm" variant="outline" disabled={create.isPending}>
-          {create.isPending ? <Spinner /> : "Ajouter une publication"}
+          {create.isPending ? <Spinner /> : "Ajouter une réalisation"}
         </Button>
       </form>
     </div>

@@ -47,6 +47,12 @@ export const DELIVERABLE_OPTIONS = [
   { value: "autres", label: "Autres" },
 ];
 
+export const RESPONSE_TIME_OPTIONS = [
+  { value: "few_hours", label: "Quelques heures" },
+  { value: "one_day", label: "Moins d'un jour" },
+  { value: "few_days", label: "1 à 3 jours" },
+];
+
 export const STATUS_LABELS = {
   pending: "En attente",
   accepted: "Acceptée",

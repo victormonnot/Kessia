@@ -4,9 +4,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { TextField, TextareaField, SwitchField } from "@/components/form/fields";
+import { TextField, TextareaField, SelectField, SwitchField } from "@/components/form/fields";
 import Spinner from "@/components/feedback/Spinner";
 import { profileSchema } from "@/lib/schemas/profile";
+import { RESPONSE_TIME_OPTIONS } from "@/lib/choices";
 import { sectionVisible } from "@/lib/profile";
 import { errorMessage } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
@@ -27,9 +28,13 @@ export default function ProfileForm() {
       google_scholar_url: user?.google_scholar_url || "",
       years_experience: user?.years_experience != null ? String(user.years_experience) : "",
       expertise: (user?.expertise_areas || []).join(", "),
+      languages: (user?.languages || []).join(", "),
+      response_time: user?.response_time || "",
       show_expertise: sectionVisible(user, "expertise"),
       show_experiences: sectionVisible(user, "experiences"),
       show_publications: sectionVisible(user, "publications"),
+      show_portfolio: sectionVisible(user, "portfolio"),
+      show_trust: sectionVisible(user, "trust"),
       show_scholar: sectionVisible(user, "scholar"),
     },
   });
@@ -48,10 +53,16 @@ export default function ProfileForm() {
       payload.expertise_areas = values.expertise
         ? values.expertise.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
+      payload.languages = values.languages
+        ? values.languages.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+      payload.response_time = values.response_time || "";
       payload.profile_sections = {
         expertise: values.show_expertise,
         experiences: values.show_experiences,
         publications: values.show_publications,
+        portfolio: values.show_portfolio,
+        trust: values.show_trust,
         scholar: values.show_scholar,
       };
     }
@@ -107,12 +118,29 @@ export default function ProfileForm() {
               label="Domaines d'expertise"
               description="Séparés par des virgules, ex. « Méta-analyses, Essais cliniques »."
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                control={form.control}
+                name="languages"
+                label="Langues"
+                description="Séparées par des virgules, ex. « Français, Anglais »."
+              />
+              <SelectField
+                control={form.control}
+                name="response_time"
+                label="Délai de réponse"
+                options={RESPONSE_TIME_OPTIONS}
+                placeholder="Choisir un délai"
+              />
+            </div>
 
             <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
               <p className="text-sm font-medium">Sections affichées sur votre profil</p>
               <SwitchField control={form.control} name="show_expertise" label="Domaines d'expertise" />
               <SwitchField control={form.control} name="show_experiences" label="Parcours" />
               <SwitchField control={form.control} name="show_publications" label="Publications" />
+              <SwitchField control={form.control} name="show_portfolio" label="Réalisations" />
+              <SwitchField control={form.control} name="show_trust" label="Infos de confiance" />
               <SwitchField control={form.control} name="show_scholar" label="Lien Google Scholar" />
             </div>
           </>

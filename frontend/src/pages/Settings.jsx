@@ -8,6 +8,7 @@ import AvatarUpload from "@/components/settings/AvatarUpload";
 import ProfileForm from "@/components/settings/ProfileForm";
 import ExperienceEditor from "@/components/settings/ExperienceEditor";
 import PublicationEditor from "@/components/settings/PublicationEditor";
+import PortfolioEditor from "@/components/settings/PortfolioEditor";
 import ChangePasswordForm from "@/components/settings/ChangePasswordForm";
 import ChangeEmailForm from "@/components/settings/ChangeEmailForm";
 import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
@@ -71,6 +72,18 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <PublicationEditor />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Réalisations</CardTitle>
+                <CardDescription>
+                  Vos exemples de travaux (le « book »), affichés sur votre profil et vos annonces.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PortfolioEditor />
               </CardContent>
             </Card>
           </>

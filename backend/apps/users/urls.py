@@ -8,6 +8,7 @@ from .views import (
     MeView,
     PublicWriterView,
     WriterExperienceViewSet,
+    WriterPortfolioViewSet,
     WriterPublicationViewSet,
     activate_writer,
     change_email,
@@ -23,6 +24,7 @@ from .views import (
 router = SimpleRouter()
 router.register("users/me/experiences", WriterExperienceViewSet, basename="me-experiences")
 router.register("users/me/publications", WriterPublicationViewSet, basename="me-publications")
+router.register("users/me/portfolio", WriterPortfolioViewSet, basename="me-portfolio")
 
 urlpatterns = [
     path("auth/register/", register, name="auth-register"),

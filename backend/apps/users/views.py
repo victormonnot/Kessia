@@ -30,7 +30,7 @@ from .cookies import (
     clear_auth_cookies,
     set_auth_cookies,
 )
-from .models import User, WriterExperience, WriterPublication
+from .models import User, WriterExperience, WriterPortfolioItem, WriterPublication
 from .serializers import (
     ChangeEmailSerializer,
     ChangePasswordSerializer,
@@ -43,6 +43,7 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
     WriterExperienceSerializer,
+    WriterPortfolioSerializer,
     WriterPublicationSerializer,
 )
 from .tokens import email_verification_token
@@ -343,13 +344,26 @@ class WriterExperienceViewSet(viewsets.ModelViewSet):
 
 
 class WriterPublicationViewSet(viewsets.ModelViewSet):
-    """CRUD over the current user's own publications / portfolio."""
+    """CRUD over the current user's own publications."""
 
     serializer_class = WriterPublicationSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         return WriterPublication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class WriterPortfolioViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own portfolio / réalisations."""
+
+    serializer_class = WriterPortfolioSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterPortfolioItem.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

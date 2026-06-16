@@ -18,8 +18,12 @@ export const profileSchema = z.object({
     .optional()
     .or(z.literal("")),
   expertise: z.string().max(300, "300 caractères maximum.").optional().or(z.literal("")),
+  languages: z.string().max(200, "200 caractères maximum.").optional().or(z.literal("")),
+  response_time: z.string().optional().or(z.literal("")),
   show_expertise: z.boolean().optional(),
   show_experiences: z.boolean().optional(),
   show_publications: z.boolean().optional(),
+  show_portfolio: z.boolean().optional(),
+  show_trust: z.boolean().optional(),
   show_scholar: z.boolean().optional(),
 });

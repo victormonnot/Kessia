@@ -31,6 +31,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Per-section visibility chosen by the writer, e.g. {"experiences": false}.
     # A missing key means "visible when it has content" (see the serializer).
     profile_sections = models.JSONField(default=dict, blank=True)
+    # Spoken languages, e.g. ["Français", "Anglais"].
+    languages = models.JSONField(default=list, blank=True)
+    # Typical response-time bucket shown as a trust signal (see ResponseTime).
+    response_time = models.CharField(max_length=20, blank=True)
 
     # Stripe Connect (Express) state for writers receiving payouts.
     stripe_account_id = models.CharField(max_length=255, blank=True)
@@ -101,6 +105,27 @@ class WriterPublication(models.Model):
 
     class Meta:
         ordering = ("order", "-is_featured", "-year")
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class WriterPortfolioItem(models.Model):
+    """A work sample / réalisation in a writer's portfolio (the « book »)."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="portfolio",
+    )
+    title = models.CharField(max_length=200)
+    kind = models.CharField(max_length=120, blank=True)  # ex. « Article original »
+    url = models.URLField(blank=True)
+    summary = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order", "id")
 
     def __str__(self) -> str:
         return self.title
