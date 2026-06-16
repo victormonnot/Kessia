@@ -1,5 +1,5 @@
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
+import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { SPECIALTY_OPTIONS } from "@/lib/choices";

@@ -38,3 +38,37 @@ const Button = React.forwardRef(({ className, variant, size, asChild = false, ..
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
+
+// --- v1 compatibility (default export) ---
+// Keeps the legacy public API (default export, variant names
+// primary/secondary/outline/danger/ghost, sizes sm/md/lg, default type="button")
+// on top of the shadcn Button so existing call sites stay untouched. Lives here
+// (not in a separate Button.jsx) to avoid a case-only filename collision that
+// breaks esbuild/Vite resolution.
+const compatVariantMap = {
+  primary: "default",
+  secondary: "secondary",
+  outline: "outline",
+  danger: "destructive",
+  ghost: "ghost",
+  link: "link",
+};
+
+const compatSizeMap = { sm: "sm", md: "default", lg: "lg", icon: "icon" };
+
+const ButtonCompat = React.forwardRef(function ButtonCompat(
+  { variant = "primary", size = "md", type = "button", ...props },
+  ref,
+) {
+  return (
+    <Button
+      ref={ref}
+      type={type}
+      variant={compatVariantMap[variant] ?? variant}
+      size={compatSizeMap[size] ?? size}
+      {...props}
+    />
+  );
+});
+
+export default ButtonCompat;

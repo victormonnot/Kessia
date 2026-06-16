@@ -4,7 +4,7 @@ import { ClipboardList, Plus, Search, SlidersHorizontal, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Select from "@/components/ui/Select";
+import Select from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import RequestCard from "@/components/requests/RequestCard";
 import RequestCardSkeleton from "@/components/requests/RequestCardSkeleton";
@@ -15,12 +15,23 @@ import ErrorState from "@/components/feedback/ErrorState";
 import { cn } from "@/lib/utils";
 import { useRequests } from "@/hooks/useRequests";
 import { useAuthStore } from "@/store/authStore";
+import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
+import { formatDate } from "@/lib/format";
 
 const ORDERING_OPTIONS = [
   { value: "-created_at", label: "Plus récentes" },
   { value: "deadline", label: "Échéance proche" },
   { value: "-budget", label: "Budget décroissant" },
   { value: "budget", label: "Budget croissant" },
+];
+
+const QUICK_SPECIALTIES = [
+  "cardiologie",
+  "oncologie",
+  "neurologie",
+  "pediatrie",
+  "psychiatrie",
+  "radiologie",
 ];
 
 function paramsToObject(searchParams) {
@@ -53,6 +64,34 @@ export default function Requests() {
     updateFilters({ ...filters, search: undefined });
   };
 
+  const toggleSpecialty = (s) =>
+    updateFilters({ ...filters, specialty: filters.specialty === s ? undefined : s });
+
+  const removeFilter = (key) => {
+    if (key === "search") setSearchText("");
+    // Status has no "off" state — removing it restores the default "open".
+    updateFilters({ ...filters, [key]: key === "status" ? "open" : undefined });
+  };
+
+  const resetAll = () => {
+    setSearchText("");
+    updateFilters({ ordering: filters.ordering, status: "open" });
+  };
+
+  const activePills = [];
+  if (filters.search) activePills.push({ key: "search", label: `« ${filters.search} »` });
+  if (filters.specialty)
+    activePills.push({ key: "specialty", label: labelFor(filters.specialty, SPECIALTY_OPTIONS) });
+  if (filters.budget_min) activePills.push({ key: "budget_min", label: `≥ ${filters.budget_min} €` });
+  if (filters.budget_max) activePills.push({ key: "budget_max", label: `≤ ${filters.budget_max} €` });
+  if (filters.deadline_before)
+    activePills.push({
+      key: "deadline_before",
+      label: `Avant le ${formatDate(filters.deadline_before)}`,
+    });
+  if (filters.status && filters.status !== "open")
+    activePills.push({ key: "status", label: "Fermées" });
+
   const activeCount =
     ["specialty", "budget_min", "budget_max", "deadline_before"].filter((k) => filters[k]).length +
     (filters.status && filters.status !== "open" ? 1 : 0);
@@ -62,7 +101,7 @@ export default function Requests() {
     <div className="container py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Demandes</h1>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Demandes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isLoading
               ? "Recherche en cours…"
@@ -126,9 +165,57 @@ export default function Requests() {
         </div>
       </div>
 
+      {/* Quick specialty chips */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {QUICK_SPECIALTIES.map((s) => {
+          const active = filters.specialty === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => toggleSpecialty(s)}
+              aria-pressed={active}
+              className={cn(
+                "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
+                active
+                  ? "border-foreground bg-foreground text-background"
+                  : "text-foreground hover:border-foreground",
+              )}
+            >
+              {labelFor(s, SPECIALTY_OPTIONS)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active filter pills */}
+      {activePills.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {activePills.map((pill) => (
+            <button
+              key={pill.key}
+              type="button"
+              onClick={() => removeFilter(pill.key)}
+              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-accent"
+              aria-label={`Retirer le filtre ${pill.label}`}
+            >
+              {pill.label}
+              <X className="size-3" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={resetAll}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Tout effacer
+          </button>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         <aside className="hidden lg:block">
-          <div className="sticky top-20 rounded-lg border bg-card p-5">
+          <div className="sticky top-20 rounded-xl border bg-card p-5">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Filtres
             </h2>

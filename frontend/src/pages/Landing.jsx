@@ -4,23 +4,30 @@ import { ArrowRight, BadgeCheck, FileText, MessagesSquare, Search, ShieldCheck }
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { useListings } from "@/hooks/useListings";
-import { coverFor } from "@/lib/demo-assets";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
-// Spécialités mises en avant (chips du héro et tuiles de catégories).
+// Chips in the hero (most-reached-for specialties).
 const POPULAR_SPECIALTIES = ["cardiologie", "oncologie", "neurologie", "pediatrie", "psychiatrie"];
-const CATEGORY_TILES = [
+
+// "Parcourir par spécialité" — modern cards (no photos), one per domain.
+const SPECIALTY_TILES = [
   "cardiologie",
+  "oncologie",
   "neurologie",
-  "pneumologie",
-  "gastroenterologie",
-  "ophtalmologie",
+  "pediatrie",
   "psychiatrie",
   "radiologie",
+  "dermatologie",
+  "pneumologie",
+  "gastroenterologie",
+  "endocrinologie",
   "rhumatologie",
+  "gynecologie",
 ];
 
 const STEPS = [
@@ -45,7 +52,37 @@ const FEATURES = [
   { icon: FileText, title: "Spécialisé médical", text: "36 spécialités, 5 types de livrables." },
 ];
 
-// Rangée d'annonces réelles — la vitrine du catalogue sur la page d'accueil.
+// Floating card spotlighting the flagship feature: writers vetted by a committee.
+// It lives INSIDE the hero's right grid column, so it scales with the layout and
+// can never slip behind the left content. The photo pops out of the top-left
+// corner (white ring behind it); the badge sits at its top-right — positioned
+// RELATIVE TO THE PHOTO, so tweak its left-[..px] / top-[..px] freely.
+function VerifiedWriterCard() {
+  return (
+    <div className="relative mx-auto w-full max-w-xs rounded-2xl border bg-card p-6 pt-14 shadow-xl">
+      <div className="absolute -top-8 left-6">
+        <Avatar className="size-20 ring-4 ring-card">
+          <AvatarImage src="/img/avatars/05.jpg" alt="" />
+          <AvatarFallback className="bg-secondary text-lg font-semibold text-foreground">
+            CF
+          </AvatarFallback>
+        </Avatar>
+        <VerifiedBadge
+          solid
+          label="Vérifié par le comité"
+          className="absolute left-[56px] top-[-13px] whitespace-nowrap px-3.5 py-1.5 text-sm shadow-md"
+        />
+      </div>
+      <p className="font-semibold leading-tight">Dr Claire Fontaine</p>
+      <p className="text-sm text-muted-foreground">Cardiologie · Paris</p>
+      <p className="mt-3 font-semibold leading-snug">
+        Des rédacteurs vérifiés par notre comité
+      </p>
+    </div>
+  );
+}
+
+// Real listings on the home page (hidden if the API is down or returns nothing).
 function PopularListings() {
   const { data, isLoading, isError } = useListings({ ordering: "-writer_rating" });
   const listings = (data?.results ?? []).slice(0, 4);
@@ -83,84 +120,119 @@ export default function Landing() {
 
   return (
     <div>
-      {/* Héro — recherche d'abord, sobre et direct. */}
-      <section className="border-b">
-        <div className="container py-12 sm:py-16 lg:py-20">
-          <h1 className="max-w-3xl text-balance text-3xl sm:text-4xl lg:text-5xl">
-            Trouvez le bon rédacteur médical pour vos publications
-          </h1>
-          <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Articles de recherche, études de cas, résumés — rédigés par des rédacteurs
-            scientifiques qualifiés et vérifiés.
-          </p>
+      {/* Héro — grille 2 colonnes : texte/recherche à gauche, carte à droite.
+          La grille rend tout responsive : la carte vit dans sa colonne, elle ne
+          peut donc plus déborder ni passer derrière le texte sur petit écran. */}
+      <section className="relative overflow-hidden border-b">
+        {/* Fond gris qui file jusqu'au bord droit, derrière la grille (lg+). */}
+        <div
+          aria-hidden
+          className="absolute inset-y-12 right-0 hidden w-[44%] rounded-l-[4rem] bg-secondary/50 lg:block"
+        />
+        <div className="container relative pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pb-20 lg:pt-12">
+          <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+            {/* Colonne gauche : texte + recherche */}
+            <div>
+              <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+                Trouvez le bon rédacteur médical pour vos publications
+              </h1>
+              <p className="mt-10 max-w-xl text-base text-muted-foreground sm:text-lg">
+                Articles de recherche, études de cas, résumés, rédigés par des rédacteurs
+                scientifiques qualifiés et vérifiés.
+              </p>
 
-          <form onSubmit={submitSearch} className="mt-7 flex w-full max-w-2xl gap-2">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Essayez « article de revue en cardiologie »…"
-                aria-label="Rechercher une annonce"
-                className="h-11 pl-9"
-              />
-            </div>
-            <Button type="submit" size="lg" className="h-11">
-              Rechercher
-            </Button>
-          </form>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Populaire :</span>
-            {POPULAR_SPECIALTIES.map((s) => (
-              <Link
-                key={s}
-                to={`/listings?specialty=${s}`}
-                className="rounded-full border px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
+              {/* Barre un peu plus large que sa colonne : elle déborde vers la
+                  droite (sur le fond gris) sans jamais atteindre la carte. */}
+              <form
+                onSubmit={submitSearch}
+                className="mt-10 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[112%]"
               >
-                {labelFor(s, SPECIALTY_OPTIONS)}
-              </Link>
-            ))}
-          </div>
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Essayez « article de revue en cardiologie »…"
+                    aria-label="Rechercher une annonce"
+                    className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="h-11">
+                  Rechercher
+                </Button>
+              </form>
 
-          <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="size-4" /> Paiement sous séquestre
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <BadgeCheck className="size-4" /> Rédacteurs vérifiés
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <FileText className="size-4" /> 36 spécialités
-            </span>
-          </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Populaire :</span>
+                {POPULAR_SPECIALTIES.map((s) => (
+                  <Link
+                    key={s}
+                    to={`/listings?specialty=${s}`}
+                    className="rounded-full border bg-card px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
+                  >
+                    {labelFor(s, SPECIALTY_OPTIONS)}
+                  </Link>
+                ))}
+              </div>
+
+              <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4" /> Paiement sous séquestre
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <BadgeCheck className="size-4" /> Rédacteurs vérifiés
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <FileText className="size-4" /> 36 spécialités
+                </span>
+              </p>
+            </div>
+
+            {/* Colonne droite : la carte (cachée en mobile) + points déco */}
+            <div className="relative hidden lg:block">
+              <svg
+                className="absolute -top-2 right-0 h-24 w-40 text-neutral-300"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <defs>
+                  <pattern id="hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="2" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#hero-dots)" />
+              </svg>
+              <VerifiedWriterCard />
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Vraies annonces dès l'accueil (masquée si l'API ne répond pas). */}
       <PopularListings />
 
-      {/* Catégories — tuiles photo par spécialité. */}
+      {/* Catégories — cartes spécialités modernes (sans photo). */}
       <section className="container py-10 sm:py-14">
-        <h2 className="text-2xl sm:text-3xl">Parcourez par spécialité</h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
-          {CATEGORY_TILES.map((s) => (
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl">Parcourir par spécialité</h2>
+          <Link
+            to="/listings"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Toutes les spécialités <ArrowRight className="size-4" />
+          </Link>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {SPECIALTY_TILES.map((s) => (
             <Link
               key={s}
               to={`/listings?specialty=${s}`}
-              className="group overflow-hidden rounded-lg border bg-card transition-shadow hover:border-neutral-300 hover:shadow-md"
+              className="group flex items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3.5 transition-colors hover:border-foreground"
             >
-              <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
-                <img
-                  src={coverFor(s)}
-                  alt=""
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-              </div>
-              <p className="truncate px-3 py-2.5 text-sm font-medium" title={labelFor(s, SPECIALTY_OPTIONS)}>
+              <span className="truncate text-sm font-medium">
                 {labelFor(s, SPECIALTY_OPTIONS)}
-              </p>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
             </Link>
           ))}
         </div>

@@ -7,6 +7,10 @@ export default function RequestCardSkeleton() {
         <Skeleton className="h-5 w-2/3" />
         <Skeleton className="h-5 w-16 rounded-full" />
       </div>
+      <div className="mt-3 flex items-center gap-2">
+        <Skeleton className="size-7 rounded-full" />
+        <Skeleton className="h-4 w-28" />
+      </div>
       <Skeleton className="mt-3 h-4 w-40" />
       <div className="mt-auto flex gap-2 pt-6">
         <Skeleton className="h-5 w-24 rounded-full" />

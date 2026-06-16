@@ -5,7 +5,7 @@ import { FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/ui/Badge";
+import Badge from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import Tabs from "@/components/layout/Tabs";
 import ConfirmButton from "@/components/ConfirmButton";

@@ -5,8 +5,26 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
-from .models import User
+from .models import User, WriterExperience, WriterPortfolioItem, WriterPublication
 from .tokens import email_verification_token
+
+
+class WriterExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WriterExperience
+        fields = ("id", "role", "organization", "start_year", "end_year", "description", "order")
+
+
+class WriterPublicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WriterPublication
+        fields = ("id", "title", "url", "venue", "year", "is_featured", "order")
+
+
+class WriterPortfolioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WriterPortfolioItem
+        fields = ("id", "title", "kind", "url", "summary", "order")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -19,6 +37,15 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "bio",
+            "avatar",
+            "headline",
+            "city",
+            "google_scholar_url",
+            "years_experience",
+            "expertise_areas",
+            "profile_sections",
+            "languages",
+            "response_time",
             "is_writer",
             "is_verified",
             "date_joined",
@@ -27,6 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "is_email_verified",
+            "avatar",
             "is_writer",
             "is_verified",
             "date_joined",
@@ -38,7 +66,7 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "bio", "is_writer")
+        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer")
         read_only_fields = fields
 
 
@@ -72,9 +100,25 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    # allow_null lets the client clear the photo (PATCH avatar=null).
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "bio")
+        fields = (
+            "first_name",
+            "last_name",
+            "bio",
+            "avatar",
+            "headline",
+            "city",
+            "google_scholar_url",
+            "years_experience",
+            "expertise_areas",
+            "profile_sections",
+            "languages",
+            "response_time",
+        )
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -207,6 +251,11 @@ class PublicWriterSerializer(serializers.ModelSerializer):
     listings = serializers.SerializerMethodField()
     avg_rating = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
+    rating_breakdown = serializers.SerializerMethodField()
+    completed_orders = serializers.SerializerMethodField()
+    experiences = WriterExperienceSerializer(many=True, read_only=True)
+    publications = WriterPublicationSerializer(many=True, read_only=True)
+    portfolio = WriterPortfolioSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -215,11 +264,26 @@ class PublicWriterSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "bio",
+            "avatar",
+            "headline",
+            "city",
+            "google_scholar_url",
+            "years_experience",
+            "expertise_areas",
+            "profile_sections",
+            "languages",
+            "response_time",
+            "date_joined",
             "is_verified",
             "specialties",
             "listings",
+            "experiences",
+            "publications",
+            "portfolio",
             "avg_rating",
             "reviews_count",
+            "rating_breakdown",
+            "completed_orders",
         )
         read_only_fields = fields
 
@@ -233,7 +297,8 @@ class PublicWriterSerializer(serializers.ModelSerializer):
         # Local import avoids a circular import (listings.serializers imports this module).
         from apps.listings.serializers import ListingListSerializer
 
-        return ListingListSerializer(self._published(obj), many=True).data
+        # Pass context so nested listings get absolute writer_avatar URLs.
+        return ListingListSerializer(self._published(obj), many=True, context=self.context).data
 
     def _rating(self, obj):
         from django.db.models import Avg, Count
@@ -246,3 +311,15 @@ class PublicWriterSerializer(serializers.ModelSerializer):
 
     def get_reviews_count(self, obj):
         return self._rating(obj)["count"]
+
+    def get_rating_breakdown(self, obj):
+        from django.db.models import Count
+
+        rows = obj.reviews_received.values("rating").annotate(n=Count("id"))
+        counts = {row["rating"]: row["n"] for row in rows}
+        return {str(star): counts.get(star, 0) for star in (5, 4, 3, 2, 1)}
+
+    def get_completed_orders(self, obj):
+        from apps.orders.models import Order
+
+        return obj.orders_received.filter(status=Order.Status.COMPLETED).count()

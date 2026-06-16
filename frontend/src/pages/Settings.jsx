@@ -3,8 +3,12 @@ import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/ui/Badge";
+import Badge from "@/components/ui/badge";
+import AvatarUpload from "@/components/settings/AvatarUpload";
 import ProfileForm from "@/components/settings/ProfileForm";
+import ExperienceEditor from "@/components/settings/ExperienceEditor";
+import PublicationEditor from "@/components/settings/PublicationEditor";
+import PortfolioEditor from "@/components/settings/PortfolioEditor";
 import ChangePasswordForm from "@/components/settings/ChangePasswordForm";
 import ChangeEmailForm from "@/components/settings/ChangeEmailForm";
 import DeleteAccountSection from "@/components/settings/DeleteAccountSection";
@@ -41,10 +45,49 @@ export default function Settings() {
               Ces informations sont visibles sur votre profil public.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ProfileForm />
+          <CardContent className="space-y-6">
+            <AvatarUpload />
+            <div className="border-t pt-6">
+              <ProfileForm />
+            </div>
           </CardContent>
         </Card>
+
+        {user?.is_writer && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Parcours</CardTitle>
+                <CardDescription>Votre expérience, affichée sur votre profil public.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ExperienceEditor />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Publications</CardTitle>
+                <CardDescription>Vos articles et papiers phares (avec liens).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PublicationEditor />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Réalisations</CardTitle>
+                <CardDescription>
+                  Vos exemples de travaux (le « book »), affichés sur votre profil et vos annonces.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PortfolioEditor />
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         <Card>
           <CardHeader>
@@ -63,7 +106,7 @@ export default function Settings() {
                 </p>
               </div>
               {user?.is_writer ? (
-                <Badge variant="primary">Rédacteur</Badge>
+                <Badge variant="info">Rédacteur</Badge>
               ) : (
                 <Button
                   variant="outline"

@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
+from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -20,9 +22,41 @@ from apps.messaging.models import Conversation, Message
 from apps.orders.models import Order
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
-from apps.users.models import User
+from apps.users.models import (
+    User,
+    WriterExperience,
+    WriterPortfolioItem,
+    WriterPublication,
+)
+
+CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes", "Strasbourg"]
+
+# Response-time buckets (stored values; labels live in the frontend).
+RESPONSE_TIMES = ["few_hours", "one_day", "few_days"]
 
 DEMO_PASSWORD = "demo1234"
+
+# Demo portraits bundled with the backend (gender-matched to each seeded user).
+# Source: randomuser.me — demo use only, replaced by real uploads in prod.
+SEED_AVATARS_DIR = Path(__file__).resolve().parents[2] / "seed_assets" / "avatars"
+AVATARS = {
+    "writer@kessia.demo": "01.jpg",
+    "sophie.bernard@kessia.demo": "02.jpg",
+    "elena.rossi@kessia.demo": "03.jpg",
+    "nadia.benali@kessia.demo": "04.jpg",
+    "clara.fontaine@kessia.demo": "05.jpg",
+    "julie.petit@kessia.demo": "06.jpg",
+    "paul.nguyen@kessia.demo": "07.jpg",
+    "karim.haddad@kessia.demo": "08.jpg",
+    "thomas.leroy@kessia.demo": "09.jpg",
+    "marc.dubois@kessia.demo": "10.jpg",
+    "hugo.moreau@kessia.demo": "11.jpg",
+    "doctor@kessia.demo": "12.jpg",
+    "antoine.garcia@kessia.demo": "07.jpg",
+    "lea.fournier@kessia.demo": "01.jpg",
+    "mehdi.cherif@kessia.demo": "08.jpg",
+    "camille.roux@kessia.demo": "02.jpg",
+}
 
 # (email, first, last, specialty, verified, bio)
 WRITERS = [
@@ -178,8 +212,77 @@ class Command(BaseCommand):
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         user._specialty = specialty  # carried in-memory for listing seeding
+        self._enrich_writer(user, specialty)
         return user
+
+    def _enrich_writer(self, user, specialty):
+        """Fill a lifelike writer profile (headline, expertise, timeline, papers)."""
+        label = Specialty(specialty).label
+        fields = {}
+        if not user.headline:
+            fields["headline"] = f"Rédacteur médical · {label}"
+        if not user.city:
+            fields["city"] = CITIES[len(user.email) % len(CITIES)]
+        if not user.expertise_areas:
+            fields["expertise_areas"] = [
+                "Revue systématique",
+                "Article original",
+                "Méthodologie & biostatistiques",
+            ]
+        if user.years_experience is None:
+            fields["years_experience"] = 6 + (user.pk % 10)
+        if not user.google_scholar_url:
+            fields["google_scholar_url"] = "https://scholar.google.com/citations?user=DEMO"
+        if not user.languages:
+            fields["languages"] = ["Français", "Anglais"]
+        if not user.response_time:
+            fields["response_time"] = RESPONSE_TIMES[user.pk % len(RESPONSE_TIMES)]
+        if fields:
+            for key, value in fields.items():
+                setattr(user, key, value)
+            user.save(update_fields=list(fields))
+
+        if not user.experiences.exists():
+            WriterExperience.objects.create(
+                user=user, order=0, start_year=2019,
+                role="Médecin rédacteur indépendant", organization="Kessia",
+                description=f"Rédaction scientifique en {label.lower()} pour revues à comité de lecture.",
+            )
+            WriterExperience.objects.create(
+                user=user, order=1, start_year=2014, end_year=2019,
+                role=f"Praticien hospitalier — {label}", organization="CHU",
+            )
+        if not user.publications.exists():
+            WriterPublication.objects.create(
+                user=user, order=0, year=2023, is_featured=True,
+                title=f"Revue systématique et méta-analyse en {label.lower()}",
+                venue="La Revue Médicale", url="https://doi.org/10.0000/demo-1",
+            )
+            WriterPublication.objects.create(
+                user=user, order=1, year=2022,
+                title="Étude de cas clinique commentée", venue="Annales médicales",
+                url="https://doi.org/10.0000/demo-2",
+            )
+        if not user.portfolio.exists():
+            WriterPortfolioItem.objects.create(
+                user=user, order=0, kind="Revue systématique",
+                title=f"Méta-analyse en {label.lower()} pour un laboratoire",
+                summary="Protocole PRISMA, extraction des données et rédaction complète du manuscrit.",
+                url="https://doi.org/10.0000/demo-portfolio-1",
+            )
+            WriterPortfolioItem.objects.create(
+                user=user, order=1, kind="Article original",
+                title="Étude observationnelle multicentrique",
+                summary="Mise en forme ICMJE et soumission à une revue à comité de lecture.",
+                url="https://doi.org/10.0000/demo-portfolio-2",
+            )
+            WriterPortfolioItem.objects.create(
+                user=user, order=2, kind="Cas clinique",
+                title=f"Série de cas commentés en {label.lower()}",
+                summary="Rédaction au format CARE avec iconographie et discussion.",
+            )
 
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(
@@ -193,7 +296,21 @@ class Command(BaseCommand):
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         return user
+
+    def _assign_avatar(self, user):
+        """Attach a bundled demo portrait once (skips if already set or missing)."""
+        if user.avatar:
+            return
+        filename = AVATARS.get(user.email)
+        if not filename:
+            return
+        path = SEED_AVATARS_DIR / filename
+        if not path.exists():
+            return
+        with path.open("rb") as fh:
+            user.avatar.save(f"{user.pk}_{filename}", File(fh), save=True)
 
     # -- listings -----------------------------------------------------------
     def _seed_listings(self, writers):
@@ -214,6 +331,26 @@ class Command(BaseCommand):
                         "deliverable_type": deliverable,
                         "price": price,
                         "turnaround_days": turnaround,
+                        "faq": [
+                            {
+                                "question": "Que comprend la prestation ?",
+                                "answer": (
+                                    "La rédaction complète du livrable, une relecture et la mise "
+                                    "au format de la revue ou du support cible."
+                                ),
+                            },
+                            {
+                                "question": "Combien de cycles de révision sont inclus ?",
+                                "answer": "Deux cycles de révisions sont inclus après la première livraison.",
+                            },
+                            {
+                                "question": "Travaillez-vous à partir de mes données ?",
+                                "answer": (
+                                    "Oui, je pars de vos données et références ; je peux aussi aider "
+                                    "à structurer la recherche bibliographique."
+                                ),
+                            },
+                        ],
                         "is_published": True,
                     },
                 )

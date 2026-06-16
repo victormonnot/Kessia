@@ -7,7 +7,9 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "1rem",
+      // Un peu d'air sur les côtés (24px) ; au-delà, la max-width prend le relais
+      // et les marges s'élargissent d'elles-mêmes.
+      padding: "1.5rem",
       // Large, façon Malt/Fiverr — le contenu occupe l'écran, mais resserré
       // d'un cran pour ne pas s'étaler jusqu'aux bords.
       screens: { "2xl": "1400px" },

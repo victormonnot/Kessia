@@ -6,7 +6,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -30,7 +30,7 @@ from .cookies import (
     clear_auth_cookies,
     set_auth_cookies,
 )
-from .models import User
+from .models import User, WriterExperience, WriterPortfolioItem, WriterPublication
 from .serializers import (
     ChangeEmailSerializer,
     ChangePasswordSerializer,
@@ -42,6 +42,9 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    WriterExperienceSerializer,
+    WriterPortfolioSerializer,
+    WriterPublicationSerializer,
 )
 from .tokens import email_verification_token
 
@@ -57,7 +60,7 @@ def register(request):
     refresh = RefreshToken.for_user(user)
     response = Response(
         {
-            "user": UserSerializer(user).data,
+            "user": UserSerializer(user, context={"request": request}).data,
             "access": str(refresh.access_token),
         },
         status=status.HTTP_201_CREATED,
@@ -191,7 +194,7 @@ def google_login(request):
 
     refresh = RefreshToken.for_user(user)
     response = Response(
-        {"user": UserSerializer(user).data, "access": str(refresh.access_token)},
+        {"user": UserSerializer(user, context={"request": request}).data, "access": str(refresh.access_token)},
         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
     set_auth_cookies(response, str(refresh))
@@ -266,13 +269,13 @@ class MeView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def delete(self, request):
         """Hard-delete the account (password-confirmed) and clear auth cookies."""
@@ -308,7 +311,7 @@ def change_email(request):
     user = serializer.save()
     # The new address is unverified — send a fresh confirmation link.
     _send_email_verification(user)
-    return Response(UserSerializer(user).data)
+    return Response(UserSerializer(user, context={"request": request}).data)
 
 
 @api_view(["POST"])
@@ -316,7 +319,7 @@ def change_email(request):
 def activate_writer(request):
     request.user.is_writer = True
     request.user.save(update_fields=["is_writer"])
-    return Response(UserSerializer(request.user).data)
+    return Response(UserSerializer(request.user, context={"request": request}).data)
 
 
 class PublicWriterView(generics.RetrieveAPIView):
@@ -325,3 +328,42 @@ class PublicWriterView(generics.RetrieveAPIView):
     queryset = User.objects.filter(is_writer=True)
     serializer_class = PublicWriterSerializer
     permission_classes = (AllowAny,)
+
+
+class WriterExperienceViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own career timeline."""
+
+    serializer_class = WriterExperienceSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterExperience.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class WriterPublicationViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own publications."""
+
+    serializer_class = WriterPublicationSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterPublication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class WriterPortfolioViewSet(viewsets.ModelViewSet):
+    """CRUD over the current user's own portfolio / réalisations."""
+
+    serializer_class = WriterPortfolioSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return WriterPortfolioItem.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import SimpleRouter
 
 from .views import (
     CookieTokenObtainPairView,
@@ -6,6 +7,9 @@ from .views import (
     LogoutView,
     MeView,
     PublicWriterView,
+    WriterExperienceViewSet,
+    WriterPortfolioViewSet,
+    WriterPublicationViewSet,
     activate_writer,
     change_email,
     change_password,
@@ -16,6 +20,11 @@ from .views import (
     password_reset_request,
     register,
 )
+
+router = SimpleRouter()
+router.register("users/me/experiences", WriterExperienceViewSet, basename="me-experiences")
+router.register("users/me/publications", WriterPublicationViewSet, basename="me-publications")
+router.register("users/me/portfolio", WriterPortfolioViewSet, basename="me-portfolio")
 
 urlpatterns = [
     path("auth/register/", register, name="auth-register"),
@@ -40,4 +49,5 @@ urlpatterns = [
     path("users/me/email/", change_email, name="users-change-email"),
     path("users/me/activate-writer/", activate_writer, name="users-activate-writer"),
     path("writers/<int:pk>/", PublicWriterView.as_view(), name="public-writer"),
+    path("", include(router.urls)),
 ]

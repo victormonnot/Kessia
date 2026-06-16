@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
+  Heart,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetClose,
@@ -108,6 +109,11 @@ export default function Navbar() {
                       </NavLink>
                     </SheetClose>
                     <SheetClose asChild>
+                      <NavLink to="/favoris" className={linkClass}>
+                        Mes favoris
+                      </NavLink>
+                    </SheetClose>
+                    <SheetClose asChild>
                       <NavLink to="/settings" className={linkClass}>
                         Paramètres
                       </NavLink>
@@ -184,6 +190,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 px-2" aria-label="Menu du compte">
                     <Avatar className="size-8">
+                      <AvatarImage src={user.avatar || undefined} alt="" />
                       <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
                         {initials(user)}
                       </AvatarFallback>
@@ -209,6 +216,9 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/messages")}>
                     <MessageSquare className="size-4" /> Messagerie
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/favoris")}>
+                    <Heart className="size-4" /> Mes favoris
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="size-4" /> Paramètres

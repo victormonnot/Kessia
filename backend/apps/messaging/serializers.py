@@ -51,7 +51,9 @@ class ConversationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_other_user(self, obj):
-        return UserPublicSerializer(obj.other(self.context["request"].user)).data
+        return UserPublicSerializer(
+            obj.other(self.context["request"].user), context=self.context
+        ).data
 
     def get_last_message(self, obj):
         msg = obj.messages.last()

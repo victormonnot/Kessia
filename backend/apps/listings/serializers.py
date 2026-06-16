@@ -17,6 +17,8 @@ class WriterRatingMixin(serializers.Serializer):
     writer_rating = serializers.SerializerMethodField()
     writer_reviews_count = serializers.SerializerMethodField()
     writer_is_verified = serializers.BooleanField(source="writer.is_verified", read_only=True)
+    # Whether the current user saved this listing (annotated by the viewset).
+    is_favorited = serializers.SerializerMethodField()
 
     def get_writer_rating(self, obj):
         val = getattr(obj, "writer_rating", None)
@@ -25,11 +27,15 @@ class WriterRatingMixin(serializers.Serializer):
     def get_writer_reviews_count(self, obj):
         return getattr(obj, "writer_reviews_count", 0) or 0
 
+    def get_is_favorited(self, obj):
+        return bool(getattr(obj, "is_favorited", False))
+
 
 class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
     """Compact representation used for the public catalog."""
 
     writer_name = serializers.SerializerMethodField()
+    writer_avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -43,15 +49,24 @@ class ListingListSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "is_published",
             "writer",
             "writer_name",
+            "writer_avatar",
             "writer_rating",
             "writer_reviews_count",
             "writer_is_verified",
+            "is_favorited",
             "created_at",
         )
         read_only_fields = fields
 
     def get_writer_name(self, obj: Listing) -> str:
         return obj.writer.get_full_name() or obj.writer.email
+
+    def get_writer_avatar(self, obj: Listing) -> str | None:
+        if not obj.writer.avatar:
+            return None
+        url = obj.writer.avatar.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
 
 
 class ListingDetailSerializer(WriterRatingMixin, serializers.ModelSerializer):
@@ -68,10 +83,12 @@ class ListingDetailSerializer(WriterRatingMixin, serializers.ModelSerializer):
             "deliverable_type",
             "price",
             "turnaround_days",
+            "faq",
             "is_published",
             "writer_rating",
             "writer_reviews_count",
             "writer_is_verified",
+            "is_favorited",
             "created_at",
             "updated_at",
         )
@@ -88,6 +105,7 @@ class ListingWriteSerializer(serializers.ModelSerializer):
             "deliverable_type",
             "price",
             "turnaround_days",
+            "faq",
             "is_published",
         )
 

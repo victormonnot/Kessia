@@ -27,6 +27,7 @@ const WriterProfile = lazy(() => import("@/pages/WriterProfile"));
 const Inbox = lazy(() => import("@/pages/Inbox"));
 const Conversation = lazy(() => import("@/pages/Conversation"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Favorites = lazy(() => import("@/pages/Favorites"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const LegalPage = lazy(() => import("@/pages/LegalPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -150,6 +151,14 @@ export default function Router() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favoris"
+          element={
+            <ProtectedRoute>
+              <Favorites />
             </ProtectedRoute>
           }
         />
