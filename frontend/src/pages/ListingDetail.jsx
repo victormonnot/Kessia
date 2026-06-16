@@ -5,10 +5,19 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 import WriterHeader from "@/components/writers/WriterHeader";
+import TrustRow from "@/components/writers/TrustRow";
 import ExperienceList from "@/components/writers/ExperienceList";
 import PublicationList from "@/components/writers/PublicationList";
+import PortfolioList from "@/components/writers/PortfolioList";
+import RatingBreakdown from "@/components/writers/RatingBreakdown";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
@@ -27,8 +36,8 @@ function DetailSkeleton() {
       <Skeleton className="mb-4 h-4 w-32" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-40 w-full rounded-lg" />
+          <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-32 w-full rounded-lg" />
         </div>
         <Skeleton className="h-56 w-full rounded-lg" />
@@ -80,14 +89,21 @@ export default function ListingDetail() {
   const canOrder = user && !isOwner;
   const canContact = user && !isOwner;
 
+  const faq = Array.isArray(listing.faq) ? listing.faq : [];
   const experiences = writerProfile?.experiences || [];
   const publications = writerProfile?.publications || [];
+  const portfolio = writerProfile?.portfolio || [];
   const featured = publications.filter((p) => p.is_featured);
   const pubsToShow = (featured.length ? featured : publications).slice(0, 3);
+
+  const showTrust = writerProfile && sectionVisible(writer, "trust");
+  const showPortfolio =
+    writerProfile && sectionVisible(writer, "portfolio") && portfolio.length > 0;
   const showExperiences =
     writerProfile && sectionVisible(writer, "experiences") && experiences.length > 0;
   const showPublications =
     writerProfile && sectionVisible(writer, "publications") && pubsToShow.length > 0;
+  const showReviews = writerProfile && writerProfile.reviews_count > 0;
 
   const contact = async () => {
     try {
@@ -109,14 +125,27 @@ export default function ListingDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          {/* Writer hero — big photo at the top, Malt-style */}
+          <Card>
+            <CardContent className="space-y-5 pt-6">
+              <WriterHeader writer={writer} large as="h1" />
+              {showTrust && <TrustRow writer={writer} />}
+              {writer?.bio && (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {writer.bio}
+                </p>
+              )}
+              <Button asChild variant="link" className="h-auto p-0">
+                <Link to={`/redacteurs/${writer?.id}`}>Voir le profil complet</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* The service */}
           <div>
             <div className="flex items-start justify-between gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
-              <FavoriteButton
-                type="listing"
-                id={listing.id}
-                favorited={listing.is_favorited}
-              />
+              <h2 className="text-2xl font-bold tracking-tight">{listing.title}</h2>
+              <FavoriteButton type="listing" id={listing.id} favorited={listing.is_favorited} />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
@@ -142,40 +171,78 @@ export default function ListingDetail() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Le rédacteur</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <WriterHeader
-                writer={writer}
-                as="h2"
-                showContact={canContact}
-                onContact={contact}
-                contacting={startConversation.isPending}
-              />
-              {writer?.bio && (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                  {writer.bio}
-                </p>
-              )}
-              {showExperiences && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Parcours</h3>
-                  <ExperienceList items={experiences} />
-                </div>
-              )}
-              {showPublications && (
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Publications sélectionnées</h3>
-                  <PublicationList items={pubsToShow} />
-                </div>
-              )}
-              <Button asChild variant="link" className="h-auto p-0">
-                <Link to={`/redacteurs/${writer?.id}`}>Voir le profil complet</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          {faq.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Questions fréquentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="single" collapsible className="w-full">
+                  {faq.map((item, i) => (
+                    <AccordionItem key={i} value={`faq-${i}`}>
+                      <AccordionTrigger className="text-left text-sm">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          )}
+
+          {showPortfolio && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Réalisations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PortfolioList items={portfolio} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showExperiences && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Parcours</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ExperienceList items={experiences} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showPublications && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Publications sélectionnées</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PublicationList items={pubsToShow} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showReviews && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Avis</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RatingBreakdown
+                  breakdown={writerProfile.rating_breakdown}
+                  avg={writerProfile.avg_rating}
+                  total={writerProfile.reviews_count}
+                />
+                <Button asChild variant="link" className="h-auto p-0">
+                  <Link to={`/redacteurs/${writer?.id}`}>Voir tous les avis</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <aside>

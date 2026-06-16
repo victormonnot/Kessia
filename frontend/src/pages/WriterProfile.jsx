@@ -5,8 +5,11 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import WriterHeader from "@/components/writers/WriterHeader";
+import TrustRow from "@/components/writers/TrustRow";
 import ExperienceList from "@/components/writers/ExperienceList";
 import PublicationList from "@/components/writers/PublicationList";
+import PortfolioList from "@/components/writers/PortfolioList";
+import RatingBreakdown from "@/components/writers/RatingBreakdown";
 import ListingCard from "@/components/listings/ListingCard";
 import ReviewCard from "@/components/reviews/ReviewCard";
 import EmptyState from "@/components/feedback/EmptyState";
@@ -23,7 +26,7 @@ function ProfileSkeleton() {
   return (
     <div className="container max-w-4xl py-8">
       <div className="flex gap-6 rounded-xl border bg-card p-6">
-        <Skeleton className="size-24 rounded-full" />
+        <Skeleton className="size-28 rounded-full" />
         <div className="flex-1 space-y-3">
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-4 w-64" />
@@ -60,8 +63,12 @@ export default function WriterProfile() {
   const reviewItems = reviews?.results || [];
   const experiences = writer.experiences || [];
   const publications = writer.publications || [];
+  const portfolio = writer.portfolio || [];
+  const showTrust = sectionVisible(writer, "trust");
+  const showPortfolio = sectionVisible(writer, "portfolio") && portfolio.length > 0;
   const showExperiences = sectionVisible(writer, "experiences") && experiences.length > 0;
   const showPublications = sectionVisible(writer, "publications") && publications.length > 0;
+  const hasReviews = writer.reviews_count > 0;
 
   const contact = async () => {
     try {
@@ -74,13 +81,15 @@ export default function WriterProfile() {
 
   return (
     <div className="container max-w-4xl space-y-6 py-8">
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="space-y-5 rounded-xl border bg-card p-6 shadow-sm">
         <WriterHeader
           writer={writer}
+          large
           showContact={canContact}
           onContact={contact}
           contacting={startConversation.isPending}
         />
+        {showTrust && <TrustRow writer={writer} />}
       </div>
 
       {writer.bio && (
@@ -112,6 +121,17 @@ export default function WriterProfile() {
                 </span>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showPortfolio && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Réalisations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PortfolioList items={portfolio} />
           </CardContent>
         </Card>
       )}
@@ -155,6 +175,17 @@ export default function WriterProfile() {
 
       <section>
         <h2 className="text-lg font-semibold">Avis</h2>
+        {hasReviews && (
+          <Card className="mt-3">
+            <CardContent className="pt-6">
+              <RatingBreakdown
+                breakdown={writer.rating_breakdown}
+                avg={writer.avg_rating}
+                total={writer.reviews_count}
+              />
+            </CardContent>
+          </Card>
+        )}
         {reviewsLoading ? (
           <div className="mt-3 space-y-3">
             <Skeleton className="h-20 w-full rounded-lg" />
