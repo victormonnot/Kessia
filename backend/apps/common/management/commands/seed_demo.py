@@ -39,23 +39,28 @@ DEMO_PASSWORD = "demo1234"
 # Demo portraits bundled with the backend (gender-matched to each seeded user).
 # Source: randomuser.me — demo use only, replaced by real uploads in prod.
 SEED_AVATARS_DIR = Path(__file__).resolve().parents[2] / "seed_assets" / "avatars"
+# Gender-matched to each profile. Photos 01-04 & 08 = hommes, 05-07 = femmes.
+# Clara Fontaine reste sur 05.jpg (ne pas changer).
 AVATARS = {
-    "writer@kessia.demo": "01.jpg",
-    "sophie.bernard@kessia.demo": "02.jpg",
-    "elena.rossi@kessia.demo": "03.jpg",
-    "nadia.benali@kessia.demo": "04.jpg",
-    "clara.fontaine@kessia.demo": "05.jpg",
-    "julie.petit@kessia.demo": "06.jpg",
-    "paul.nguyen@kessia.demo": "07.jpg",
-    "karim.haddad@kessia.demo": "08.jpg",
-    "thomas.leroy@kessia.demo": "01.jpg",
-    "marc.dubois@kessia.demo": "02.jpg",
-    "hugo.moreau@kessia.demo": "03.jpg",
-    "doctor@kessia.demo": "04.jpg",
-    "antoine.garcia@kessia.demo": "05.jpg",
-    "lea.fournier@kessia.demo": "06.jpg",
-    "mehdi.cherif@kessia.demo": "07.jpg",
-    "camille.roux@kessia.demo": "08.jpg",
+    # Rédactrices (femmes)
+    "writer@kessia.demo": "06.jpg",  # Alice Martin
+    "sophie.bernard@kessia.demo": "07.jpg",  # Sophie Bernard
+    "elena.rossi@kessia.demo": "06.jpg",  # Elena Rossi
+    "nadia.benali@kessia.demo": "07.jpg",  # Nadia Benali
+    "clara.fontaine@kessia.demo": "05.jpg",  # Clara Fontaine (inchangée)
+    # Rédacteurs (hommes)
+    "paul.nguyen@kessia.demo": "01.jpg",  # Paul Nguyen
+    "karim.haddad@kessia.demo": "02.jpg",  # Karim Haddad
+    "thomas.leroy@kessia.demo": "03.jpg",  # Thomas Leroy
+    "marc.dubois@kessia.demo": "04.jpg",  # Marc Dubois
+    "hugo.moreau@kessia.demo": "08.jpg",  # Hugo Moreau
+    # Médecins
+    "doctor@kessia.demo": "01.jpg",  # Bob Dupont (H)
+    "julie.petit@kessia.demo": "06.jpg",  # Julie Petit (F)
+    "antoine.garcia@kessia.demo": "02.jpg",  # Antoine Garcia (H)
+    "lea.fournier@kessia.demo": "07.jpg",  # Léa Fournier (F)
+    "mehdi.cherif@kessia.demo": "03.jpg",  # Mehdi Chérif (H)
+    "camille.roux@kessia.demo": "06.jpg",  # Camille Roux (F)
 }
 
 # (email, first, last, specialty, verified, bio)
