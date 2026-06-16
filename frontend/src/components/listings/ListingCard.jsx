@@ -16,7 +16,7 @@ export default function ListingCard({ listing }) {
   return (
     <Link
       to={`/listings/${listing.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-lg border bg-card transition-shadow hover:border-neutral-300 hover:shadow-md"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
         <img
@@ -41,8 +41,10 @@ export default function ListingCard({ listing }) {
           <span className="truncate text-sm font-medium text-foreground">
             {listing.writer_name}
           </span>
-          {listing.writer_reviews_count > 0 && (
+          {listing.writer_reviews_count > 0 ? (
             <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
+          ) : (
+            <span className="shrink-0 text-xs text-muted-foreground">Nouveau</span>
           )}
         </div>
 
@@ -53,14 +55,16 @@ export default function ListingCard({ listing }) {
           {listing.title}
         </h3>
 
-        <div className="mt-auto flex items-end justify-between gap-3 pt-3">
-          <span className="inline-flex items-center gap-x-2 text-xs text-muted-foreground">
-            {labelFor(listing.deliverable_type, DELIVERABLE_OPTIONS)}
-            <span className="inline-flex items-center gap-1">
-              <Clock className="size-3" /> {listing.turnaround_days} j
-            </span>
+        <div className="mt-3 flex items-center gap-x-3 text-xs text-muted-foreground">
+          <span className="truncate">{labelFor(listing.deliverable_type, DELIVERABLE_OPTIONS)}</span>
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <Clock className="size-3" /> {listing.turnaround_days} j
           </span>
-          <span className="shrink-0 text-base font-semibold">{formatPrice(listing.price)}</span>
+        </div>
+
+        <div className="mt-auto flex items-end justify-between gap-3 border-t pt-3">
+          <span className="text-xs text-muted-foreground">À partir de</span>
+          <span className="shrink-0 text-lg font-bold">{formatPrice(listing.price)}</span>
         </div>
       </div>
     </Link>
