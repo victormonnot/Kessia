@@ -39,6 +39,16 @@ section documents trade-offs that are still deliberately out of scope.
 - **Cross-site cookies in prod** require `AUTH_COOKIE_SAMESITE=None` + HTTPS and
   the frontend origin in `CORS_ALLOWED_ORIGINS`/`CSRF_TRUSTED_ORIGINS` (see
   `DEPLOYMENT.md`).
+- **Reversible payment methods (product decision).** Checkout now accepts any
+  method enabled in the Stripe dashboard (the PaymentIntent uses automatic
+  payment methods and the SPA handles redirect returns at `/paiement/statut`).
+  Card payments hold instantly; slower methods sit in `processing` until the
+  webhook confirms. Some methods (notably SEPA direct debit) can be **reversed
+  for weeks** after settling — if the writer payout already went out, the
+  platform absorbs the loss. Mitigation (delaying payout for reversible methods,
+  or restricting the enabled set to card) is a deliberate policy choice, not yet
+  implemented; restrict the dashboard payment-method list if that risk is
+  unacceptable.
 - **Out of scope by design:** i18n/multi-currency, SMS, real credential
   verification (the badge is an admin-gated flag).
 

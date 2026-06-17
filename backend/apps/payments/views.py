@@ -86,6 +86,9 @@ def confirm_payment(request, order_id):
     intent = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
     if intent.status == "succeeded":
         services.mark_payment_held(order)
+    elif intent.status == "processing":
+        # Slow method (e.g. SEPA): payment submitted, awaiting clearing.
+        services.mark_payment_processing(order)
     order.refresh_from_db()
     return Response({"payment_status": order.payment_status, "status": order.status})
 

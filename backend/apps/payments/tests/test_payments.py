@@ -49,7 +49,8 @@ def test_pay_creates_intent_with_idempotency_key(auth_client, user):
     assert kwargs["amount"] == 10000  # cents
     assert kwargs["idempotency_key"] == f"order-{order.id}-pi"
     order.refresh_from_db()
-    assert order.payment_status == Order.PaymentStatus.PROCESSING
+    # Creating the intent must NOT mark the order paying — the doctor hasn't paid.
+    assert order.payment_status == Order.PaymentStatus.UNPAID
     assert order.stripe_payment_intent_id == "pi_123"
 
 
@@ -206,6 +207,140 @@ def test_cancel_after_payment_refunds_doctor(auth_client, user):
     assert kwargs["idempotency_key"] == f"order-{order.id}-refund"
     order.refresh_from_db()
     assert order.payment_status == Order.PaymentStatus.REFUNDED
+
+
+# --- Failed payment & retry (any-method support) --------------------------
+
+
+def test_payment_failed_webhook_marks_order_failed(api_client):
+    order = OrderFactory(
+        status=Order.Status.ACCEPTED, payment_status=Order.PaymentStatus.PROCESSING
+    )
+    event = {
+        "id": "evt_failed_1",
+        "type": "payment_intent.payment_failed",
+        "data": {"object": {"metadata": {"order_id": order.id}}},
+    }
+    url = reverse("payments-webhook")
+    with patch("apps.payments.views.stripe") as mock_stripe:
+        mock_stripe.Webhook.construct_event.return_value = event
+        response = api_client.post(url, **{"HTTP_STRIPE_SIGNATURE": "sig"})
+    assert response.status_code == 200
+    order.refresh_from_db()
+    assert order.payment_status == Order.PaymentStatus.FAILED
+
+
+def test_payment_failed_webhook_does_not_override_held(api_client):
+    """A late failure event must never undo an already-held payment."""
+    order = OrderFactory(
+        status=Order.Status.IN_PROGRESS, payment_status=Order.PaymentStatus.HELD
+    )
+    event = {
+        "id": "evt_failed_2",
+        "type": "payment_intent.payment_failed",
+        "data": {"object": {"metadata": {"order_id": order.id}}},
+    }
+    url = reverse("payments-webhook")
+    with patch("apps.payments.views.stripe") as mock_stripe:
+        mock_stripe.Webhook.construct_event.return_value = event
+        api_client.post(url, **{"HTTP_STRIPE_SIGNATURE": "sig"})
+    order.refresh_from_db()
+    assert order.payment_status == Order.PaymentStatus.HELD
+
+
+def test_pay_is_allowed_after_a_failed_payment(auth_client, user):
+    order = OrderFactory(
+        doctor=user,
+        status=Order.Status.ACCEPTED,
+        payment_status=Order.PaymentStatus.FAILED,
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.PaymentIntent.create.return_value = MagicMock(
+            id="pi_retry", client_secret="cs_retry"
+        )
+        response = auth_client.post(reverse("payments-pay", kwargs={"order_id": order.id}))
+    assert response.status_code == 200
+
+
+def test_create_payment_intent_reuses_a_confirmable_intent():
+    """Retrying a declined payment reuses the same intent (no duplicate charge)."""
+    order = OrderFactory(
+        status=Order.Status.ACCEPTED,
+        payment_status=Order.PaymentStatus.FAILED,
+        stripe_payment_intent_id="pi_existing",
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.PaymentIntent.retrieve.return_value = MagicMock(
+            id="pi_existing", status="requires_payment_method", client_secret="cs_x"
+        )
+        intent = services.create_payment_intent(order)
+    assert intent.id == "pi_existing"
+    mock_stripe.PaymentIntent.create.assert_not_called()
+
+
+def test_create_payment_intent_replaces_a_terminal_intent():
+    """A canceled/terminal intent is replaced with a fresh one under a new key."""
+    order = OrderFactory(
+        status=Order.Status.ACCEPTED,
+        payment_status=Order.PaymentStatus.FAILED,
+        stripe_payment_intent_id="pi_old",
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.PaymentIntent.retrieve.return_value = MagicMock(
+            id="pi_old", status="canceled"
+        )
+        mock_stripe.PaymentIntent.create.return_value = MagicMock(
+            id="pi_new", client_secret="cs_new"
+        )
+        intent = services.create_payment_intent(order)
+    assert intent.id == "pi_new"
+    kwargs = mock_stripe.PaymentIntent.create.call_args.kwargs
+    assert kwargs["idempotency_key"] == f"order-{order.id}-pi-after-pi_old"
+    order.refresh_from_db()
+    assert order.stripe_payment_intent_id == "pi_new"
+
+
+# --- Payment-status lifecycle (no premature/lingering "processing") -------
+
+
+def test_processing_webhook_marks_order_processing(api_client):
+    order = OrderFactory(
+        status=Order.Status.ACCEPTED, payment_status=Order.PaymentStatus.UNPAID
+    )
+    event = {
+        "id": "evt_proc_1",
+        "type": "payment_intent.processing",
+        "data": {"object": {"metadata": {"order_id": order.id}}},
+    }
+    url = reverse("payments-webhook")
+    with patch("apps.payments.views.stripe") as mock_stripe:
+        mock_stripe.Webhook.construct_event.return_value = event
+        api_client.post(url, **{"HTTP_STRIPE_SIGNATURE": "sig"})
+    order.refresh_from_db()
+    assert order.payment_status == Order.PaymentStatus.PROCESSING
+
+
+def test_cancelling_clears_an_unconfirmed_payment(auth_client, user):
+    """Cancelling an order with an unconfirmed intent aborts it and clears the
+    status (no lingering 'processing' on a cancelled order)."""
+    order = OrderFactory(
+        doctor=user,
+        status=Order.Status.ACCEPTED,
+        payment_status=Order.PaymentStatus.PROCESSING,
+        stripe_payment_intent_id="pi_pending",
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        response = auth_client.patch(
+            reverse("order-detail", args=[order.id]),
+            {"status": Order.Status.CANCELLED},
+            format="json",
+        )
+    assert response.status_code == 200
+    mock_stripe.PaymentIntent.cancel.assert_called_once_with("pi_pending")
+    mock_stripe.Refund.create.assert_not_called()  # nothing was held
+    order.refresh_from_db()
+    assert order.status == Order.Status.CANCELLED
+    assert order.payment_status == Order.PaymentStatus.UNPAID
 
 
 # --- Fee math -------------------------------------------------------------

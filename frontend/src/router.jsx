@@ -29,6 +29,7 @@ const Conversation = lazy(() => import("@/pages/Conversation"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Favorites = lazy(() => import("@/pages/Favorites"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const PaymentStatus = lazy(() => import("@/pages/PaymentStatus"));
 const LegalPage = lazy(() => import("@/pages/LegalPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -170,6 +171,9 @@ export default function Router() {
             </WriterRoute>
           }
         />
+
+        {/* Stripe return target for any payment method (also used by in-page ones). */}
+        <Route path="/paiement/statut" element={<PaymentStatus />} />
 
         <Route path="/mentions-legales" element={<LegalPage doc="mentions" />} />
         <Route path="/cgu" element={<LegalPage doc="cgu" />} />

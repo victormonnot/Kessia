@@ -102,10 +102,14 @@ export default function OrderActions({ order, role }) {
   const fileRef = useRef(null);
 
   const transitions = TRANSITIONS[role]?.[order.status] || [];
+  // No "Payer" while a payment is already settled or still processing (a slow
+  // method like SEPA confirms via webhook); a failed attempt can be retried.
   const canPay =
     role === "doctor" &&
     order.status === "accepted" &&
-    !["held", "released"].includes(order.payment_status);
+    !["held", "released", "processing"].includes(order.payment_status);
+  const paymentFailed = order.payment_status === "failed";
+  const paymentProcessing = role === "doctor" && order.payment_status === "processing";
   const canDeliver = role === "writer" && order.status === "in_progress";
   const awaitingPayment = role === "writer" && order.status === "accepted";
   const canReview = role === "doctor" && order.status === "completed" && !order.has_review;
@@ -203,8 +207,11 @@ export default function OrderActions({ order, role }) {
 
       {canPay && (
         <Button size="sm" disabled={busy} onClick={() => setPayOpen(true)}>
-          Payer
+          {paymentFailed ? "Réessayer le paiement" : "Payer"}
         </Button>
+      )}
+      {paymentProcessing && (
+        <span className="text-xs text-muted-foreground">Paiement en cours de traitement…</span>
       )}
       {awaitingPayment && (
         <span className="text-xs text-muted-foreground">En attente du paiement du médecin</span>

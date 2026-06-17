@@ -74,22 +74,51 @@ def refresh_account_status(user) -> None:
 # --- Payment lifecycle ---------------------------------------------------
 
 
+# PaymentIntent statuses that can still be confirmed/paid by the client. A
+# declined or abandoned payment lands back in one of these, so the same intent
+# is reused on retry instead of spawning a duplicate.
+_REUSABLE_PI_STATUSES = {
+    "requires_payment_method",
+    "requires_confirmation",
+    "requires_action",
+    "processing",
+}
+
+
 def create_payment_intent(order: Order):
-    """Create (or idempotently reuse) the PaymentIntent for an accepted order."""
+    """Create or reuse the PaymentIntent for an accepted order.
+
+    Any Stripe payment method is allowed — the SPA confirms with a ``return_url``,
+    so redirect-based methods (and slow ones like SEPA) work too. A still-payable
+    existing intent is reused (e.g. the doctor retrying after a decline), and a
+    fresh one is minted only once the previous intent is terminal, so re-payment
+    never double-charges.
+    """
+    if order.stripe_payment_intent_id:
+        existing = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
+        if existing.status in _REUSABLE_PI_STATUSES:
+            return existing
+
+    # Keying on the terminal predecessor lets a fresh intent be created after a
+    # failed/canceled one, while still de-duping rapid double-submits.
+    idempotency_key = f"order-{order.id}-pi"
+    if order.stripe_payment_intent_id:
+        idempotency_key = f"order-{order.id}-pi-after-{order.stripe_payment_intent_id}"
+
     intent = stripe.PaymentIntent.create(
         amount=_to_cents(order.amount),
         currency=order.currency.lower(),
         metadata={"order_id": order.id},
         transfer_group=f"order_{order.id}",
-        # Embedded card checkout: enable automatic payment methods but disable
-        # redirect-based ones, so the PaymentElement confirms in-page without a
-        # return_url (the frontend confirms with redirect: "if_required").
-        automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
-        idempotency_key=f"order-{order.id}-pi",
+        automatic_payment_methods={"enabled": True},
+        idempotency_key=idempotency_key,
     )
+    # Don't mark the order "processing" just for creating the intent — the
+    # doctor hasn't paid yet. The status only advances once the payment is
+    # actually submitted (processing) or confirmed (held), driven by the confirm
+    # endpoint and webhooks.
     order.stripe_payment_intent_id = intent.id
-    order.payment_status = Order.PaymentStatus.PROCESSING
-    order.save(update_fields=["stripe_payment_intent_id", "payment_status", "updated_at"])
+    order.save(update_fields=["stripe_payment_intent_id", "updated_at"])
     return intent
 
 
@@ -101,6 +130,58 @@ def mark_payment_held(order: Order) -> bool:
     if order.status == Order.Status.ACCEPTED:
         order.status = Order.Status.IN_PROGRESS
     order.save(update_fields=["payment_status", "status", "updated_at"])
+    return True
+
+
+def mark_payment_failed(order: Order) -> bool:
+    """Flag a failed payment so the doctor can retry. No-op once funds moved."""
+    if order.payment_status in {
+        Order.PaymentStatus.HELD,
+        Order.PaymentStatus.RELEASED,
+        Order.PaymentStatus.REFUNDED,
+    }:
+        return False
+    order.payment_status = Order.PaymentStatus.FAILED
+    order.save(update_fields=["payment_status", "updated_at"])
+    return True
+
+
+def mark_payment_processing(order: Order) -> bool:
+    """Mark a payment as genuinely in flight (a slow method awaiting clearing)."""
+    if order.payment_status in {
+        Order.PaymentStatus.PROCESSING,
+        Order.PaymentStatus.HELD,
+        Order.PaymentStatus.RELEASED,
+        Order.PaymentStatus.REFUNDED,
+    }:
+        return False
+    order.payment_status = Order.PaymentStatus.PROCESSING
+    order.save(update_fields=["payment_status", "updated_at"])
+    return True
+
+
+def cancel_pending_payment(order: Order) -> bool:
+    """Abort an unconfirmed payment when its order is cancelled/declined.
+
+    Cancels the Stripe intent if it's still cancelable (so a stale checkout tab
+    can't pay a dead order) and clears the order back to ``unpaid`` so the
+    cancelled order doesn't keep showing a payment in flight. No funds have been
+    held, so there is nothing to refund.
+    """
+    if order.payment_status in {
+        Order.PaymentStatus.HELD,
+        Order.PaymentStatus.RELEASED,
+        Order.PaymentStatus.REFUNDED,
+    }:
+        return False
+    if order.stripe_payment_intent_id:
+        try:
+            stripe.PaymentIntent.cancel(order.stripe_payment_intent_id)
+        except stripe.StripeError:
+            pass  # already terminal / not cancelable — nothing to undo
+    if order.payment_status != Order.PaymentStatus.UNPAID:
+        order.payment_status = Order.PaymentStatus.UNPAID
+        order.save(update_fields=["payment_status", "updated_at"])
     return True
 
 
@@ -161,7 +242,12 @@ def on_order_status_changed(order: Order) -> None:
     if order.status == Order.Status.COMPLETED:
         release_payment(order)
     elif order.status in {Order.Status.DECLINED, Order.Status.CANCELLED}:
-        refund_payment(order)
+        if order.payment_status == Order.PaymentStatus.HELD:
+            refund_payment(order)
+        else:
+            # Nothing held yet: abort any unconfirmed intent and clear the
+            # status so a cancelled order doesn't linger as "payment in flight".
+            cancel_pending_payment(order)
 
 
 # --- Webhook handling ----------------------------------------------------
@@ -180,16 +266,32 @@ def _field(obj, key, default=None):
         return default
 
 
+def _order_from_intent(obj):
+    """Resolve the order a PaymentIntent webhook refers to (via its metadata)."""
+    order_id = _field(_field(obj, "metadata", {}), "order_id")
+    if not order_id:
+        return None
+    return Order.objects.filter(pk=order_id).first()
+
+
 def handle_webhook_event(event) -> None:
     etype = event["type"]
     obj = event["data"]["object"]
 
     if etype == "payment_intent.succeeded":
-        order_id = _field(_field(obj, "metadata", {}), "order_id")
-        if order_id:
-            order = Order.objects.filter(pk=order_id).first()
-            if order:
-                mark_payment_held(order)
+        order = _order_from_intent(obj)
+        if order:
+            mark_payment_held(order)
+
+    elif etype == "payment_intent.processing":
+        order = _order_from_intent(obj)
+        if order:
+            mark_payment_processing(order)
+
+    elif etype == "payment_intent.payment_failed":
+        order = _order_from_intent(obj)
+        if order:
+            mark_payment_failed(order)
 
     elif etype == "account.updated":
         user = User.objects.filter(stripe_account_id=_field(obj, "id")).first()
