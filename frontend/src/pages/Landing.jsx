@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, BadgeCheck, FileText, MessagesSquare, Search, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  FileText,
+  MessagesSquare,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import HeroFlow from "@/components/landing/HeroFlow";
 import { useListings } from "@/hooks/useListings";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
-
-// Chips in the hero (most-reached-for specialties).
-const POPULAR_SPECIALTIES = ["cardiologie", "oncologie", "neurologie", "pediatrie", "psychiatrie"];
 
 // "Parcourir par spécialité" — modern cards (no photos), one per domain.
 const SPECIALTY_TILES = [
@@ -82,10 +87,44 @@ function VerifiedWriterCard() {
   );
 }
 
+// Second card on the orange "process line" (bottom-right): the outcome. Pairs
+// with VerifiedWriterCard to tell the story order → delivered, ready to publish.
+function DeliveredCard() {
+  return (
+    <div className="relative ml-auto mt-10 w-full max-w-[15.5rem] rounded-2xl border bg-card p-5 shadow-xl">
+      {/* Mini aperçu du document livré (réponse visuelle à la photo de la carte
+          vérifié). « Livré » en souligné remplace l'ancienne coche/pastille. */}
+      <div className="relative mb-3 flex h-24 items-center justify-center rounded-xl bg-secondary/40">
+        <div className="h-16 w-12 rounded-sm border bg-card p-2 shadow-sm">
+          <div className="h-1.5 w-3/4 rounded-full bg-foreground/25" />
+          <div className="mt-1.5 h-1 w-full rounded-full bg-foreground/15" />
+          <div className="mt-1 h-1 w-full rounded-full bg-foreground/15" />
+          <div className="mt-1 h-1 w-2/3 rounded-full bg-foreground/15" />
+        </div>
+        <span className="absolute right-3 top-3 text-xs font-bold text-emerald-600 underline decoration-2 underline-offset-2">
+          Livré
+        </span>
+      </div>
+      <p className="font-semibold leading-snug">Votre article, prêt à être publié</p>
+      <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        <FileText className="size-4 shrink-0" /> article-recherche.docx
+      </p>
+    </div>
+  );
+}
+
 // Real listings on the home page (hidden if the API is down or returns nothing).
 function PopularListings() {
   const { data, isLoading, isError } = useListings({ ordering: "-writer_rating" });
-  const listings = (data?.results ?? []).slice(0, 4);
+  // Une seule annonce par rédacteur (évite deux cartes avec la même photo).
+  const seenWriters = new Set();
+  const listings = (data?.results ?? [])
+    .filter((listing) => {
+      if (seenWriters.has(listing.writer)) return false;
+      seenWriters.add(listing.writer);
+      return true;
+    })
+    .slice(0, 5);
 
   if (isError || (!isLoading && listings.length === 0)) return null;
 
@@ -100,9 +139,9 @@ function PopularListings() {
           Voir tout <ArrowRight className="size-4" />
         </Link>
       </div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => <ListingCardSkeleton key={i} />)
+          ? Array.from({ length: 5 }).map((_, i) => <ListingCardSkeleton key={i} />)
           : listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
       </div>
     </section>
@@ -129,14 +168,16 @@ export default function Landing() {
           aria-hidden
           className="absolute inset-y-12 right-0 hidden w-[44%] rounded-l-[4rem] bg-secondary/50 lg:block"
         />
+        {/* Déco « flow » (ligne orange = process) qui relie les deux cartes. */}
+        <HeroFlow />
         <div className="container relative pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pb-20 lg:pt-12">
-          <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             {/* Colonne gauche : texte + recherche */}
             <div>
               <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
                 Trouvez le bon rédacteur médical pour vos publications
               </h1>
-              <p className="mt-10 max-w-xl text-base text-muted-foreground sm:text-lg">
+              <p className="mt-12 max-w-xl text-base text-muted-foreground sm:text-lg">
                 Articles de recherche, études de cas, résumés, rédigés par des rédacteurs
                 scientifiques qualifiés et vérifiés.
               </p>
@@ -145,7 +186,7 @@ export default function Landing() {
                   droite (sur le fond gris) sans jamais atteindre la carte. */}
               <form
                 onSubmit={submitSearch}
-                className="mt-10 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[112%]"
+                className="mt-12 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[116%]"
               >
                 <div className="relative flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -162,20 +203,7 @@ export default function Landing() {
                 </Button>
               </form>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Populaire :</span>
-                {POPULAR_SPECIALTIES.map((s) => (
-                  <Link
-                    key={s}
-                    to={`/listings?specialty=${s}`}
-                    className="rounded-full border bg-card px-3 py-1 text-sm font-medium text-foreground transition-colors hover:border-foreground"
-                  >
-                    {labelFor(s, SPECIALTY_OPTIONS)}
-                  </Link>
-                ))}
-              </div>
-
-              <p className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+              <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheck className="size-4" /> Paiement sous séquestre
                 </span>
@@ -188,21 +216,11 @@ export default function Landing() {
               </p>
             </div>
 
-            {/* Colonne droite : la carte (cachée en mobile) + points déco */}
+            {/* Colonne droite : deux cartes le long de la ligne orange (process),
+                au-dessus de la déco ; cachées en mobile. */}
             <div className="relative hidden lg:block">
-              <svg
-                className="absolute -top-2 right-0 h-24 w-40 text-neutral-300"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <defs>
-                  <pattern id="hero-dots" width="22" height="22" patternUnits="userSpaceOnUse">
-                    <circle cx="2" cy="2" r="2" />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#hero-dots)" />
-              </svg>
               <VerifiedWriterCard />
+              <DeliveredCard />
             </div>
           </div>
         </div>
