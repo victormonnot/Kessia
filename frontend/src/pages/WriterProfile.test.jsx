@@ -13,7 +13,7 @@ vi.mock("@/hooks/useWriters", () => ({
       is_verified: true,
       avg_rating: 4.5,
       reviews_count: 1,
-      specialties: ["cardiology"],
+      specialties: ["cardiologie"],
       bio: "Rédactrice scientifique senior.",
       listings: [
         {
@@ -24,8 +24,8 @@ vi.mock("@/hooks/useWriters", () => ({
           writer_is_verified: true,
           writer_rating: 4.5,
           writer_reviews_count: 1,
-          specialty: "cardiology",
-          deliverable_type: "research_paper",
+          specialty: "cardiologie",
+          deliverable_type: "protocole_recherche",
           turnaround_days: 7,
         },
       ],

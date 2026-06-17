@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.reviews",
     "apps.messaging",
     "apps.verification",
+    "apps.favorites",
 ]
 
 MIDDLEWARE = [
@@ -120,6 +121,16 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Rates for the abuse-prone endpoints (see apps/common/throttles.py).
+    # Email senders are tight (each hit sends a real email and the Brevo free
+    # tier is 300/day); login is anti-bruteforce.
+    "DEFAULT_THROTTLE_RATES": {
+        "auth-login": "10/min",
+        "auth-register": "10/hour",
+        "password-reset": "3/hour",
+        "email-resend": "3/hour",
+        "email-change": "3/hour",
+    },
 }
 
 SIMPLE_JWT = {
@@ -163,17 +174,35 @@ AUTH_COOKIE_SAMESITE = config("AUTH_COOKIE_SAMESITE", default="Lax")
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 
 # Transactional email. Dev overrides EMAIL_BACKEND to the console and tests use
-# locmem; in prod the SMTP settings below are driven by env (e.g. SendGrid:
-# host=smtp.sendgrid.net, port=587, user="apikey", password=<API key>, TLS).
+# locmem (both override EMAIL_BACKEND, so the logic here only affects prod).
+#
+# Sending method, in order of preference:
+#   1. Brevo HTTPS API (django-anymail) when BREVO_API_KEY is set — used in prod
+#      because hosts like Render block outbound SMTP ports (25/465/587), so the
+#      API over HTTPS is the only path that works there.
+#   2. SMTP otherwise (EMAIL_HOST/USER/PASSWORD), e.g. for hosts that allow it.
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kessia <no-reply@kessia.local>")
-EMAIL_BACKEND = config(
-    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
-)
+BREVO_API_KEY = config("BREVO_API_KEY", default="")
+if BREVO_API_KEY:
+    EMAIL_BACKEND = config("EMAIL_BACKEND", default="anymail.backends.brevo.EmailBackend")
+    ANYMAIL = {"BREVO_API_KEY": BREVO_API_KEY}
+else:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+    )
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+
+# "Sign in with Google": OAuth client ID used to verify the ID tokens posted by
+# the frontend's Google button. Blank = the feature is disabled.
+GOOGLE_OAUTH_CLIENT_ID = config("GOOGLE_OAUTH_CLIENT_ID", default="")
+# Django's default COOP ("same-origin") cuts the Google sign-in popup off from
+# the page that opened it, leaving it blank: the token can never be handed back.
+# "same-origin-allow-popups" keeps the protection but lets our popups respond.
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 # Stripe Connect (test mode). The platform charges the doctor, holds the funds,
 # and on completion transfers (amount - commission) to the writer's connected

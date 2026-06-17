@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FileText, MessagesSquare, ShieldCheck, Stethoscope } from "lucide-react";
+import { FileText, MessagesSquare, ShieldCheck } from "lucide-react";
 
 const FEATURES = [
   {
@@ -23,52 +23,34 @@ const FEATURES = [
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-accent-700"
-        />
-        <div
-          aria-hidden
-          className="absolute -right-16 -top-16 size-72 rounded-full bg-white/10 blur-2xl"
-        />
-        <div
-          aria-hidden
-          className="absolute -bottom-20 -left-10 size-72 rounded-full bg-white/10 blur-2xl"
-        />
-
-        <Link to="/" className="relative flex items-center gap-2 text-xl font-bold">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-white/15">
-            <Stethoscope className="size-5" />
-          </span>
-          Kessia
+      <aside className="hidden flex-col justify-between bg-foreground p-10 text-background lg:flex">
+        <Link to="/" className="text-xl font-semibold tracking-tight">
+          Kessia<span className="text-primary">.</span>
         </Link>
 
-        <div className="relative animate-fade-in">
-          <h2 className="text-3xl font-bold leading-tight">
+        <div>
+          <h2 className="text-3xl font-semibold leading-tight">
             La marketplace de la rédaction médicale.
           </h2>
-          <p className="mt-3 max-w-md text-primary-foreground/80">
+          <p className="mt-3 max-w-md text-background/70">
             Médecins et rédacteurs scientifiques, réunis sur une plateforme sécurisée.
           </p>
           <ul className="mt-10 space-y-6">
             {FEATURES.map((f) => (
               <li key={f.title} className="flex gap-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background/10 text-primary">
                   <f.icon className="size-5" />
                 </span>
                 <div>
                   <p className="font-semibold">{f.title}</p>
-                  <p className="text-sm text-primary-foreground/80">{f.text}</p>
+                  <p className="text-sm text-background/70">{f.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="relative text-sm text-primary-foreground/70">
-          © {new Date().getFullYear()} Kessia
-        </p>
+        <p className="text-sm text-background/60">© {new Date().getFullYear()} Kessia</p>
       </aside>
 
       <main className="flex items-center justify-center p-6 sm:p-10">

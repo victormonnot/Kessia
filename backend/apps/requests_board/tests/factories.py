@@ -15,7 +15,7 @@ class RequestFactory(factory.django.DjangoModelFactory):
     doctor = factory.SubFactory(UserFactory)
     title = factory.Sequence(lambda n: f"Request {n}")
     description = "Help me write this."
-    specialty = Specialty.CARDIOLOGY
+    specialty = Specialty.CARDIOLOGIE
     deadline = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
     budget = Decimal("500.00")
     status = Request.Status.OPEN

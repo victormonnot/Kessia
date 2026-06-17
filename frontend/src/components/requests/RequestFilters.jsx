@@ -1,11 +1,17 @@
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
+import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { SPECIALTY_OPTIONS } from "@/lib/choices";
 
 const STATUS_OPTIONS = [
   { value: "open", label: "Ouverte" },
   { value: "closed", label: "Fermée" },
+];
+
+const SPECIALTY_FILTER_OPTIONS = [
+  { value: "", label: "Toutes les spécialités" },
+  ...SPECIALTY_OPTIONS,
 ];
 
 export default function RequestFilters({ value, onChange }) {
@@ -15,13 +21,16 @@ export default function RequestFilters({ value, onChange }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Select
-        label="Spécialité"
-        placeholder="Toutes les spécialités"
-        options={SPECIALTY_OPTIONS}
-        value={value.specialty || ""}
-        onChange={(e) => update("specialty", e.target.value)}
-      />
+      <div>
+        <label className="mb-1.5 block text-sm font-medium">Spécialité</label>
+        <Combobox
+          options={SPECIALTY_FILTER_OPTIONS}
+          value={value.specialty || ""}
+          onChange={(v) => update("specialty", v)}
+          placeholder="Toutes les spécialités"
+          searchPlaceholder="Rechercher une spécialité…"
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Input
           label="Budget min"

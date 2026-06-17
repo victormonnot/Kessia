@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
+from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -20,35 +22,72 @@ from apps.messaging.models import Conversation, Message
 from apps.orders.models import Order
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
-from apps.users.models import User
+from apps.users.models import (
+    User,
+    WriterExperience,
+    WriterPortfolioItem,
+    WriterPublication,
+)
+
+CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes", "Strasbourg"]
+
+# Response-time buckets (stored values; labels live in the frontend).
+RESPONSE_TIMES = ["few_hours", "one_day", "few_days"]
 
 DEMO_PASSWORD = "demo1234"
 
+# Demo portraits bundled with the backend (gender-matched to each seeded user).
+# Source: randomuser.me — demo use only, replaced by real uploads in prod.
+SEED_AVATARS_DIR = Path(__file__).resolve().parents[2] / "seed_assets" / "avatars"
+# Gender-matched to each profile. Photos 01-04 & 08 = hommes, 05-07 = femmes.
+# Clara Fontaine reste sur 05.jpg (ne pas changer).
+AVATARS = {
+    # Rédactrices (femmes)
+    "writer@kessia.demo": "06.jpg",  # Alice Martin
+    "sophie.bernard@kessia.demo": "07.jpg",  # Sophie Bernard
+    "elena.rossi@kessia.demo": "06.jpg",  # Elena Rossi
+    "nadia.benali@kessia.demo": "07.jpg",  # Nadia Benali
+    "clara.fontaine@kessia.demo": "05.jpg",  # Clara Fontaine (inchangée)
+    # Rédacteurs (hommes)
+    "paul.nguyen@kessia.demo": "01.jpg",  # Paul Nguyen
+    "karim.haddad@kessia.demo": "02.jpg",  # Karim Haddad
+    "thomas.leroy@kessia.demo": "03.jpg",  # Thomas Leroy
+    "marc.dubois@kessia.demo": "04.jpg",  # Marc Dubois
+    "hugo.moreau@kessia.demo": "08.jpg",  # Hugo Moreau
+    # Médecins
+    "doctor@kessia.demo": "01.jpg",  # Bob Dupont (H)
+    "julie.petit@kessia.demo": "06.jpg",  # Julie Petit (F)
+    "antoine.garcia@kessia.demo": "02.jpg",  # Antoine Garcia (H)
+    "lea.fournier@kessia.demo": "07.jpg",  # Léa Fournier (F)
+    "mehdi.cherif@kessia.demo": "03.jpg",  # Mehdi Chérif (H)
+    "camille.roux@kessia.demo": "06.jpg",  # Camille Roux (F)
+}
+
 # (email, first, last, specialty, verified, bio)
 WRITERS = [
-    ("writer@kessia.demo", "Alice", "Martin", Specialty.CARDIOLOGY, True,
+    ("writer@kessia.demo", "Alice", "Martin", Specialty.CARDIOLOGIE, True,
      "Rédactrice médicale freelance, 8 ans d'expérience auprès de laboratoires "
      "et de groupes hospitaliers. Spécialités : cardiologie, oncologie."),
-    ("paul.nguyen@kessia.demo", "Paul", "Nguyen", Specialty.ONCOLOGY, True,
+    ("paul.nguyen@kessia.demo", "Paul", "Nguyen", Specialty.ONCOLOGIE, True,
      "Docteur en biologie, rédacteur scientifique spécialisé en oncologie et "
      "immunothérapie. Publications dans des revues à comité de lecture."),
-    ("sophie.bernard@kessia.demo", "Sophie", "Bernard", Specialty.NEUROLOGY, True,
+    ("sophie.bernard@kessia.demo", "Sophie", "Bernard", Specialty.NEUROLOGIE, True,
      "Neurologue de formation, j'accompagne les équipes dans la rédaction "
      "d'articles et de revues systématiques."),
-    ("karim.haddad@kessia.demo", "Karim", "Haddad", Specialty.PEDIATRICS, False,
+    ("karim.haddad@kessia.demo", "Karim", "Haddad", Specialty.PEDIATRIE, False,
      "Rédacteur médical, focus pédiatrie et études de cas cliniques (CARE)."),
-    ("elena.rossi@kessia.demo", "Elena", "Rossi", Specialty.DERMATOLOGY, True,
+    ("elena.rossi@kessia.demo", "Elena", "Rossi", Specialty.DERMATOLOGIE, True,
      "Spécialiste de la rédaction en dermatologie : séries de cas, revues, "
      "résumés de congrès."),
-    ("thomas.leroy@kessia.demo", "Thomas", "Leroy", Specialty.RADIOLOGY, False,
+    ("thomas.leroy@kessia.demo", "Thomas", "Leroy", Specialty.RADIOLOGIE, False,
      "Ingénieur biomédical et rédacteur, imagerie et radiologie diagnostique."),
-    ("nadia.benali@kessia.demo", "Nadia", "Benali", Specialty.PSYCHIATRY, True,
+    ("nadia.benali@kessia.demo", "Nadia", "Benali", Specialty.PSYCHIATRIE, True,
      "Rédactrice en santé mentale et psychiatrie, sensible aux enjeux éthiques."),
-    ("marc.dubois@kessia.demo", "Marc", "Dubois", Specialty.SURGERY, False,
+    ("marc.dubois@kessia.demo", "Marc", "Dubois", Specialty.NEUROCHIRURGIE, False,
      "Ancien interne en chirurgie, rédaction d'articles chirurgicaux et de protocoles."),
-    ("clara.fontaine@kessia.demo", "Clara", "Fontaine", Specialty.ENDOCRINOLOGY, True,
+    ("clara.fontaine@kessia.demo", "Clara", "Fontaine", Specialty.ENDOCRINOLOGIE, True,
      "Endocrinologie et métabolisme : articles originaux et méta-analyses."),
-    ("hugo.moreau@kessia.demo", "Hugo", "Moreau", Specialty.GASTROENTEROLOGY, False,
+    ("hugo.moreau@kessia.demo", "Hugo", "Moreau", Specialty.GASTROENTEROLOGIE, False,
      "Rédacteur médical, gastro-entérologie et hépatologie."),
 ]
 
@@ -64,55 +103,55 @@ DOCTORS = [
 
 # Two listing ideas per specialty: (title, deliverable_type).
 SPECIALTY_LISTINGS = {
-    Specialty.CARDIOLOGY: [
-        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.CASE_REPORT),
+    Specialty.CARDIOLOGIE: [
+        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
+        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
-    Specialty.ONCOLOGY: [
-        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.RESEARCH_PAPER),
-        ("Résumé pour congrès international d'oncologie", DeliverableType.ABSTRACT),
+    Specialty.ONCOLOGIE: [
+        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Résumé pour congrès international d'oncologie", DeliverableType.RESUME_RECHERCHE),
     ],
-    Specialty.NEUROLOGY: [
-        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.REVIEW_ARTICLE),
-        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.RESEARCH_PAPER),
+    Specialty.NEUROLOGIE: [
+        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
+        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.PROTOCOLE_RECHERCHE),
     ],
-    Specialty.PEDIATRICS: [
-        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.CASE_REPORT),
-        ("Résumé pour journées de pédiatrie", DeliverableType.ABSTRACT),
+    Specialty.PEDIATRIE: [
+        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
+        ("Résumé pour journées de pédiatrie", DeliverableType.RESUME_RECHERCHE),
     ],
-    Specialty.DERMATOLOGY: [
-        ("Série de cas en dermatologie inflammatoire", DeliverableType.CASE_REPORT),
-        ("Revue sur les biothérapies du psoriasis", DeliverableType.REVIEW_ARTICLE),
+    Specialty.DERMATOLOGIE: [
+        ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
+        ("Revue sur les biothérapies du psoriasis", DeliverableType.VULGARISATION),
     ],
-    Specialty.RADIOLOGY: [
-        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.ABSTRACT),
-        ("Article original — IA et imagerie diagnostique", DeliverableType.RESEARCH_PAPER),
+    Specialty.RADIOLOGIE: [
+        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
+        ("Article original — IA et imagerie diagnostique", DeliverableType.PROTOCOLE_RECHERCHE),
     ],
-    Specialty.PSYCHIATRY: [
-        ("Revue sur les troubles anxieux et la TCC", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas en psychiatrie de liaison", DeliverableType.CASE_REPORT),
+    Specialty.PSYCHIATRIE: [
+        ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
+        ("Étude de cas en psychiatrie de liaison", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
-    Specialty.SURGERY: [
-        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.RESEARCH_PAPER),
-        ("Étude de cas chirurgical rare", DeliverableType.CASE_REPORT),
+    Specialty.NEUROCHIRURGIE: [
+        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Étude de cas chirurgical rare", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
-    Specialty.ENDOCRINOLOGY: [
-        ("Méta-analyse sur le diabète de type 2", DeliverableType.RESEARCH_PAPER),
-        ("Revue sur les analogues du GLP-1", DeliverableType.REVIEW_ARTICLE),
+    Specialty.ENDOCRINOLOGIE: [
+        ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
+        ("Revue sur les analogues du GLP-1", DeliverableType.VULGARISATION),
     ],
-    Specialty.GASTROENTEROLOGY: [
-        ("Revue sur les MICI et les biothérapies", DeliverableType.REVIEW_ARTICLE),
-        ("Étude de cas en hépatologie", DeliverableType.CASE_REPORT),
+    Specialty.GASTROENTEROLOGIE: [
+        ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
+        ("Étude de cas en hépatologie", DeliverableType.SYNOPSIS_RECHERCHE),
     ],
 }
 
 # (price, turnaround_days) per deliverable type.
 PRICING = {
-    DeliverableType.RESEARCH_PAPER: (Decimal("900.00"), 21),
-    DeliverableType.REVIEW_ARTICLE: (Decimal("750.00"), 14),
-    DeliverableType.CASE_REPORT: (Decimal("350.00"), 7),
-    DeliverableType.ABSTRACT: (Decimal("200.00"), 5),
-    DeliverableType.OTHER: (Decimal("400.00"), 10),
+    DeliverableType.PROTOCOLE_RECHERCHE: (Decimal("900.00"), 21),
+    DeliverableType.VULGARISATION: (Decimal("750.00"), 14),
+    DeliverableType.SYNOPSIS_RECHERCHE: (Decimal("350.00"), 7),
+    DeliverableType.RESUME_RECHERCHE: (Decimal("200.00"), 5),
+    DeliverableType.AUTRES: (Decimal("400.00"), 10),
 }
 
 REVIEW_COMMENTS = [
@@ -126,12 +165,12 @@ REVIEW_RATINGS = [5, 5, 4, 5, 4, 5, 4, 5, 5, 4]
 
 # (doctor_index, title, specialty, budget, deadline_in_days)
 REQUESTS = [
-    (1, "Recherche d'un rédacteur pour un article de neurologie", Specialty.NEUROLOGY, Decimal("1200.00"), 30),
-    (2, "Aide pour une série de cas en dermatologie", Specialty.DERMATOLOGY, Decimal("600.00"), 21),
-    (0, "Relecture d'un résumé pour un congrès de radiologie", Specialty.RADIOLOGY, Decimal("250.00"), 14),
-    (3, "Méta-analyse sur le diabète de type 2", Specialty.ENDOCRINOLOGY, Decimal("1500.00"), 45),
-    (4, "Article original en oncologie thoracique", Specialty.ONCOLOGY, Decimal("1100.00"), 28),
-    (5, "Étude de cas en gastro-entérologie", Specialty.GASTROENTEROLOGY, Decimal("500.00"), 18),
+    (1, "Recherche d'un rédacteur pour un article de neurologie", Specialty.NEUROLOGIE, Decimal("1200.00"), 30),
+    (2, "Aide pour une série de cas en dermatologie", Specialty.DERMATOLOGIE, Decimal("600.00"), 21),
+    (0, "Relecture d'un résumé pour un congrès de radiologie", Specialty.RADIOLOGIE, Decimal("250.00"), 14),
+    (3, "Méta-analyse sur le diabète de type 2", Specialty.ENDOCRINOLOGIE, Decimal("1500.00"), 45),
+    (4, "Article original en oncologie thoracique", Specialty.ONCOLOGIE, Decimal("1100.00"), 28),
+    (5, "Étude de cas en gastro-entérologie", Specialty.GASTROENTEROLOGIE, Decimal("500.00"), 18),
 ]
 
 ORDER_STATUSES = [
@@ -171,26 +210,112 @@ class Command(BaseCommand):
             email=email,
             defaults={
                 "first_name": first, "last_name": last, "is_writer": True,
-                "is_verified": verified, "bio": bio,
+                "is_verified": verified, "is_email_verified": True, "bio": bio,
             },
         )
         self._track(created)
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         user._specialty = specialty  # carried in-memory for listing seeding
+        self._enrich_writer(user, specialty)
         return user
+
+    def _enrich_writer(self, user, specialty):
+        """Fill a lifelike writer profile (headline, expertise, timeline, papers)."""
+        label = Specialty(specialty).label
+        fields = {}
+        if not user.headline:
+            fields["headline"] = f"Rédacteur médical · {label}"
+        if not user.city:
+            fields["city"] = CITIES[len(user.email) % len(CITIES)]
+        if not user.expertise_areas:
+            fields["expertise_areas"] = [
+                "Revue systématique",
+                "Article original",
+                "Méthodologie & biostatistiques",
+            ]
+        if user.years_experience is None:
+            fields["years_experience"] = 6 + (user.pk % 10)
+        if not user.google_scholar_url:
+            fields["google_scholar_url"] = "https://scholar.google.com/citations?user=DEMO"
+        if not user.languages:
+            fields["languages"] = ["Français", "Anglais"]
+        if not user.response_time:
+            fields["response_time"] = RESPONSE_TIMES[user.pk % len(RESPONSE_TIMES)]
+        if fields:
+            for key, value in fields.items():
+                setattr(user, key, value)
+            user.save(update_fields=list(fields))
+
+        if not user.experiences.exists():
+            WriterExperience.objects.create(
+                user=user, order=0, start_year=2019,
+                role="Médecin rédacteur indépendant", organization="Kessia",
+                description=f"Rédaction scientifique en {label.lower()} pour revues à comité de lecture.",
+            )
+            WriterExperience.objects.create(
+                user=user, order=1, start_year=2014, end_year=2019,
+                role=f"Praticien hospitalier — {label}", organization="CHU",
+            )
+        if not user.publications.exists():
+            WriterPublication.objects.create(
+                user=user, order=0, year=2023, is_featured=True,
+                title=f"Revue systématique et méta-analyse en {label.lower()}",
+                venue="La Revue Médicale", url="https://doi.org/10.0000/demo-1",
+            )
+            WriterPublication.objects.create(
+                user=user, order=1, year=2022,
+                title="Étude de cas clinique commentée", venue="Annales médicales",
+                url="https://doi.org/10.0000/demo-2",
+            )
+        if not user.portfolio.exists():
+            WriterPortfolioItem.objects.create(
+                user=user, order=0, kind="Revue systématique",
+                title=f"Méta-analyse en {label.lower()} pour un laboratoire",
+                summary="Protocole PRISMA, extraction des données et rédaction complète du manuscrit.",
+                url="https://doi.org/10.0000/demo-portfolio-1",
+            )
+            WriterPortfolioItem.objects.create(
+                user=user, order=1, kind="Article original",
+                title="Étude observationnelle multicentrique",
+                summary="Mise en forme ICMJE et soumission à une revue à comité de lecture.",
+                url="https://doi.org/10.0000/demo-portfolio-2",
+            )
+            WriterPortfolioItem.objects.create(
+                user=user, order=2, kind="Cas clinique",
+                title=f"Série de cas commentés en {label.lower()}",
+                summary="Rédaction au format CARE avec iconographie et discussion.",
+            )
 
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(
             email=email,
-            defaults={"first_name": first, "last_name": last, "is_writer": False},
+            defaults={
+                "first_name": first, "last_name": last, "is_writer": False,
+                "is_email_verified": True,
+            },
         )
         self._track(created)
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save(update_fields=["password"])
+        self._assign_avatar(user)
         return user
+
+    def _assign_avatar(self, user):
+        """Attach a bundled demo portrait once (skips if already set or missing)."""
+        if user.avatar:
+            return
+        filename = AVATARS.get(user.email)
+        if not filename:
+            return
+        path = SEED_AVATARS_DIR / filename
+        if not path.exists():
+            return
+        with path.open("rb") as fh:
+            user.avatar.save(f"{user.pk}_{filename}", File(fh), save=True)
 
     # -- listings -----------------------------------------------------------
     def _seed_listings(self, writers):
@@ -211,6 +336,26 @@ class Command(BaseCommand):
                         "deliverable_type": deliverable,
                         "price": price,
                         "turnaround_days": turnaround,
+                        "faq": [
+                            {
+                                "question": "Que comprend la prestation ?",
+                                "answer": (
+                                    "La rédaction complète du livrable, une relecture et la mise "
+                                    "au format de la revue ou du support cible."
+                                ),
+                            },
+                            {
+                                "question": "Combien de cycles de révision sont inclus ?",
+                                "answer": "Deux cycles de révisions sont inclus après la première livraison.",
+                            },
+                            {
+                                "question": "Travaillez-vous à partir de mes données ?",
+                                "answer": (
+                                    "Oui, je pars de vos données et références ; je peux aussi aider "
+                                    "à structurer la recherche bibliographique."
+                                ),
+                            },
+                        ],
                         "is_published": True,
                     },
                 )

@@ -1,18 +1,33 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, Clock, Pencil } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Clock, Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
-import Stars from "@/components/ui/Stars";
+import WriterHeader from "@/components/writers/WriterHeader";
+import TrustRow from "@/components/writers/TrustRow";
+import ExperienceList from "@/components/writers/ExperienceList";
+import PublicationList from "@/components/writers/PublicationList";
+import PortfolioList from "@/components/writers/PortfolioList";
+import RatingBreakdown from "@/components/writers/RatingBreakdown";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import PlaceOrderModal from "@/components/orders/PlaceOrderModal";
 import { useListing } from "@/hooks/useListings";
+import { useWriter } from "@/hooks/useWriters";
+import { useStartConversation } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
-import { formatPrice, fullName, initials } from "@/lib/format";
+import { sectionVisible } from "@/lib/profile";
+import { errorMessage, formatPrice } from "@/lib/format";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 function DetailSkeleton() {
@@ -21,8 +36,8 @@ function DetailSkeleton() {
       <Skeleton className="mb-4 h-4 w-32" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-40 w-full rounded-lg" />
+          <Skeleton className="h-9 w-3/4" />
           <Skeleton className="h-32 w-full rounded-lg" />
         </div>
         <Skeleton className="h-56 w-full rounded-lg" />
@@ -33,11 +48,19 @@ function DetailSkeleton() {
 
 export default function ListingDetail() {
   const { id } = useParams();
-  const { data: listing, isLoading, isError, refetch } = useListing(id);
+  const navigate = useNavigate();
+  const { data: listing, isLoading, isError, isFetching, refetch } = useListing(id);
   const user = useAuthStore((s) => s.user);
   const [orderOpen, setOrderOpen] = useState(false);
+  const startConversation = useStartConversation();
 
-  if (isLoading) return <DetailSkeleton />;
+  const writerId = listing?.writer?.id;
+  // Full public profile of the writer (rich fields the listing payload omits).
+  const { data: writerProfile } = useWriter(writerId);
+
+  // Recovering from a cached error (refetch in flight) renders as loading, not
+  // as a flash of the error state.
+  if (isLoading || (isError && isFetching)) return <DetailSkeleton />;
   if (isError) {
     return (
       <div className="container py-10">
@@ -61,9 +84,35 @@ export default function ListingDetail() {
     );
   }
 
-  const writer = listing.writer;
+  const writer = writerProfile || listing.writer;
   const isOwner = user?.id === writer?.id;
   const canOrder = user && !isOwner;
+  const canContact = user && !isOwner;
+
+  const faq = Array.isArray(listing.faq) ? listing.faq : [];
+  const experiences = writerProfile?.experiences || [];
+  const publications = writerProfile?.publications || [];
+  const portfolio = writerProfile?.portfolio || [];
+  const featured = publications.filter((p) => p.is_featured);
+  const pubsToShow = (featured.length ? featured : publications).slice(0, 3);
+
+  const showTrust = writerProfile && sectionVisible(writer, "trust");
+  const showPortfolio =
+    writerProfile && sectionVisible(writer, "portfolio") && portfolio.length > 0;
+  const showExperiences =
+    writerProfile && sectionVisible(writer, "experiences") && experiences.length > 0;
+  const showPublications =
+    writerProfile && sectionVisible(writer, "publications") && pubsToShow.length > 0;
+  const showReviews = writerProfile && writerProfile.reviews_count > 0;
+
+  const contact = async () => {
+    try {
+      const conv = await startConversation.mutateAsync({ recipient: writer.id });
+      navigate(`/messages/${conv.id}`);
+    } catch (e) {
+      toast.error(errorMessage(e, "Impossible d'ouvrir la conversation."));
+    }
+  };
 
   return (
     <div className="container max-w-5xl py-8">
@@ -76,10 +125,30 @@ export default function ListingDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          {/* Writer hero — big photo at the top, Malt-style */}
+          <Card>
+            <CardContent className="space-y-5 pt-6">
+              <WriterHeader writer={writer} large as="h1" />
+              {showTrust && <TrustRow writer={writer} />}
+              {writer?.bio && (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {writer.bio}
+                </p>
+              )}
+              <Button asChild variant="link" className="h-auto p-0">
+                <Link to={`/redacteurs/${writer?.id}`}>Voir le profil complet</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* The service */}
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{listing.title}</h1>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-2xl font-bold tracking-tight">{listing.title}</h2>
+              <FavoriteButton type="listing" id={listing.id} favorited={listing.is_favorited} />
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
                 {labelFor(listing.specialty, SPECIALTY_OPTIONS)}
               </span>
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
@@ -102,51 +171,83 @@ export default function ListingDetail() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Le rédacteur</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-start gap-4">
-                <Avatar className="size-12">
-                  <AvatarFallback className="bg-primary/10 font-semibold text-primary">
-                    {initials(writer)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <Link
-                      to={`/redacteurs/${writer?.id}`}
-                      className="font-semibold hover:text-primary hover:underline"
-                    >
-                      {fullName(writer)}
-                    </Link>
-                    {listing.writer_is_verified && (
-                      <BadgeCheck className="size-4 text-primary" aria-label="Vérifié" />
-                    )}
-                  </div>
-                  {listing.writer_reviews_count > 0 ? (
-                    <div className="mt-1">
-                      <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">Pas encore d'avis</p>
-                  )}
-                  {writer?.bio && (
-                    <p className="mt-2 text-sm text-muted-foreground">{writer.bio}</p>
-                  )}
-                  <Button asChild variant="link" className="mt-1 h-auto p-0">
-                    <Link to={`/redacteurs/${writer?.id}`}>Voir le profil</Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {faq.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Questions fréquentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="single" collapsible className="w-full">
+                  {faq.map((item, i) => (
+                    <AccordionItem key={i} value={`faq-${i}`}>
+                      <AccordionTrigger className="text-left text-sm">
+                        {item.question}
+                      </AccordionTrigger>
+                      <AccordionContent className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                        {item.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          )}
+
+          {showPortfolio && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Réalisations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PortfolioList items={portfolio} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showExperiences && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Parcours</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ExperienceList items={experiences} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showPublications && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Publications sélectionnées</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PublicationList items={pubsToShow} />
+              </CardContent>
+            </Card>
+          )}
+
+          {showReviews && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Avis</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RatingBreakdown
+                  breakdown={writerProfile.rating_breakdown}
+                  avg={writerProfile.avg_rating}
+                  total={writerProfile.reviews_count}
+                />
+                <Button asChild variant="link" className="h-auto p-0">
+                  <Link to={`/redacteurs/${writer?.id}`}>Voir tous les avis</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <aside>
           <div className="sticky top-20 rounded-lg border bg-card p-6 shadow-sm">
-            <p className="text-3xl font-bold text-primary">{formatPrice(listing.price)}</p>
+            <p className="text-3xl font-bold text-foreground">{formatPrice(listing.price)}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Livraison estimée sous {listing.turnaround_days} jours
             </p>
@@ -154,6 +255,16 @@ export default function ListingDetail() {
               {canOrder && (
                 <Button className="w-full" onClick={() => setOrderOpen(true)}>
                   Commander
+                </Button>
+              )}
+              {canContact && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={contact}
+                  disabled={startConversation.isPending}
+                >
+                  Contacter le rédacteur
                 </Button>
               )}
               {!user && (

@@ -1,5 +1,6 @@
 import stripe
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import (
@@ -10,6 +11,7 @@ from rest_framework.decorators import (
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.orders.models import Order
 
 from . import services
@@ -17,7 +19,7 @@ from .models import StripeEvent
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def connect_onboard(request):
     if not request.user.is_writer:
         return Response({"detail": "Réservé aux rédacteurs."}, status=status.HTTP_403_FORBIDDEN)
@@ -44,7 +46,7 @@ def connect_status(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def pay_order(request, order_id):
     order = get_object_or_404(Order, pk=order_id)
     if order.doctor_id != request.user.id:
@@ -69,7 +71,7 @@ def pay_order(request, order_id):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsEmailVerified])
 def confirm_payment(request, order_id):
     """Sync the order with Stripe after the client confirms a payment.
 
@@ -99,13 +101,15 @@ def stripe_webhook(request):
     except Exception:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    # Idempotency: skip events we've already processed.
-    _, created = StripeEvent.objects.get_or_create(
-        event_id=event["id"],
-        defaults={"type": event["type"]},
-    )
-    if not created:
-        return Response(status=status.HTTP_200_OK)
-
-    services.handle_webhook_event(event)
+    # Record-and-process atomically. The event row is the idempotency guard
+    # (skip replays), but it must only persist if handling succeeds: if the
+    # handler raises, the atomic block rolls the row back so the 500 we return
+    # makes Stripe retry — instead of the retry being skipped as a duplicate.
+    with transaction.atomic():
+        _, created = StripeEvent.objects.get_or_create(
+            event_id=event["id"],
+            defaults={"type": event["type"]},
+        )
+        if created:
+            services.handle_webhook_event(event)
     return Response(status=status.HTTP_200_OK)

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Marque provisoire v3 : K blanc sur bleu nuit, point orange.
+       À remplacer par un vrai logo vectorisé plus tard. -->
+  <rect width="64" height="64" rx="12" fill="#15243B"/>
+  <text x="30" y="46" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="40" font-weight="700" fill="#FFFFFF">K</text>
+  <circle cx="50" cy="44" r="5" fill="#F2620F"/>
+</svg>

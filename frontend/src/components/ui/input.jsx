@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef(({ className, type, ...props }, ref) => {
@@ -18,3 +19,30 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
 Input.displayName = "Input";
 
 export { Input };
+
+// --- v1 compatibility (default export) ---
+// Field wrapper preserving the v1 API ({ label, error, ... }) on top of the
+// shadcn Input, with the label/input association the tests rely on. Kept here
+// rather than in a separate Input.jsx to avoid a case-only filename collision
+// that breaks esbuild/Vite resolution.
+const InputField = React.forwardRef(function InputField(
+  { label, error, className = "", id, ...props },
+  ref,
+) {
+  const inputId = id || props.name;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {label && <Label htmlFor={inputId}>{label}</Label>}
+      <Input
+        id={inputId}
+        ref={ref}
+        aria-invalid={error ? true : undefined}
+        className={cn(error && "border-destructive focus-visible:ring-destructive", className)}
+        {...props}
+      />
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
+  );
+});
+
+export default InputField;

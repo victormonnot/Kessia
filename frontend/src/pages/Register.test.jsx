@@ -37,6 +37,7 @@ describe("Register page", () => {
     await userEvent.type(screen.getByLabelText("Nom"), "Durand");
     await userEvent.type(screen.getByLabelText(/e-mail/i), "marie@example.com");
     await userEvent.type(screen.getByLabelText(/mot de passe/i), "password123");
+    await userEvent.click(screen.getByRole("checkbox")); // accept CGU / privacy
     await userEvent.click(screen.getByRole("button", { name: /s'inscrire/i }));
 
     // TanStack Query v5 passes a second context arg to a bare mutationFn, so we
@@ -47,6 +48,7 @@ describe("Register page", () => {
       password: "password123",
       first_name: "Marie",
       last_name: "Durand",
+      accept_terms: true,
     });
   });
 

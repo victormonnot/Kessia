@@ -1,10 +1,11 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from apps.common.permissions import IsEmailVerified
 from apps.listings.permissions import IsWriter
 
 from .filters import RequestFilter
@@ -32,9 +33,19 @@ class RequestViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        return Request.objects.select_related("doctor").annotate(
+        qs = Request.objects.select_related("doctor").annotate(
             proposals_count=Count("proposals")
         )
+        user = self.request.user
+        if user.is_authenticated:
+            from apps.favorites.models import Favorite
+
+            qs = qs.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user, request=OuterRef("pk"))
+                )
+            )
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -47,16 +58,16 @@ class RequestViewSet(viewsets.ModelViewSet):
         if self.action in {"list", "retrieve"}:
             return [AllowAny()]
         if self.action == "create":
-            return [IsAuthenticated()]
+            return [IsAuthenticated(), IsEmailVerified()]
         if self.action in {"update", "partial_update", "destroy"}:
-            return [IsAuthenticated(), IsRequestOwner()]
+            return [IsAuthenticated(), IsEmailVerified(), IsRequestOwner()]
         return [IsAuthenticated()]
 
     @action(
         detail=True,
         methods=("get", "post"),
         url_path="proposals",
-        permission_classes=(IsAuthenticated,),
+        permission_classes=(IsAuthenticated, IsEmailVerified),
     )
     def proposals(self, request, pk=None):
         request_obj = self.get_object()
@@ -110,9 +121,9 @@ class ProposalViewSet(
         if self.action == "list":
             return [IsAuthenticated()]
         if self.action == "destroy":
-            return [IsAuthenticated(), IsWriter(), IsProposalWriter()]
-        # update / partial_update
-        return [IsAuthenticated(), IsProposalRequestOwner()]
+            return [IsAuthenticated(), IsEmailVerified(), IsWriter(), IsProposalWriter()]
+        # update / partial_update (accept / reject a proposal)
+        return [IsAuthenticated(), IsEmailVerified(), IsProposalRequestOwner()]
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

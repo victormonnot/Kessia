@@ -7,8 +7,12 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "1rem",
-      screens: { "2xl": "1280px" },
+      // Un peu d'air sur les côtés (24px) ; au-delà, la max-width prend le relais
+      // et les marges s'élargissent d'elles-mêmes.
+      padding: "1.5rem",
+      // Large, façon Malt/Fiverr — le contenu occupe l'écran, mais resserré
+      // d'un cran pour ne pas s'étaler jusqu'aux bords.
+      screens: { "2xl": "1400px" },
     },
     extend: {
       colors: {
@@ -39,32 +43,33 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-        // `primary` and `accent` keep their legacy numeric scales alongside the
-        // semantic DEFAULT/foreground so not-yet-refonted screens still render.
+        // `primary` and `accent` keep numeric scales alongside the semantic
+        // DEFAULT/foreground. Identité v3 : orange (CTA) + ambre (étoiles).
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          50: "#f0fdfa",
-          100: "#ccfbf1",
-          200: "#99f6e4",
-          300: "#5eead4",
-          400: "#2dd4bf",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-          900: "#134e4a",
+          // Orange — la marque (#F2620F = 500), à usage parcimonieux.
+          50: "#fff4ed",
+          100: "#ffe6d5",
+          200: "#feccaa",
+          300: "#fda974",
+          400: "#fb7e3c",
+          500: "#f2620f",
+          600: "#e14f09",
+          700: "#bb3d0a",
+          800: "#953110",
+          900: "#782b10",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
-          // Sky blue, kept for marketing gradients / accents on the landing.
-          400: "#38bdf8",
-          500: "#0ea5e9",
-          600: "#0284c7",
-          700: "#0369a1",
+          // Ambre — étoiles et badges de note uniquement.
+          400: "#fbbf24",
+          500: "#f59e0b",
+          600: "#d97706",
+          700: "#b45309",
         },
-        // Slate scale preserved from v1 (Tailwind's default `neutral` differs).
+        // Slate — gris bleutés froids, accordés au texte bleu nuit.
         neutral: {
           50: "#f8fafc",
           100: "#f1f5f9",
@@ -84,7 +89,10 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Une seule famille : Archivo, anguleuse et efficace.
+        sans: ["Archivo Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Alias conservé pour les composants qui utilisent `font-display`.
+        display: ["Archivo Variable", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {

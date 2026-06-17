@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   BadgeCheck,
@@ -6,215 +7,309 @@ import {
   MessagesSquare,
   Search,
   ShieldCheck,
-  Stethoscope,
-  Upload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import Reveal from "@/components/motion/Reveal";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ListingCard from "@/components/listings/ListingCard";
+import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import HeroFlow from "@/components/landing/HeroFlow";
+import { useListings } from "@/hooks/useListings";
+import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
+
+// "Parcourir par spécialité" — modern cards (no photos), one per domain.
+const SPECIALTY_TILES = [
+  "cardiologie",
+  "oncologie",
+  "neurologie",
+  "pediatrie",
+  "psychiatrie",
+  "radiologie",
+  "dermatologie",
+  "pneumologie",
+  "gastroenterologie",
+  "endocrinologie",
+  "rhumatologie",
+  "gynecologie",
+];
 
 const STEPS = [
   {
-    icon: Search,
     title: "Trouvez ou publiez",
     text: "Parcourez les annonces de rédacteurs ou publiez une demande sur mesure.",
   },
   {
-    icon: ShieldCheck,
     title: "Payez en sécurité",
     text: "Le paiement est placé sous séquestre et n'est versé qu'à la livraison validée.",
   },
   {
-    icon: Upload,
     title: "Recevez votre livrable",
     text: "Échangez via la messagerie, téléchargez le travail et laissez un avis.",
   },
 ];
 
 const FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: "Paiement sécurisé",
-    text: "Fonds sous séquestre via Stripe, versés au rédacteur à la finalisation.",
-  },
-  {
-    icon: BadgeCheck,
-    title: "Rédacteurs vérifiés",
-    text: "Un badge « Vérifié » distingue les profils aux qualifications validées.",
-  },
-  {
-    icon: MessagesSquare,
-    title: "Messagerie intégrée",
-    text: "Échangez en temps réel, du devis à la livraison, sans quitter la plateforme.",
-  },
-  {
-    icon: FileText,
-    title: "Spécialisé médical",
-    text: "12 spécialités et 5 types de livrables, pensés pour la rédaction scientifique.",
-  },
+  { icon: ShieldCheck, title: "Paiement sécurisé", text: "Fonds sous séquestre via Stripe." },
+  { icon: BadgeCheck, title: "Rédacteurs vérifiés", text: "Qualifications contrôlées, badge dédié." },
+  { icon: MessagesSquare, title: "Messagerie intégrée", text: "Du devis à la livraison, au même endroit." },
+  { icon: FileText, title: "Spécialisé médical", text: "36 spécialités, 5 types de livrables." },
 ];
 
+// Floating card spotlighting the flagship feature: writers vetted by a committee.
+// It lives INSIDE the hero's right grid column, so it scales with the layout and
+// can never slip behind the left content. The photo pops out of the top-left
+// corner (white ring behind it); the badge sits at its top-right — positioned
+// RELATIVE TO THE PHOTO, so tweak its left-[..px] / top-[..px] freely.
+function VerifiedWriterCard() {
+  return (
+    <div className="relative mx-auto w-full max-w-xs rounded-2xl border bg-card p-6 pt-14 shadow-xl">
+      <div className="absolute -top-8 left-6">
+        <Avatar className="size-20 ring-4 ring-card">
+          <AvatarImage src="/img/avatars/05.jpg" alt="" />
+          <AvatarFallback className="bg-secondary text-lg font-semibold text-foreground">
+            CF
+          </AvatarFallback>
+        </Avatar>
+        <VerifiedBadge
+          solid
+          label="Vérifié par le comité"
+          className="absolute left-[56px] top-[-13px] whitespace-nowrap px-3.5 py-1.5 text-sm shadow-md"
+        />
+      </div>
+      <p className="font-semibold leading-tight">Dr Claire Fontaine</p>
+      <p className="text-sm text-muted-foreground">Cardiologie · Paris</p>
+      <p className="mt-3 font-semibold leading-snug">
+        Des rédacteurs vérifiés par notre comité
+      </p>
+    </div>
+  );
+}
+
+// Second card on the orange "process line" (bottom-right): the outcome. Pairs
+// with VerifiedWriterCard to tell the story order → delivered, ready to publish.
+function DeliveredCard() {
+  return (
+    <div className="relative ml-auto mt-10 w-full max-w-[15.5rem] rounded-2xl border bg-card p-5 shadow-xl">
+      {/* Mini aperçu du document livré (réponse visuelle à la photo de la carte
+          vérifié). « Livré » en souligné remplace l'ancienne coche/pastille. */}
+      <div className="relative mb-3 flex h-24 items-center justify-center rounded-xl bg-secondary/40">
+        <div className="h-16 w-12 rounded-sm border bg-card p-2 shadow-sm">
+          <div className="h-1.5 w-3/4 rounded-full bg-foreground/25" />
+          <div className="mt-1.5 h-1 w-full rounded-full bg-foreground/15" />
+          <div className="mt-1 h-1 w-full rounded-full bg-foreground/15" />
+          <div className="mt-1 h-1 w-2/3 rounded-full bg-foreground/15" />
+        </div>
+        <span className="absolute right-3 top-3 text-xs font-bold text-emerald-600 underline decoration-2 underline-offset-2">
+          Livré
+        </span>
+      </div>
+      <p className="font-semibold leading-snug">Votre article, prêt à être publié</p>
+      <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+        <FileText className="size-4 shrink-0" /> article-recherche.docx
+      </p>
+    </div>
+  );
+}
+
+// Real listings on the home page (hidden if the API is down or returns nothing).
+function PopularListings() {
+  const { data, isLoading, isError } = useListings({ ordering: "-writer_rating" });
+  // Une seule annonce par rédacteur (évite deux cartes avec la même photo).
+  const seenWriters = new Set();
+  const listings = (data?.results ?? [])
+    .filter((listing) => {
+      if (seenWriters.has(listing.writer)) return false;
+      seenWriters.add(listing.writer);
+      return true;
+    })
+    .slice(0, 5);
+
+  if (isError || (!isLoading && listings.length === 0)) return null;
+
+  return (
+    <section className="container py-10 sm:py-14">
+      <div className="flex items-end justify-between gap-4">
+        <h2 className="text-2xl sm:text-3xl">Annonces populaires</h2>
+        <Link
+          to="/listings"
+          className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
+          Voir tout <ArrowRight className="size-4" />
+        </Link>
+      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {isLoading
+          ? Array.from({ length: 5 }).map((_, i) => <ListingCardSkeleton key={i} />)
+          : listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
+      </div>
+    </section>
+  );
+}
+
 export default function Landing() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  const submitSearch = (e) => {
+    e.preventDefault();
+    navigate(query.trim() ? `/listings?search=${encodeURIComponent(query.trim())}` : "/listings");
+  };
+
   return (
     <div>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b bg-gradient-to-b from-primary/5 via-background to-background">
+      {/* Héro — grille 2 colonnes : texte/recherche à gauche, carte à droite.
+          La grille rend tout responsive : la carte vit dans sa colonne, elle ne
+          peut donc plus déborder ni passer derrière le texte sur petit écran. */}
+      <section className="relative overflow-hidden border-b">
+        {/* Fond gris qui file jusqu'au bord droit, derrière la grille (lg+). */}
         <div
           aria-hidden
-          className="absolute -right-24 -top-24 size-80 rounded-full bg-primary/10 blur-3xl"
+          className="absolute inset-y-12 right-0 hidden w-[44%] rounded-l-[4rem] bg-secondary/50 lg:block"
         />
-        <div
-          aria-hidden
-          className="absolute -bottom-24 -left-24 size-80 rounded-full bg-accent-500/10 blur-3xl"
-        />
-        <div className="container relative py-20 text-center sm:py-28">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm font-medium text-muted-foreground">
-              <Stethoscope className="size-4 text-primary" /> Marketplace de rédaction médicale
-            </span>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
-              La rédaction médicale, <span className="text-primary">à la demande</span>.
-            </h1>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              Kessia met en relation médecins et institutions avec des rédacteurs scientifiques
-              qualifiés — articles de revue, études de cas, résumés, et plus.
-            </p>
-          </Reveal>
-          <Reveal delay={0.15}>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg">
-                <Link to="/register">
-                  Créer un compte <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/listings">Parcourir les annonces</Link>
-              </Button>
-            </div>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <p className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <ShieldCheck className="size-4 text-primary" /> Paiement sécurisé
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <BadgeCheck className="size-4 text-primary" /> Rédacteurs vérifiés
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <FileText className="size-4 text-primary" /> 12 spécialités
-              </span>
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="container py-16 sm:py-20">
-        <Reveal className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">Comment ça marche</h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Trois étapes, du premier contact à la livraison validée.
-          </p>
-        </Reveal>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <Reveal key={s.title} delay={i * 0.1}>
-              <div className="relative h-full rounded-xl border bg-card p-6 shadow-sm">
-                <span className="absolute right-5 top-5 text-4xl font-bold text-muted/60">
-                  {i + 1}
-                </span>
-                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <s.icon className="size-6" />
-                </div>
-                <h3 className="mt-4 font-semibold">{s.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{s.text}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* Audiences */}
-      <section className="border-y bg-muted/30 py-16 sm:py-20">
-        <div className="container grid gap-6 md:grid-cols-2">
-          <Reveal>
-            <div className="flex h-full flex-col rounded-xl border bg-card p-8 shadow-sm">
-              <h3 className="text-xl font-bold">Vous êtes médecin</h3>
-              <p className="mt-2 flex-1 text-muted-foreground">
-                Parcourez les annonces, commandez un livrable ou publiez une demande sur mesure.
-                Suivez l'avancement et payez en toute sécurité.
+        {/* Déco « flow » (ligne orange = process) qui relie les deux cartes. */}
+        <HeroFlow />
+        <div className="container relative pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pb-20 lg:pt-12">
+          <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            {/* Colonne gauche : texte + recherche */}
+            <div>
+              <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+                Trouvez le bon rédacteur médical pour vos publications
+              </h1>
+              <p className="mt-12 max-w-xl text-base text-muted-foreground sm:text-lg">
+                Articles de recherche, études de cas, résumés, rédigés par des rédacteurs
+                scientifiques qualifiés et vérifiés.
               </p>
-              <Button asChild className="mt-6 self-start">
-                <Link to="/listings">
-                  Parcourir les annonces <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="flex h-full flex-col rounded-xl border bg-card p-8 shadow-sm">
-              <h3 className="text-xl font-bold">Vous êtes rédacteur</h3>
-              <p className="mt-2 flex-1 text-muted-foreground">
-                Publiez vos services, recevez des commandes et répondez aux demandes ouvertes.
-                Faites-vous vérifier et développez votre activité.
-              </p>
-              <Button asChild className="mt-6 self-start">
-                <Link to="/register">
-                  Devenir rédacteur <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
-          </Reveal>
-        </div>
-      </section>
 
-      {/* Features */}
-      <section className="container py-16 sm:py-20">
-        <Reveal className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">Pensé pour la rédaction médicale</h2>
-        </Reveal>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f, i) => (
-            <Reveal key={f.title} delay={i * 0.08}>
-              <div className="h-full rounded-xl border bg-card p-6 shadow-sm">
-                <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <f.icon className="size-5" />
-                </div>
-                <h3 className="mt-4 font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.text}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="container pb-20">
-        <Reveal>
-          <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-accent-700 px-8 py-14 text-center text-primary-foreground">
-            <h2 className="text-3xl font-bold tracking-tight">Prêt à commencer ?</h2>
-            <p className="mx-auto mt-3 max-w-xl text-primary-foreground/80">
-              Rejoignez Kessia et donnez vie à vos projets de rédaction médicale.
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/register">Créer un compte</Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              {/* Barre un peu plus large que sa colonne : elle déborde vers la
+                  droite (sur le fond gris) sans jamais atteindre la carte. */}
+              <form
+                onSubmit={submitSearch}
+                className="mt-12 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[116%]"
               >
-                <Link to="/listings">Parcourir les annonces</Link>
-              </Button>
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Essayez « article de revue en cardiologie »…"
+                    aria-label="Rechercher une annonce"
+                    className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="h-11">
+                  Rechercher
+                </Button>
+              </form>
+
+              <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4" /> Paiement sous séquestre
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <BadgeCheck className="size-4" /> Rédacteurs vérifiés
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <FileText className="size-4" /> 36 spécialités
+                </span>
+              </p>
+            </div>
+
+            {/* Colonne droite : deux cartes le long de la ligne orange (process),
+                au-dessus de la déco ; cachées en mobile. */}
+            <div className="relative hidden lg:block">
+              <VerifiedWriterCard />
+              <DeliveredCard />
             </div>
           </div>
-        </Reveal>
+        </div>
+      </section>
+
+      {/* Vraies annonces dès l'accueil (masquée si l'API ne répond pas). */}
+      <PopularListings />
+
+      {/* Catégories — cartes spécialités modernes (sans photo). */}
+      <section className="container py-10 sm:py-14">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl">Parcourir par spécialité</h2>
+          <Link
+            to="/listings"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Toutes les spécialités <ArrowRight className="size-4" />
+          </Link>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {SPECIALTY_TILES.map((s) => (
+            <Link
+              key={s}
+              to={`/listings?specialty=${s}`}
+              className="group flex items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3.5 transition-colors hover:border-foreground"
+            >
+              <span className="truncate text-sm font-medium">
+                {labelFor(s, SPECIALTY_OPTIONS)}
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Comment ça marche + réassurance — bande grise compacte. */}
+      <section className="border-y bg-secondary/60">
+        <div className="container py-10 sm:py-14">
+          <h2 className="text-2xl sm:text-3xl">Comment ça marche</h2>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <div key={s.title} className="flex gap-4">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-semibold text-background">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 grid gap-6 border-t pt-8 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="flex gap-3">
+                <f.icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <div>
+                  <h3 className="text-sm font-semibold">{f.title}</h3>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{f.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA final — bande bleu nuit, l'orange ne sert qu'au bouton. */}
+      <section className="bg-foreground">
+        <div className="container flex flex-col items-start gap-6 py-12 text-background sm:flex-row sm:items-center sm:justify-between sm:py-14">
+          <div>
+            <h2 className="text-2xl sm:text-3xl">Prêt à commencer ?</h2>
+            <p className="mt-2 max-w-xl text-background/70">
+              Créez votre compte médecin ou rédacteur en quelques minutes.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <Link to="/register">Créer un compte</Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background"
+            >
+              <Link to="/listings">Parcourir les annonces</Link>
+            </Button>
+          </div>
+        </div>
       </section>
     </div>
   );

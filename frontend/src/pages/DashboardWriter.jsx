@@ -5,7 +5,7 @@ import { FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import Badge from "@/components/ui/Badge";
+import Badge from "@/components/ui/badge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import Tabs from "@/components/layout/Tabs";
 import ConfirmButton from "@/components/ConfirmButton";
@@ -23,10 +23,10 @@ import { errorMessage, formatPrice, fullName } from "@/lib/format";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 function MyListingsTab() {
-  const { data, isLoading, isError, refetch } = useListings({ mine: true });
+  const { data, isLoading, isError, isFetching, refetch } = useListings({ mine: true });
   const remove = useDeleteListing();
 
-  if (isLoading) return <LoadingBlock />;
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
   const listings = data?.results || [];
 
@@ -112,8 +112,8 @@ function OrdersReceivedTab() {
 
 function MyProposalsTab() {
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, isError, refetch } = useAllProposals();
-  if (isLoading) return <LoadingBlock />;
+  const { data, isLoading, isError, isFetching, refetch } = useAllProposals();
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   const mine = (data?.results || []).filter((p) => p.writer?.id === user?.id);
@@ -176,7 +176,7 @@ export default function DashboardWriter() {
     <div className="container py-8">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-        <Badge variant="primary">Rédacteur</Badge>
+        <Badge variant="info">Rédacteur</Badge>
         {user?.is_verified && <Badge variant="success">Vérifié</Badge>}
       </div>
       <p className="mt-1 text-muted-foreground">Bon retour, {fullName(user)}.</p>

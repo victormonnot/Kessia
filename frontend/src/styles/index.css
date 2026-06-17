@@ -2,61 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Identité v3 « Nuit + orange » — marketplace sobre et dense.
+ * Fond blanc, texte bleu nuit, l'orange réservé aux CTA/liens actifs :
+ * la couleur est rare, donc visible. Tout passe par ces variables HSL.
+ */
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Bleu nuit (#15243B). */
+    --foreground: 216 47% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 216 47% 16%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 216 47% 16%;
 
-    /* Brand teal (matches primary-600 #0d9488). */
-    --primary: 175 84% 32%;
+    /* Orange (#F2620F) — CTA et liens uniquement. */
+    --primary: 22 90% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Gris bleuté clair — boutons secondaires, bandes de section. */
+    --secondary: 216 20% 96%;
+    --secondary-foreground: 216 47% 16%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 216 20% 96%;
+    --muted-foreground: 215 16% 42%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Lavis gris au survol (menus, listes). */
+    --accent: 216 20% 95%;
+    --accent-foreground: 216 47% 16%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 175 84% 32%;
+    --border: 216 16% 90%;
+    --input: 216 16% 86%;
+    --ring: 22 90% 50%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
 
   /* Prepared for a future dark theme — inactive until `.dark` is toggled. */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 172 66% 50%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 172 66% 50%;
+    --background: 216 40% 9%;
+    --foreground: 216 20% 94%;
+    --card: 216 35% 12%;
+    --card-foreground: 216 20% 94%;
+    --popover: 216 35% 12%;
+    --popover-foreground: 216 20% 94%;
+    --primary: 22 90% 55%;
+    --primary-foreground: 216 47% 10%;
+    --secondary: 216 25% 18%;
+    --secondary-foreground: 216 20% 94%;
+    --muted: 216 25% 18%;
+    --muted-foreground: 215 15% 64%;
+    --accent: 216 25% 18%;
+    --accent-foreground: 216 20% 94%;
+    --destructive: 0 60% 40%;
+    --destructive-foreground: 216 20% 94%;
+    --border: 216 25% 20%;
+    --input: 216 25% 20%;
+    --ring: 22 90% 55%;
   }
 }
 
@@ -67,6 +75,17 @@
 
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+
+  /* Titres : même famille, graisse forte et serrée — pas de fantaisie. */
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-primary/20;
   }
 
   /* Respect users who prefer reduced motion across Framer Motion / CSS. */

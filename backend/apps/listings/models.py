@@ -16,6 +16,8 @@ class Listing(models.Model):
     deliverable_type = models.CharField(max_length=32, choices=DeliverableType.choices)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     turnaround_days = models.PositiveIntegerField()
+    # Service FAQ: list of {"question": ..., "answer": ...} edited by the writer.
+    faq = models.JSONField(default=list, blank=True)
     is_published = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

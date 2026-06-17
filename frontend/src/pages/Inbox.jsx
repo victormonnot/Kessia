@@ -4,16 +4,17 @@ import { MessagesSquare, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import { cn } from "@/lib/utils";
+import { avatarFor } from "@/lib/demo-assets";
 import { formatRelative, fullName, initials } from "@/lib/format";
 import { useConversations } from "@/hooks/useMessaging";
 
 export default function Inbox() {
-  const { data, isLoading, isError, refetch } = useConversations();
+  const { data, isLoading, isError, isFetching, refetch } = useConversations();
   const [query, setQuery] = useState("");
 
   const conversations = data?.results || [];
@@ -27,9 +28,9 @@ export default function Inbox() {
     <div className="container max-w-3xl py-8">
       <h1 className="text-2xl font-bold tracking-tight">Messagerie</h1>
 
-      {isError ? (
+      {isError && !isFetching ? (
         <ErrorState className="mt-6" title="Impossible de charger vos messages" onRetry={refetch} />
-      ) : isLoading ? (
+      ) : isLoading || isError ? (
         <div className="mt-6 space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-[4.5rem] w-full rounded-lg" />
@@ -70,7 +71,11 @@ export default function Inbox() {
                   className="flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/40"
                 >
                   <Avatar className="size-11">
-                    <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                    <AvatarImage
+                      src={c.other_user?.avatar || avatarFor(fullName(c.other_user))}
+                      alt=""
+                    />
+                    <AvatarFallback className="bg-secondary text-sm font-semibold text-foreground">
                       {initials(c.other_user)}
                     </AvatarFallback>
                   </Avatar>

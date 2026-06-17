@@ -7,9 +7,9 @@ import { LoadingBlock } from "@/components/feedback/Spinner";
 import { useOrders } from "@/hooks/useOrders";
 
 export default function OrdersList({ role, emptyTitle, emptyDescription, emptyAction }) {
-  const { data, isLoading, isError, refetch } = useOrders({ role });
+  const { data, isLoading, isError, isFetching, refetch } = useOrders({ role });
 
-  if (isLoading) return <LoadingBlock />;
+  if (isLoading || (isError && isFetching)) return <LoadingBlock />;
   if (isError) return <ErrorState onRetry={refetch} />;
 
   const orders = data?.results || [];

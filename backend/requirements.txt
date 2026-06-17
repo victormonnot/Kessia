@@ -13,3 +13,6 @@ daphne==4.2.1
 django-storages[boto3]==1.14.4
 whitenoise==6.8.2
 dj-database-url==2.3.0
+django-anymail==15.0
+google-auth==2.53.0
+Pillow==11.0.0

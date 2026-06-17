@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
+  Heart,
   LayoutDashboard,
   LogOut,
   Menu,
   MessageSquare,
   Settings,
-  Stethoscope,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetClose,
@@ -84,8 +84,8 @@ export default function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-72">
               <SheetHeader>
-                <SheetTitle className="flex items-center gap-2 text-primary">
-                  <Stethoscope className="size-5" /> Kessia
+                <SheetTitle className="font-display text-xl font-semibold tracking-tight">
+                  Kessia<span className="text-primary">.</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="mt-6 flex flex-col gap-1">
@@ -106,6 +106,11 @@ export default function Navbar() {
                     <SheetClose asChild>
                       <NavLink to="/messages" className={linkClass}>
                         Messagerie {unreadTotal > 0 && `(${unreadTotal})`}
+                      </NavLink>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <NavLink to="/favoris" className={linkClass}>
+                        Mes favoris
                       </NavLink>
                     </SheetClose>
                     <SheetClose asChild>
@@ -143,11 +148,8 @@ export default function Navbar() {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold text-primary">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Stethoscope className="size-5" />
-            </span>
-            <span className="hidden sm:inline">Kessia</span>
+          <Link to="/" className="font-display text-xl font-semibold tracking-tight text-foreground">
+            Kessia<span className="text-primary">.</span>
           </Link>
 
           <nav className="ml-4 hidden items-center gap-1 md:flex">
@@ -188,7 +190,8 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 px-2" aria-label="Menu du compte">
                     <Avatar className="size-8">
-                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      <AvatarImage src={user.avatar || undefined} alt="" />
+                      <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
                         {initials(user)}
                       </AvatarFallback>
                     </Avatar>
@@ -213,6 +216,9 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/messages")}>
                     <MessageSquare className="size-4" /> Messagerie
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/favoris")}>
+                    <Heart className="size-4" /> Mes favoris
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="size-4" /> Paramètres

@@ -186,6 +186,34 @@ def test_writer_delivers_by_uploading_file(writer_auth_client, writer_user):
     assert order.deliverables.count() == 1
 
 
+def test_deliverable_upload_rejects_disallowed_type(writer_auth_client, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, status=Order.Status.IN_PROGRESS)
+    upload = SimpleUploadedFile("malware.exe", b"MZ", content_type="application/octet-stream")
+    response = writer_auth_client.post(
+        reverse("order-deliverables", args=[order.id]),
+        {"file": upload},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert order.deliverables.count() == 0
+
+
+def test_deliverable_upload_rejects_oversized_file(writer_auth_client, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, status=Order.Status.IN_PROGRESS)
+    too_big = SimpleUploadedFile(
+        "huge.pdf", b"x" * (25 * 1024 * 1024 + 1), content_type="application/pdf"
+    )
+    response = writer_auth_client.post(
+        reverse("order-deliverables", args=[order.id]),
+        {"file": too_big},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert order.deliverables.count() == 0
+
+
 def test_doctor_cannot_upload_deliverable(auth_client, user):
     order = OrderFactory(doctor=user, status=Order.Status.IN_PROGRESS)
     upload = SimpleUploadedFile("paper.pdf", b"data")

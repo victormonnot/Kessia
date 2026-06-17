@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Paperclip, Send, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import Spinner from "@/components/feedback/Spinner";
+import MessageAttachment from "@/components/messaging/MessageAttachment";
 import { useConversation, useMessages, useSendMessage } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-import { errorMessage, formatDateTime, fullName, initials } from "@/lib/format";
+import { avatarFor } from "@/lib/demo-assets";
+import { errorMessage, formatBytes, formatDateTime, fullName, initials } from "@/lib/format";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 const WS_BASE = API_BASE.replace(/^http/, "ws").replace(/\/api\/v1\/?$/, "");
@@ -21,9 +23,11 @@ export default function Conversation() {
   const me = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const { data: conversation } = useConversation(id);
-  const { data: messages = [], isLoading, isError } = useMessages(id);
+  const { data: messages = [], isLoading, isError, isFetching } = useMessages(id);
   const send = useSendMessage(id);
   const [body, setBody] = useState("");
+  const [file, setFile] = useState(null);
+  const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
 
   // Live delivery: a WebSocket pushes new messages instantly; the REST polling
@@ -49,12 +53,15 @@ export default function Conversation() {
   const submit = async (e) => {
     e?.preventDefault();
     const text = body.trim();
-    if (!text || send.isPending) return;
+    if ((!text && !file) || send.isPending) return;
+    const sentFile = file;
     setBody("");
+    setFile(null);
     try {
-      await send.mutateAsync(text);
+      await send.mutateAsync({ body: text, attachment: sentFile });
     } catch (err) {
       setBody(text);
+      setFile(sentFile);
       toast.error(errorMessage(err, "L'envoi du message a échoué."));
     }
   };
@@ -64,6 +71,12 @@ export default function Conversation() {
       e.preventDefault();
       submit(e);
     }
+  };
+
+  const onPickFile = (e) => {
+    const picked = e.target.files?.[0];
+    if (picked) setFile(picked);
+    e.target.value = ""; // allow re-picking the same file
   };
 
   const other = conversation?.other_user;
@@ -79,7 +92,8 @@ export default function Conversation() {
             </Link>
           </Button>
           <Avatar className="size-10">
-            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            <AvatarImage src={other?.avatar || avatarFor(fullName(other))} alt="" />
+            <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
               {initials(other)}
             </AvatarFallback>
           </Avatar>
@@ -95,7 +109,7 @@ export default function Conversation() {
 
         {/* Messages */}
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
-          {isLoading ? (
+          {isLoading || (isError && isFetching) ? (
             <div className="space-y-3">
               <Skeleton className="h-10 w-2/3" />
               <Skeleton className="ml-auto h-10 w-1/2" />
@@ -114,13 +128,16 @@ export default function Conversation() {
                 <div key={m.id} className={cn("flex flex-col", mine ? "items-end" : "items-start")}>
                   <div
                     className={cn(
-                      "max-w-[75%] rounded-2xl px-3.5 py-2 text-sm",
+                      "max-w-[75%] space-y-1.5 rounded-2xl px-3.5 py-2 text-sm",
                       mine
-                        ? "rounded-br-sm bg-primary text-primary-foreground"
+                        ? "rounded-br-sm bg-foreground text-background"
                         : "rounded-bl-sm bg-muted text-foreground",
                     )}
                   >
-                    <p className="whitespace-pre-line">{m.body}</p>
+                    {m.body && <p className="whitespace-pre-line">{m.body}</p>}
+                    {m.attachment_name && (
+                      <MessageAttachment conversationId={id} message={m} mine={mine} />
+                    )}
                   </div>
                   <span className="mt-1 px-1 text-[11px] text-muted-foreground">
                     {formatDateTime(m.created_at)}
@@ -132,26 +149,65 @@ export default function Conversation() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Composer */}
-        <form onSubmit={submit} className="flex items-end gap-2 border-t p-3">
-          <textarea
-            rows={1}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="Votre message…"
-            aria-label="Votre message"
-            className="max-h-32 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={send.isPending || !body.trim()}
-            aria-label="Envoyer"
-          >
-            {send.isPending ? <Spinner /> : <Send className="size-4" />}
-          </Button>
-        </form>
+        {/* Composer — sending requires a verified email; reading stays open. */}
+        {me?.is_email_verified ? (
+          <form onSubmit={submit} className="border-t p-3">
+          {file && (
+            <div className="mb-2 flex items-center gap-2 rounded-md border bg-muted/40 px-2.5 py-1.5 text-xs">
+              <Paperclip className="size-3.5 shrink-0" />
+              <span className="flex-1 truncate">{file.name}</span>
+              <span className="shrink-0 text-muted-foreground">{formatBytes(file.size)}</span>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                aria-label="Retirer le fichier"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={onPickFile}
+              aria-hidden="true"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Joindre un fichier"
+            >
+              <Paperclip className="size-4" />
+            </Button>
+            <textarea
+              rows={1}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Votre message…"
+              aria-label="Votre message"
+              className="max-h-32 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={send.isPending || (!body.trim() && !file)}
+              aria-label="Envoyer"
+            >
+              {send.isPending ? <Spinner /> : <Send className="size-4" />}
+            </Button>
+          </div>
+          </form>
+        ) : (
+          <div className="border-t p-3 text-center text-sm text-muted-foreground">
+            Confirmez votre adresse e-mail pour envoyer des messages.
+          </div>
+        )}
       </div>
     </div>
   );

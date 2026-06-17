@@ -14,7 +14,7 @@ function Step({ done, icon: Icon, title, description, action }) {
       <div
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-full",
-          done ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary",
+          done ? "bg-emerald-100 text-emerald-700" : "bg-secondary text-foreground",
         )}
       >
         {done ? <Check className="size-5" /> : <Icon className="size-5" />}

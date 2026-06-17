@@ -1,12 +1,13 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Pencil, User, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarDays, Pencil, Stethoscope, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import Badge from "@/components/ui/Badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import ProposalForm from "@/components/requests/ProposalForm";
@@ -18,8 +19,9 @@ import {
   useUpdateProposal,
 } from "@/hooks/useRequests";
 import { useAuthStore } from "@/store/authStore";
+import { avatarFor } from "@/lib/demo-assets";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
-import { errorMessage, formatDate, formatPrice, fullName } from "@/lib/format";
+import { errorMessage, formatDate, formatPrice, fullName, initials } from "@/lib/format";
 
 function DetailSkeleton() {
   return (
@@ -36,12 +38,12 @@ function DetailSkeleton() {
 export default function RequestDetail() {
   const { id } = useParams();
   const user = useAuthStore((s) => s.user);
-  const { data: request, isLoading, isError, refetch } = useRequest(id);
+  const { data: request, isLoading, isError, isFetching, refetch } = useRequest(id);
   const { data: proposals = [] } = useProposals(user ? id : null);
   const createProposal = useCreateProposal(id);
   const updateProposal = useUpdateProposal(id);
 
-  if (isLoading) return <DetailSkeleton />;
+  if (isLoading || (isError && isFetching)) return <DetailSkeleton />;
   if (isError) {
     return (
       <div className="container py-10">
@@ -90,22 +92,25 @@ export default function RequestDetail() {
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">{request.title}</h1>
             <StatusBadge status={request.status} />
+            <FavoriteButton
+              type="request"
+              id={request.id}
+              favorited={request.is_favorited}
+              className="size-8"
+            />
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <User className="size-4" /> {fullName(request.doctor)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays className="size-4" /> Échéance {formatDate(request.deadline)}
-            </span>
-            <span className="inline-flex items-center gap-1 font-medium text-foreground">
-              <Wallet className="size-4" /> {formatPrice(request.budget)}
-            </span>
-            <Badge variant="primary">{labelFor(request.specialty, SPECIALTY_OPTIONS)}</Badge>
+          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+            <Avatar className="size-7">
+              <AvatarImage src={request.doctor?.avatar || avatarFor(fullName(request.doctor))} alt="" />
+              <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
+                {initials(request.doctor)}
+              </AvatarFallback>
+            </Avatar>
+            Publié par <span className="font-medium text-foreground">{fullName(request.doctor)}</span>
           </div>
         </div>
         {isOwner && (
@@ -115,6 +120,30 @@ export default function RequestDetail() {
             </Link>
           </Button>
         )}
+      </div>
+
+      {/* Key facts — budget & deadline made prominent. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <Wallet className="size-4" /> Budget
+          </p>
+          <p className="mt-1 text-xl font-semibold">{formatPrice(request.budget)}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <CalendarDays className="size-4" /> Échéance
+          </p>
+          <p className="mt-1 text-xl font-semibold">{formatDate(request.deadline)}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <Stethoscope className="size-4" /> Spécialité
+          </p>
+          <p className="mt-1 font-semibold leading-tight">
+            {labelFor(request.specialty, SPECIALTY_OPTIONS)}
+          </p>
+        </div>
       </div>
 
       <Card className="mt-6">

@@ -3,6 +3,8 @@ import { Routes, Route } from "react-router-dom";
 
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
+import GuestRoute from "@/components/layout/GuestRoute";
+import VerifiedRoute from "@/components/layout/VerifiedRoute";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 
 // Route-based code splitting: each page is its own chunk so the initial bundle
@@ -10,6 +12,9 @@ import { LoadingBlock } from "@/components/feedback/Spinner";
 const Landing = lazy(() => import("@/pages/Landing"));
 const Register = lazy(() => import("@/pages/Register"));
 const Login = lazy(() => import("@/pages/Login"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const Listings = lazy(() => import("@/pages/Listings"));
 const ListingDetail = lazy(() => import("@/pages/ListingDetail"));
 const ListingFormPage = lazy(() => import("@/pages/ListingFormPage"));
@@ -22,6 +27,7 @@ const WriterProfile = lazy(() => import("@/pages/WriterProfile"));
 const Inbox = lazy(() => import("@/pages/Inbox"));
 const Conversation = lazy(() => import("@/pages/Conversation"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Favorites = lazy(() => import("@/pages/Favorites"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const LegalPage = lazy(() => import("@/pages/LegalPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -37,8 +43,26 @@ export default function Router() {
     >
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Reachable while logged in (you're signed in right after registering). */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         <Route path="/listings" element={<Listings />} />
         <Route path="/listings/:id" element={<ListingDetail />} />
@@ -46,7 +70,9 @@ export default function Router() {
           path="/listings/new"
           element={
             <WriterRoute>
-              <ListingFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une annonce.">
+                <ListingFormPage />
+              </VerifiedRoute>
             </WriterRoute>
           }
         />
@@ -54,7 +80,9 @@ export default function Router() {
           path="/listings/:id/edit"
           element={
             <WriterRoute>
-              <ListingFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une annonce.">
+                <ListingFormPage />
+              </VerifiedRoute>
             </WriterRoute>
           }
         />
@@ -67,7 +95,9 @@ export default function Router() {
           path="/requests/new"
           element={
             <ProtectedRoute>
-              <RequestFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une demande.">
+                <RequestFormPage />
+              </VerifiedRoute>
             </ProtectedRoute>
           }
         />
@@ -75,7 +105,9 @@ export default function Router() {
           path="/requests/:id/edit"
           element={
             <ProtectedRoute>
-              <RequestFormPage />
+              <VerifiedRoute message="Confirmez votre adresse e-mail pour publier une demande.">
+                <RequestFormPage />
+              </VerifiedRoute>
             </ProtectedRoute>
           }
         />
@@ -119,6 +151,14 @@ export default function Router() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favoris"
+          element={
+            <ProtectedRoute>
+              <Favorites />
             </ProtectedRoute>
           }
         />

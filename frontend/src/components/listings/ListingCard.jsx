@@ -1,47 +1,71 @@
 import { Link } from "react-router-dom";
-import { BadgeCheck, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import Stars from "@/components/ui/Stars";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import FavoriteButton from "@/components/ui/FavoriteButton";
+import { avatarFor } from "@/lib/demo-assets";
 import { formatPrice } from "@/lib/format";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 export default function ListingCard({ listing }) {
+  // Malt-style preview: the writer's own photo is the cover. Real avatar first,
+  // deterministic demo portrait as fallback (always resolves to a face).
+  const photo = listing.writer_avatar || avatarFor(listing.writer_name);
+
   return (
     <Link
       to={`/listings/${listing.id}`}
-      className="group flex h-full flex-col rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+      className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
     >
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+        <img
+          src={photo}
+          alt={listing.writer_name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+        />
+        {listing.writer_is_verified && (
+          <VerifiedBadge solid label="Rédacteur vérifié" className="absolute left-2 top-2" />
+        )}
+        <FavoriteButton
+          type="listing"
+          id={listing.id}
+          favorited={listing.is_favorited}
+          className="absolute right-2 top-2 size-8"
+        />
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-sm font-medium text-foreground">
+            {listing.writer_name}
+          </span>
+          {listing.writer_reviews_count > 0 ? (
+            <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
+          ) : (
+            <span className="shrink-0 text-xs text-muted-foreground">Nouveau</span>
+          )}
+        </div>
+
+        <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {labelFor(listing.specialty, SPECIALTY_OPTIONS)}
+        </p>
+        <h3 className="mt-1 line-clamp-2 font-semibold leading-snug transition-colors group-hover:text-primary">
           {listing.title}
         </h3>
-        <span className="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-sm font-semibold text-primary">
-          {formatPrice(listing.price)}
-        </span>
-      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <span className="inline-flex items-center gap-1 font-medium text-foreground">
-          {listing.writer_name}
-          {listing.writer_is_verified && (
-            <BadgeCheck className="size-4 text-primary" aria-label="Rédacteur vérifié" />
-          )}
-        </span>
-        {listing.writer_reviews_count > 0 && (
-          <Stars rating={listing.writer_rating} count={listing.writer_reviews_count} />
-        )}
-      </div>
+        <div className="mt-3 flex items-center gap-x-3 text-xs text-muted-foreground">
+          <span className="truncate">{labelFor(listing.deliverable_type, DELIVERABLE_OPTIONS)}</span>
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <Clock className="size-3" /> {listing.turnaround_days} j
+          </span>
+        </div>
 
-      <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-          {labelFor(listing.specialty, SPECIALTY_OPTIONS)}
-        </span>
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          {labelFor(listing.deliverable_type, DELIVERABLE_OPTIONS)}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          <Clock className="size-3" /> {listing.turnaround_days} j
-        </span>
+        <div className="mt-auto flex items-end justify-between gap-3 border-t pt-3">
+          <span className="text-xs text-muted-foreground">À partir de</span>
+          <span className="shrink-0 text-lg font-bold">{formatPrice(listing.price)}</span>
+        </div>
       </div>
     </Link>
   );
