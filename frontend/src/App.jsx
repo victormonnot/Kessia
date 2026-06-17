@@ -9,6 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 import { Toaster } from "@/components/ui/sonner";
 import { refreshAccessToken } from "@/api/client";
+import { authApi } from "@/api/auth";
 import { useAuthStore } from "@/store/authStore";
 
 export default function App() {
@@ -24,6 +25,16 @@ export default function App() {
           await refreshAccessToken();
         } catch {
           useAuthStore.getState().clear();
+        }
+        // Session revived: re-sync the profile so persisted data (e.g. avatar)
+        // can't go stale across reloads.
+        if (useAuthStore.getState().accessToken) {
+          try {
+            const me = await authApi.me();
+            if (active) useAuthStore.getState().setUser(me);
+          } catch {
+            // Non-fatal: keep the persisted user.
+          }
         }
       }
       if (active) setReady(true);
