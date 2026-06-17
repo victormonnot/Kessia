@@ -2,6 +2,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
+import stripe
 from django.urls import reverse
 
 from apps.listings.tests.factories import ListingFactory
@@ -153,6 +154,33 @@ def test_completion_without_payment_does_not_transfer(auth_client, user, writer_
             format="json",
         )
         mock_stripe.Transfer.create.assert_not_called()
+
+
+def test_release_failure_leaves_funds_held(auth_client, user, writer_user):
+    """A transfer error (e.g. writer not payout-ready) must not crash completion:
+    the order still completes and the funds stay held for a later retry."""
+    writer_user.stripe_account_id = "acct_writer"
+    writer_user.save(update_fields=["stripe_account_id"])
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(
+        listing=listing,
+        doctor=user,
+        status=Order.Status.DELIVERED,
+        payment_status=Order.PaymentStatus.HELD,
+        amount=Decimal("100.00"),
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.StripeError = stripe.StripeError
+        mock_stripe.Transfer.create.side_effect = stripe.StripeError("account not payout-ready")
+        response = auth_client.patch(
+            reverse("order-detail", args=[order.id]),
+            {"status": Order.Status.COMPLETED},
+            format="json",
+        )
+    assert response.status_code == 200  # completion succeeds despite payout failure
+    order.refresh_from_db()
+    assert order.status == Order.Status.COMPLETED
+    assert order.payment_status == Order.PaymentStatus.HELD  # funds preserved, not lost
 
 
 # --- Refund on cancel-after-payment --------------------------------------

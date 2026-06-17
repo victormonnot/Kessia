@@ -81,6 +81,10 @@ def create_payment_intent(order: Order):
         currency=order.currency.lower(),
         metadata={"order_id": order.id},
         transfer_group=f"order_{order.id}",
+        # Embedded card checkout: enable automatic payment methods but disable
+        # redirect-based ones, so the PaymentElement confirms in-page without a
+        # return_url (the frontend confirms with redirect: "if_required").
+        automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
         idempotency_key=f"order-{order.id}-pi",
     )
     order.stripe_payment_intent_id = intent.id
@@ -109,14 +113,22 @@ def release_payment(order: Order) -> bool:
         logger.warning("Order %s completed but writer has no connected account", order.id)
         return False
     fee = platform_fee(order.amount)
-    transfer = stripe.Transfer.create(
-        amount=_to_cents(order.amount - fee),
-        currency=order.currency.lower(),
-        destination=order.writer.stripe_account_id,
-        transfer_group=f"order_{order.id}",
-        metadata={"order_id": order.id},
-        idempotency_key=f"order-{order.id}-transfer",
-    )
+    try:
+        transfer = stripe.Transfer.create(
+            amount=_to_cents(order.amount - fee),
+            currency=order.currency.lower(),
+            destination=order.writer.stripe_account_id,
+            transfer_group=f"order_{order.id}",
+            metadata={"order_id": order.id},
+            idempotency_key=f"order-{order.id}-transfer",
+        )
+    except stripe.StripeError as exc:
+        # Most commonly the writer's account isn't payout-ready yet (onboarding
+        # not finished -> no "transfers" capability). Don't fail the completion:
+        # the work is delivered and accepted. Leave the funds held so the payout
+        # can be retried once onboarding completes.
+        logger.warning("Order %s transfer failed, funds left held: %s", order.id, exc)
+        return False
     order.stripe_transfer_id = transfer.id
     order.application_fee_amount = fee
     order.payment_status = Order.PaymentStatus.RELEASED
@@ -155,20 +167,33 @@ def on_order_status_changed(order: Order) -> None:
 # --- Webhook handling ----------------------------------------------------
 
 
+def _field(obj, key, default=None):
+    """Read a key from a Stripe object or a plain dict.
+
+    Stripe's SDK objects (v15) raise AttributeError on ``.get()``; subscripting
+    works on both them and the plain-dict test doubles, so it is the portable
+    accessor for webhook payloads.
+    """
+    try:
+        return obj[key]
+    except (KeyError, TypeError):
+        return default
+
+
 def handle_webhook_event(event) -> None:
     etype = event["type"]
     obj = event["data"]["object"]
 
     if etype == "payment_intent.succeeded":
-        order_id = (obj.get("metadata") or {}).get("order_id")
+        order_id = _field(_field(obj, "metadata", {}), "order_id")
         if order_id:
             order = Order.objects.filter(pk=order_id).first()
             if order:
                 mark_payment_held(order)
 
     elif etype == "account.updated":
-        user = User.objects.filter(stripe_account_id=obj.get("id")).first()
+        user = User.objects.filter(stripe_account_id=_field(obj, "id")).first()
         if user:
-            user.stripe_charges_enabled = bool(obj.get("charges_enabled"))
-            user.stripe_payouts_enabled = bool(obj.get("payouts_enabled"))
+            user.stripe_charges_enabled = bool(_field(obj, "charges_enabled"))
+            user.stripe_payouts_enabled = bool(_field(obj, "payouts_enabled"))
             user.save(update_fields=["stripe_charges_enabled", "stripe_payouts_enabled"])

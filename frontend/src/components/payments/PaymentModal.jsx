@@ -4,6 +4,7 @@ import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import InputField from "@/components/ui/input";
 import Modal from "@/components/ui/Modal";
 import Spinner from "@/components/feedback/Spinner";
 import { paymentsApi } from "@/api/payments";
@@ -14,6 +15,10 @@ function CheckoutForm({ order, onClose }) {
   const stripe = useStripe();
   const elements = useElements();
   const confirm = useConfirmPayment();
+  // The payer isn't necessarily the logged-in user (e.g. a relative paying), so
+  // we always ask for the payer's own name and email rather than the account's.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,6 +31,11 @@ function CheckoutForm({ order, onClose }) {
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
       redirect: "if_required",
+      confirmParams: {
+        payment_method_data: {
+          billing_details: { name: name.trim(), email: email.trim() },
+        },
+      },
     });
     if (stripeError) {
       setError(stripeError.message || "Le paiement a échoué.");
@@ -48,7 +58,28 @@ function CheckoutForm({ order, onClose }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
+      {/* Identity of whoever is paying (may differ from the logged-in user). */}
+      <InputField
+        label="Nom du titulaire de la carte"
+        name="cardholder-name"
+        autoComplete="name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <InputField
+        label="E-mail (pour le reçu)"
+        name="billing-email"
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      {/* Card details only; name/email/phone are collected above instead. */}
+      <PaymentElement
+        options={{ fields: { billingDetails: { name: "never", email: "never", phone: "never" } } }}
+      />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
