@@ -33,6 +33,20 @@ def test_onboard_forbidden_for_non_writer(auth_client):
     assert response.status_code == 403
 
 
+def test_connect_session_returns_client_secret(writer_auth_client, writer_user):
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.Account.create.return_value = MagicMock(id="acct_123")
+        mock_stripe.AccountSession.create.return_value = MagicMock(client_secret="accs_secret_x")
+        response = writer_auth_client.post(reverse("payments-connect-session"))
+    assert response.status_code == 200
+    assert response.json()["client_secret"] == "accs_secret_x"
+
+
+def test_connect_session_forbidden_for_non_writer(auth_client):
+    response = auth_client.post(reverse("payments-connect-session"))
+    assert response.status_code == 403
+
+
 # --- Pay (doctor, after acceptance) --------------------------------------
 
 
@@ -182,6 +196,68 @@ def test_release_failure_leaves_funds_held(auth_client, user, writer_user):
     order.refresh_from_db()
     assert order.status == Order.Status.COMPLETED
     assert order.payment_status == Order.PaymentStatus.HELD  # funds preserved, not lost
+
+
+def test_release_ties_transfer_to_source_charge(auth_client, user, writer_user):
+    """The transfer must reference the source charge so it draws from those
+    funds even while the platform's available balance is still pending."""
+    writer_user.stripe_account_id = "acct_writer"
+    writer_user.save(update_fields=["stripe_account_id"])
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(
+        listing=listing,
+        doctor=user,
+        status=Order.Status.DELIVERED,
+        payment_status=Order.PaymentStatus.HELD,
+        amount=Decimal("100.00"),
+        stripe_charge_id="ch_source",
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.Transfer.create.return_value = MagicMock(id="tr_123")
+        auth_client.patch(
+            reverse("order-detail", args=[order.id]),
+            {"status": Order.Status.COMPLETED},
+            format="json",
+        )
+    kwargs = mock_stripe.Transfer.create.call_args.kwargs
+    assert kwargs["source_transaction"] == "ch_source"
+
+
+def test_release_pending_for_writer_releases_held_completed_orders(writer_user):
+    """When a writer becomes payout-ready, funds held on already-completed
+    orders are released (covers onboarding after completion)."""
+    writer_user.stripe_account_id = "acct_writer"
+    writer_user.stripe_payouts_enabled = True
+    writer_user.save(update_fields=["stripe_account_id", "stripe_payouts_enabled"])
+    order = OrderFactory(
+        writer=writer_user,
+        status=Order.Status.COMPLETED,
+        payment_status=Order.PaymentStatus.HELD,
+        amount=Decimal("100.00"),
+        stripe_charge_id="ch_source",
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.Transfer.create.return_value = MagicMock(id="tr_123")
+        released = services.release_pending_for_writer(writer_user)
+    assert released == 1
+    order.refresh_from_db()
+    assert order.payment_status == Order.PaymentStatus.RELEASED
+
+
+def test_release_pending_for_writer_noop_when_not_payout_ready(writer_user):
+    writer_user.stripe_account_id = "acct_writer"
+    writer_user.stripe_payouts_enabled = False
+    writer_user.save(update_fields=["stripe_account_id", "stripe_payouts_enabled"])
+    OrderFactory(
+        writer=writer_user,
+        status=Order.Status.COMPLETED,
+        payment_status=Order.PaymentStatus.HELD,
+        amount=Decimal("100.00"),
+    )
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        released = services.release_pending_for_writer(writer_user)
+    assert released == 0
+    mock_stripe.Transfer.create.assert_not_called()
 
 
 # --- Refund on cancel-after-payment --------------------------------------

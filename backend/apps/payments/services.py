@@ -62,6 +62,20 @@ def create_onboarding_link(user) -> str:
     return link.url
 
 
+def create_account_session(user) -> str:
+    """Client secret for Stripe's *embedded* onboarding component.
+
+    Lets the writer complete Connect onboarding inside Kessia (no redirect to
+    Stripe) while Stripe still handles the KYC / bank collection and compliance.
+    """
+    account_id = get_or_create_connected_account(user)
+    session = stripe.AccountSession.create(
+        account=account_id,
+        components={"account_onboarding": {"enabled": True}},
+    )
+    return session.client_secret
+
+
 def refresh_account_status(user) -> None:
     if not user.stripe_account_id:
         return
@@ -69,6 +83,10 @@ def refresh_account_status(user) -> None:
     user.stripe_charges_enabled = bool(account.charges_enabled)
     user.stripe_payouts_enabled = bool(account.payouts_enabled)
     user.save(update_fields=["stripe_charges_enabled", "stripe_payouts_enabled"])
+    # Onboarding may have just completed: release any payouts that were held
+    # because the account wasn't ready when the order was completed.
+    if user.stripe_payouts_enabled:
+        release_pending_for_writer(user)
 
 
 # --- Payment lifecycle ---------------------------------------------------
@@ -185,6 +203,26 @@ def cancel_pending_payment(order: Order) -> bool:
     return True
 
 
+def _charge_for(order: Order) -> str:
+    """The charge backing this order's payment (cached on the order).
+
+    Tying the payout transfer to its source charge lets it draw from those funds
+    even before they settle to the platform's available balance (separate
+    charges & transfers: the platform's available balance is often still 0 while
+    the charge is pending).
+    """
+    if order.stripe_charge_id:
+        return order.stripe_charge_id
+    if not order.stripe_payment_intent_id:
+        return ""
+    intent = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
+    charge_id = intent.latest_charge or ""
+    if charge_id:
+        order.stripe_charge_id = charge_id
+        order.save(update_fields=["stripe_charge_id", "updated_at"])
+    return charge_id
+
+
 def release_payment(order: Order) -> bool:
     """Transfer amount − commission to the writer. Guarded by held status."""
     if order.payment_status != Order.PaymentStatus.HELD:
@@ -194,20 +232,24 @@ def release_payment(order: Order) -> bool:
         logger.warning("Order %s completed but writer has no connected account", order.id)
         return False
     fee = platform_fee(order.amount)
+    transfer_args = {
+        "amount": _to_cents(order.amount - fee),
+        "currency": order.currency.lower(),
+        "destination": order.writer.stripe_account_id,
+        "transfer_group": f"order_{order.id}",
+        "metadata": {"order_id": order.id},
+        "idempotency_key": f"order-{order.id}-transfer",
+    }
+    charge_id = _charge_for(order)
+    if charge_id:
+        transfer_args["source_transaction"] = charge_id
     try:
-        transfer = stripe.Transfer.create(
-            amount=_to_cents(order.amount - fee),
-            currency=order.currency.lower(),
-            destination=order.writer.stripe_account_id,
-            transfer_group=f"order_{order.id}",
-            metadata={"order_id": order.id},
-            idempotency_key=f"order-{order.id}-transfer",
-        )
+        transfer = stripe.Transfer.create(**transfer_args)
     except stripe.StripeError as exc:
         # Most commonly the writer's account isn't payout-ready yet (onboarding
         # not finished -> no "transfers" capability). Don't fail the completion:
         # the work is delivered and accepted. Leave the funds held so the payout
-        # can be retried once onboarding completes.
+        # can be retried once onboarding completes (see release_pending_for_writer).
         logger.warning("Order %s transfer failed, funds left held: %s", order.id, exc)
         return False
     order.stripe_transfer_id = transfer.id
@@ -222,6 +264,23 @@ def release_payment(order: Order) -> bool:
         ]
     )
     return True
+
+
+def release_pending_for_writer(user) -> int:
+    """Release funds held on the writer's already-completed orders.
+
+    Handles the writer onboarding *after* an order was completed (so the payout
+    couldn't run at completion time). Safe to call repeatedly: release_payment is
+    guarded by held status and idempotent. Returns the number released.
+    """
+    if not (user.stripe_account_id and user.stripe_payouts_enabled):
+        return 0
+    held = Order.objects.filter(
+        writer=user,
+        status=Order.Status.COMPLETED,
+        payment_status=Order.PaymentStatus.HELD,
+    )
+    return sum(1 for order in held if release_payment(order))
 
 
 def refund_payment(order: Order) -> bool:
@@ -299,3 +358,5 @@ def handle_webhook_event(event) -> None:
             user.stripe_charges_enabled = bool(_field(obj, "charges_enabled"))
             user.stripe_payouts_enabled = bool(_field(obj, "payouts_enabled"))
             user.save(update_fields=["stripe_charges_enabled", "stripe_payouts_enabled"])
+            if user.stripe_payouts_enabled:
+                release_pending_for_writer(user)
