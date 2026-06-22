@@ -360,12 +360,18 @@ def test_change_email_rejects_duplicate(auth_client, user, writer_user):
 # --- Account settings: delete account --------------------------------------
 
 
-def test_delete_account_removes_user(auth_client, user):
+def test_delete_account_anonymizes_user(auth_client, user):
     response = auth_client.delete(
         reverse("users-me"), {"current_password": "testpass123"}, format="json"
     )
     assert response.status_code == 204
-    assert not User.objects.filter(pk=user.pk).exists()
+    # The row is kept (transactional integrity) but scrubbed and deactivated.
+    user.refresh_from_db()
+    assert user.email == f"deleted-{user.pk}@kessia.invalid"
+    assert user.first_name == "" and user.last_name == "" and user.bio == ""
+    assert user.is_active is False
+    assert user.deleted_at is not None
+    assert not user.has_usable_password()
 
 
 def test_delete_account_rejects_wrong_password(auth_client, user):

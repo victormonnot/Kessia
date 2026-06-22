@@ -86,6 +86,14 @@ class OrderViewSet(
         from apps.payments.services import on_order_status_changed
 
         on_order_status_changed(instance)
+
+        # If either party had asked to delete their account, their erasure was
+        # deferred until their orders settled — complete it now if this was the
+        # last one in flight. (No-op otherwise.)
+        from apps.users.services import finalize_deletion_if_pending
+
+        finalize_deletion_if_pending(instance.doctor)
+        finalize_deletion_if_pending(instance.writer)
         return Response(OrderDetailSerializer(instance).data)
 
     @action(

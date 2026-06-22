@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -46,6 +45,7 @@ from .serializers import (
     WriterPortfolioSerializer,
     WriterPublicationSerializer,
 )
+from .services import request_account_deletion
 from .tokens import email_verification_token
 
 
@@ -278,17 +278,28 @@ class MeView(APIView):
         return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def delete(self, request):
-        """Hard-delete the account (password-confirmed) and clear auth cookies."""
+        """Honour an account-deletion request (RGPD erasure), password-confirmed.
+
+        Personal data is anonymised in place while transactional records are
+        retained. If an order is still in flight, erasure is deferred: the
+        account is deactivated now (202) and the scrub completes once that order
+        settles. With nothing in flight it completes immediately (204). Either
+        way the session is ended.
+        """
         serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        try:
-            request.user.delete()
-        except ProtectedError:
-            return Response(
-                {"detail": "Votre compte est lié à des éléments protégés et ne peut pas être supprimé."},
-                status=status.HTTP_409_CONFLICT,
+        completed = request_account_deletion(request.user)
+        if completed:
+            response = Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            response = Response(
+                {
+                    "detail": "Votre demande de suppression a été enregistrée. Votre compte "
+                    "est désactivé et sera anonymisé définitivement une fois vos commandes "
+                    "en cours terminées."
+                },
+                status=status.HTTP_202_ACCEPTED,
             )
-        response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)
         return response
 
