@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -20,16 +20,19 @@ def my_favorites(request):
     listing_ids = [f.listing_id for f in favs if f.listing_id]
     request_ids = [f.request_id for f in favs if f.request_id]
 
+    _not_removed = Q(writer__reviews_received__removed_at__isnull=True)
     listings = (
-        Listing.objects.filter(id__in=listing_ids)
+        Listing.objects.filter(id__in=listing_ids, removed_at__isnull=True)
         .select_related("writer")
         .annotate(
-            writer_rating=Avg("writer__reviews_received__rating"),
-            writer_reviews_count=Count("writer__reviews_received", distinct=True),
+            writer_rating=Avg("writer__reviews_received__rating", filter=_not_removed),
+            writer_reviews_count=Count(
+                "writer__reviews_received", distinct=True, filter=_not_removed
+            ),
         )
     )
     requests = (
-        Request.objects.filter(id__in=request_ids)
+        Request.objects.filter(id__in=request_ids, removed_at__isnull=True)
         .select_related("doctor")
         .annotate(proposals_count=Count("proposals"))
     )

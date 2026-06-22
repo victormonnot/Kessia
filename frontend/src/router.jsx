@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import WriterRoute from "@/components/layout/WriterRoute";
 import GuestRoute from "@/components/layout/GuestRoute";
 import VerifiedRoute from "@/components/layout/VerifiedRoute";
+import AdminRoute from "@/components/layout/AdminRoute";
 import { LoadingBlock } from "@/components/feedback/Spinner";
 
 // Route-based code splitting: each page is its own chunk so the initial bundle
@@ -32,6 +33,16 @@ const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const PaymentStatus = lazy(() => import("@/pages/PaymentStatus"));
 const LegalPage = lazy(() => import("@/pages/LegalPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+
+const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const AdminListings = lazy(() => import("@/pages/admin/AdminListings"));
+const AdminRequests = lazy(() => import("@/pages/admin/AdminRequests"));
+const AdminReviews = lazy(() => import("@/pages/admin/AdminReviews"));
+const AdminOrders = lazy(() => import("@/pages/admin/AdminOrders"));
+const AdminReports = lazy(() => import("@/pages/admin/AdminReports"));
+const AdminAuditLog = lazy(() => import("@/pages/admin/AdminAuditLog"));
 
 export default function Router() {
   return (
@@ -178,6 +189,25 @@ export default function Router() {
         <Route path="/mentions-legales" element={<LegalPage doc="mentions" />} />
         <Route path="/cgu" element={<LegalPage doc="cgu" />} />
         <Route path="/confidentialite" element={<LegalPage doc="confidentialite" />} />
+
+        {/* Admin / moderation (Django staff only) */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="listings" element={<AdminListings />} />
+          <Route path="requests" element={<AdminRequests />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="audit-log" element={<AdminAuditLog />} />
+        </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>

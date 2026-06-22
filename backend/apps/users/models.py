@@ -56,6 +56,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     deletion_requested_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+    # Set when an admin suspends the account (login blocked, hidden) — distinct
+    # from deletion. Cleared on un-suspend.
+    suspended_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"

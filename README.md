@@ -27,6 +27,7 @@ Elle crée :
 
 - un compte rédacteur : `writer@kessia.demo` / `demo1234`
 - un compte médecin : `doctor@kessia.demo` / `demo1234`
+- un compte admin (back office) : `admin@kessia.demo` / `demo1234` (temporaire, à retirer avant la mise en production)
 - 3 annonces, 3 demandes, 1 commande déjà acceptée, 1 proposition en attente
 
 Adresses :

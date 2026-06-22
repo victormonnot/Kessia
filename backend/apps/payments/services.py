@@ -355,6 +355,9 @@ def handle_webhook_event(event) -> None:
         if order:
             mark_payment_failed(order)
 
+    elif etype == "charge.dispute.created":
+        _flag_dispute(obj)
+
     elif etype == "account.updated":
         user = User.objects.filter(stripe_account_id=_field(obj, "id")).first()
         if user:
@@ -363,3 +366,20 @@ def handle_webhook_event(event) -> None:
             user.save(update_fields=["stripe_charges_enabled", "stripe_payouts_enabled"])
             if user.stripe_payouts_enabled:
                 release_pending_for_writer(user)
+
+
+def _flag_dispute(obj) -> None:
+    """A chargeback was opened (charge.dispute.created): flag the order so it
+    surfaces to admins. Resolve the order via its charge, else its intent."""
+    from django.utils import timezone
+
+    charge_id = _field(obj, "charge")
+    order = Order.objects.filter(stripe_charge_id=charge_id).first() if charge_id else None
+    if order is None:
+        intent_id = _field(obj, "payment_intent")
+        if intent_id:
+            order = Order.objects.filter(stripe_payment_intent_id=intent_id).first()
+    if order and order.disputed_at is None:
+        order.disputed_at = timezone.now()
+        order.save(update_fields=["disputed_at", "updated_at"])
+        logger.warning("Dispute opened on order %s (charge %s)", order.id, charge_id)

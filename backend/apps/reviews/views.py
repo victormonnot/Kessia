@@ -14,7 +14,10 @@ class ReviewViewSet(
     viewsets.GenericViewSet,
 ):
     def get_queryset(self):
-        qs = Review.objects.select_related("doctor", "writer", "order")
+        # Hide admin-removed reviews from the public list.
+        qs = Review.objects.select_related("doctor", "writer", "order").filter(
+            removed_at__isnull=True
+        )
         writer_id = self.request.query_params.get("writer")
         if writer_id:
             qs = qs.filter(writer_id=writer_id)

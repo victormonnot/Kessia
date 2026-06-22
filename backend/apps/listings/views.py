@@ -17,11 +17,15 @@ from .serializers import (
 class ListingViewSet(viewsets.ModelViewSet):
     # Annotate each listing with its writer's aggregate rating (avoids N+1 in
     # the catalog and on the detail view).
+    # Removed reviews (admin takedown) must not count toward a writer's rating.
+    _not_removed = Q(writer__reviews_received__removed_at__isnull=True)
     queryset = (
         Listing.objects.select_related("writer")
         .annotate(
-            writer_rating=Avg("writer__reviews_received__rating"),
-            writer_reviews_count=Count("writer__reviews_received", distinct=True),
+            writer_rating=Avg("writer__reviews_received__rating", filter=_not_removed),
+            writer_reviews_count=Count(
+                "writer__reviews_received", distinct=True, filter=_not_removed
+            ),
         )
         .all()
     )
@@ -31,7 +35,8 @@ class ListingViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        # Admin-removed listings are hidden from the public viewset entirely.
+        qs = super().get_queryset().filter(removed_at__isnull=True)
         user = self.request.user
         # Unpublished listings are private drafts: only their author may see them.
         # Everyone else (anonymous or other users) sees published listings only.

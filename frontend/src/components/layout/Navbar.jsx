@@ -8,6 +8,7 @@ import {
   Menu,
   MessageSquare,
   Settings,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -118,6 +119,13 @@ export default function Navbar() {
                         Paramètres
                       </NavLink>
                     </SheetClose>
+                    {user.is_staff && (
+                      <SheetClose asChild>
+                        <NavLink to="/admin" className={linkClass}>
+                          Administration
+                        </NavLink>
+                      </SheetClose>
+                    )}
                   </>
                 )}
               </nav>
@@ -223,6 +231,11 @@ export default function Navbar() {
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="size-4" /> Paramètres
                   </DropdownMenuItem>
+                  {user.is_staff && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="size-4" /> Administration
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="size-4" /> Déconnexion

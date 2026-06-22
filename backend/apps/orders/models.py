@@ -79,6 +79,10 @@ class Order(models.Model):
         blank=True,
     )
 
+    # Set when Stripe reports a chargeback/dispute on the order's payment
+    # (charge.dispute.created webhook). Surfaced to admins for resolution.
+    disputed_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

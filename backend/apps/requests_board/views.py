@@ -33,8 +33,10 @@ class RequestViewSet(viewsets.ModelViewSet):
     ordering = ("-created_at",)
 
     def get_queryset(self):
-        qs = Request.objects.select_related("doctor").annotate(
-            proposals_count=Count("proposals")
+        qs = (
+            Request.objects.select_related("doctor")
+            .filter(removed_at__isnull=True)  # hide admin-removed requests
+            .annotate(proposals_count=Count("proposals"))
         )
         user = self.request.user
         if user.is_authenticated:

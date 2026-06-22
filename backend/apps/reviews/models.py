@@ -25,6 +25,9 @@ class Review(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
     comment = models.TextField(blank=True)
+    # Set when an admin removes an abusive/fake review. Removed reviews are
+    # hidden and excluded from a writer's rating aggregates.
+    removed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

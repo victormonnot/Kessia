@@ -196,6 +196,7 @@ class Command(BaseCommand):
 
         writers = [self._ensure_writer(*w) for w in WRITERS]
         doctors = [self._ensure_doctor(*d) for d in DOCTORS]
+        self._ensure_admin()
 
         listings = self._seed_listings(writers)
         self._seed_orders_and_reviews(listings, doctors)
@@ -288,6 +289,30 @@ class Command(BaseCommand):
                 title=f"Série de cas commentés en {label.lower()}",
                 summary="Rédaction au format CARE avec iconographie et discussion.",
             )
+
+    def _ensure_admin(self):
+        """A demo owner/admin account (Django staff) for testing the back office.
+
+        Temporary testing convenience — like the other demo accounts, it is meant
+        to be removed before a real launch.
+        """
+        user, created = User.objects.get_or_create(
+            email="admin@kessia.demo",
+            defaults={
+                "first_name": "Admin", "last_name": "Kessia",
+                "is_staff": True, "is_superuser": True, "is_email_verified": True,
+            },
+        )
+        self._track(created)
+        if created:
+            user.set_password(DEMO_PASSWORD)
+            user.save(update_fields=["password"])
+        elif not (user.is_staff and user.is_superuser):
+            # Keep admin powers on an idempotent re-run.
+            user.is_staff = True
+            user.is_superuser = True
+            user.save(update_fields=["is_staff", "is_superuser"])
+        return user
 
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(

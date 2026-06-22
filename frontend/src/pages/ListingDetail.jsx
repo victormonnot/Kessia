@@ -19,6 +19,7 @@ import PublicationList from "@/components/writers/PublicationList";
 import PortfolioList from "@/components/writers/PortfolioList";
 import RatingBreakdown from "@/components/writers/RatingBreakdown";
 import FavoriteButton from "@/components/ui/FavoriteButton";
+import ReportButton from "@/components/feedback/ReportButton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import PlaceOrderModal from "@/components/orders/PlaceOrderModal";
@@ -145,7 +146,10 @@ export default function ListingDetail() {
           <div>
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-2xl font-bold tracking-tight">{listing.title}</h2>
-              <FavoriteButton type="listing" id={listing.id} favorited={listing.is_favorited} />
+              <div className="flex shrink-0 items-center gap-1">
+                {!isOwner && <ReportButton targetType="listing" targetId={listing.id} />}
+                <FavoriteButton type="listing" id={listing.id} favorited={listing.is_favorited} />
+              </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">

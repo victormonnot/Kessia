@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.messaging",
     "apps.verification",
     "apps.favorites",
+    "apps.admin_panel",
 ]
 
 MIDDLEWARE = [

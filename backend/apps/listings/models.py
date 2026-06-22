@@ -19,6 +19,9 @@ class Listing(models.Model):
     # Service FAQ: list of {"question": ..., "answer": ...} edited by the writer.
     faq = models.JSONField(default=list, blank=True)
     is_published = models.BooleanField(default=True)
+    # Set when an admin takes the listing down (policy violation). A removed
+    # listing is hidden from everyone and the owner cannot re-publish it.
+    removed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
