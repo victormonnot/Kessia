@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count, Exists, OuterRef
+from django.db.models import Avg, Count, Exists, OuterRef, Q
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -33,7 +33,11 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
+        # Unpublished listings are private drafts: only their author may see them.
+        # Everyone else (anonymous or other users) sees published listings only.
         if user.is_authenticated:
+            qs = qs.filter(Q(is_published=True) | Q(writer=user))
+
             from apps.favorites.models import Favorite
 
             qs = qs.annotate(
@@ -41,6 +45,8 @@ class ListingViewSet(viewsets.ModelViewSet):
                     Favorite.objects.filter(user=user, listing=OuterRef("pk"))
                 )
             )
+        else:
+            qs = qs.filter(is_published=True)
         return qs
 
     def get_serializer_class(self):
