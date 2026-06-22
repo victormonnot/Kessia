@@ -186,6 +186,22 @@ def _fee(amount: Decimal) -> Decimal:
     return (amount * Decimal("0.15")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def _first_or_create(model, defaults=None, **lookup):
+    """Like ``get_or_create`` but tolerant of pre-existing duplicates.
+
+    Seeding runs against a long-lived demo database that may already hold rows
+    created through the app (e.g. two orders for the same listing+doctor, where
+    the lookup isn't unique). A plain ``get_or_create`` raises
+    ``MultipleObjectsReturned`` on those and, under ``start.sh``'s ``set -e``,
+    crash-loops the deploy. Returning the first match keeps re-seeding idempotent
+    and safe.
+    """
+    obj = model.objects.filter(**lookup).first()
+    if obj is not None:
+        return obj, False
+    return model.objects.create(**{**lookup, **(defaults or {})}), True
+
+
 class Command(BaseCommand):
     help = "Seed a rich, lifelike demo dataset. Safe to re-run (idempotent)."
 
@@ -348,7 +364,8 @@ class Command(BaseCommand):
         for writer in writers:
             for title, deliverable in SPECIALTY_LISTINGS[writer._specialty]:
                 price, turnaround = PRICING[deliverable]
-                listing, created = Listing.objects.get_or_create(
+                listing, created = _first_or_create(
+                    Listing,
                     writer=writer,
                     title=title,
                     defaults={
@@ -411,8 +428,8 @@ class Command(BaseCommand):
             if status == Order.Status.COMPLETED:
                 defaults["application_fee_amount"] = _fee(listing.price)
 
-            order, created = Order.objects.get_or_create(
-                listing=listing, doctor=doctor, defaults=defaults
+            order, created = _first_or_create(
+                Order, listing=listing, doctor=doctor, defaults=defaults
             )
             self._track(created)
 
@@ -434,7 +451,8 @@ class Command(BaseCommand):
         today = date.today()
         for doctor_idx, title, specialty, budget, deadline_days in REQUESTS:
             doctor = doctors[doctor_idx]
-            req, created = Request.objects.get_or_create(
+            req, created = _first_or_create(
+                Request,
                 doctor=doctor,
                 title=title,
                 defaults={
