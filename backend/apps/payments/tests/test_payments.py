@@ -68,6 +68,20 @@ def test_pay_creates_intent_with_idempotency_key(auth_client, user):
     assert order.stripe_payment_intent_id == "pi_123"
 
 
+def test_pay_intent_is_card_only(auth_client, user):
+    order = OrderFactory(doctor=user, status=Order.Status.ACCEPTED, amount=Decimal("100.00"))
+    with patch("apps.payments.services.stripe") as mock_stripe:
+        mock_stripe.PaymentIntent.create.return_value = MagicMock(
+            id="pi_1", client_secret="cs_1"
+        )
+        auth_client.post(reverse("payments-pay", kwargs={"order_id": order.id}))
+    kwargs = mock_stripe.PaymentIntent.create.call_args.kwargs
+    # Bank-debit methods (e.g. SEPA) are reversible for weeks after the
+    # irreversible writer payout, so checkout is restricted to cards.
+    assert kwargs["payment_method_types"] == ["card"]
+    assert "automatic_payment_methods" not in kwargs
+
+
 def test_pay_requires_accepted_status(auth_client, user):
     order = OrderFactory(doctor=user, status=Order.Status.PENDING)
     response = auth_client.post(reverse("payments-pay", kwargs={"order_id": order.id}))

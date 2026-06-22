@@ -106,11 +106,14 @@ _REUSABLE_PI_STATUSES = {
 def create_payment_intent(order: Order):
     """Create or reuse the PaymentIntent for an accepted order.
 
-    Any Stripe payment method is allowed — the SPA confirms with a ``return_url``,
-    so redirect-based methods (and slow ones like SEPA) work too. A still-payable
-    existing intent is reused (e.g. the doctor retrying after a decline), and a
-    fresh one is minted only once the previous intent is terminal, so re-payment
-    never double-charges.
+    Card only (``payment_method_types=["card"]``). The platform pays the writer
+    out at completion and that transfer is effectively irreversible, so we don't
+    accept bank-debit methods (e.g. SEPA) that the payer can reverse for weeks
+    after the payout has already gone. Card chargebacks remain possible but are a
+    smaller, contestable risk we accept here (see docs/LIMITATIONS.md). A
+    still-payable existing intent is reused (e.g. the doctor retrying after a
+    decline), and a fresh one is minted only once the previous intent is
+    terminal, so re-payment never double-charges.
     """
     if order.stripe_payment_intent_id:
         existing = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
@@ -128,7 +131,7 @@ def create_payment_intent(order: Order):
         currency=order.currency.lower(),
         metadata={"order_id": order.id},
         transfer_group=f"order_{order.id}",
-        automatic_payment_methods={"enabled": True},
+        payment_method_types=["card"],
         idempotency_key=idempotency_key,
     )
     # Don't mark the order "processing" just for creating the intent — the
