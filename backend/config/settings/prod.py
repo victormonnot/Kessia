@@ -70,6 +70,11 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
+# No S3 bucket → this single-origin service serves /media itself (the seeded demo
+# avatars, re-materialised on each deploy by seed_demo). Real user uploads stay
+# ephemeral without S3; set AWS_STORAGE_BUCKET_NAME for persistent storage.
+SERVE_MEDIA = not AWS_STORAGE_BUCKET_NAME
+
 # --- Serve the built SPA from this service (single origin) -----------------
 # The Docker image copies the Vite build to backend/frontend_dist.
 _spa_dir = BASE_DIR / "frontend_dist"  # noqa: F405

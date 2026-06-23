@@ -346,11 +346,18 @@ class Command(BaseCommand):
         return user
 
     def _assign_avatar(self, user):
-        """Attach a bundled demo portrait once (skips if already set or missing)."""
-        if user.avatar:
-            return
+        """Attach a bundled demo portrait, (re)writing the file when it's missing.
+
+        On an ephemeral filesystem (e.g. Render's free tier) the media dir is
+        wiped on every deploy while the DB keeps the avatar path. Checking the
+        path alone would skip the lost file forever, so we re-materialise it
+        whenever it's gone — that keeps the seeded portraits displaying with no
+        S3. With S3 configured the file persists, so this re-write never fires.
+        """
         filename = AVATARS.get(user.email)
         if not filename:
+            return
+        if user.avatar and user.avatar.storage.exists(user.avatar.name):
             return
         path = SEED_AVATARS_DIR / filename
         if not path.exists():
