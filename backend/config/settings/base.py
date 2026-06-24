@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -219,3 +220,17 @@ ASGI_APPLICATION = "config.asgi.application"
 CHANNEL_LAYERS = {
     "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
 }
+
+
+# --- Helpers ---------------------------------------------------------------
+def ensure_strong_secret_key(key: str) -> None:
+    """Refuse a public/placeholder SECRET_KEY (enforced by prod settings).
+
+    A known key lets anyone forge sessions and JWTs, so production must fail
+    fast rather than silently boot with the dev default or an example value.
+    """
+    if key in ("", "insecure-dev-key-change-me", "change-me-in-production"):
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be set to a strong, secret value in production "
+            "(it is currently unset or a placeholder)."
+        )
