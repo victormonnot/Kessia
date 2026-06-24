@@ -29,6 +29,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 # Bring in the built SPA (prod settings serve it via WhiteNoise).
 COPY --from=frontend /app/frontend/dist ./frontend_dist
-RUN python manage.py collectstatic --noinput
+# collectstatic only gathers files; it doesn't sign anything. Render injects the
+# real DJANGO_SECRET_KEY at *runtime*, not at build time, so pass a throwaway key
+# here just to satisfy prod settings' strong-key check during the build.
+RUN DJANGO_SECRET_KEY=build-only-not-used-at-runtime python manage.py collectstatic --noinput
 # Render/Railway inject $PORT. start.sh runs migrate, ensures the admin, then daphne.
 CMD ["sh", "start.sh"]
