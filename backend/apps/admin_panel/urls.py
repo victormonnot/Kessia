@@ -7,11 +7,9 @@ urlpatterns = [
     # Users
     path("admin/users/", views.AdminUserList.as_view(), name="admin-users"),
     path("admin/users/<int:pk>/", views.AdminUserDetail.as_view(), name="admin-user-detail"),
-    path("admin/users/<int:pk>/suspend/", views.user_suspend, name="admin-user-suspend"),
-    path("admin/users/<int:pk>/unsuspend/", views.user_unsuspend, name="admin-user-unsuspend"),
     path("admin/users/<int:pk>/verify/", views.user_verify, name="admin-user-verify"),
     path("admin/users/<int:pk>/unverify/", views.user_unverify, name="admin-user-unverify"),
-    path("admin/users/<int:pk>/anonymize/", views.user_anonymize, name="admin-user-anonymize"),
+    path("admin/users/<int:pk>/delete/", views.user_delete, name="admin-user-delete"),
     # Listings
     path("admin/listings/", views.AdminListingList.as_view(), name="admin-listings"),
     path("admin/listings/<int:pk>/remove/", views.listing_remove, name="admin-listing-remove"),

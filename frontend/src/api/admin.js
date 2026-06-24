@@ -5,11 +5,9 @@ export const adminApi = {
 
   users: (params = {}) => api.get("/admin/users/", { params }).then((r) => r.data),
   user: (id) => api.get(`/admin/users/${id}/`).then((r) => r.data),
-  suspendUser: (id) => api.post(`/admin/users/${id}/suspend/`).then((r) => r.data),
-  unsuspendUser: (id) => api.post(`/admin/users/${id}/unsuspend/`).then((r) => r.data),
   verifyUser: (id) => api.post(`/admin/users/${id}/verify/`).then((r) => r.data),
   unverifyUser: (id) => api.post(`/admin/users/${id}/unverify/`).then((r) => r.data),
-  anonymizeUser: (id) => api.post(`/admin/users/${id}/anonymize/`).then((r) => r.data),
+  deleteUser: (id) => api.post(`/admin/users/${id}/delete/`).then((r) => r.data),
 
   listings: (params = {}) => api.get("/admin/listings/", { params }).then((r) => r.data),
   removeListing: (id) => api.post(`/admin/listings/${id}/remove/`).then((r) => r.data),

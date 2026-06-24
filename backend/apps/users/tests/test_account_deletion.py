@@ -1,14 +1,15 @@
 """Account deletion = anonymise-in-place (RGPD erasure), not hard delete.
 
-Covers the two failure modes the old hard-delete had:
-  - a doctor deleting their account destroyed the *writer's* order + review,
-  - a writer who had sold anything was blocked outright (ProtectedError -> 409).
-Both are fixed by anonymising in place and keeping the transactional rows.
+Refused while an order is in flight or funds are unsettled; otherwise the PII is
+wiped, listings without orders are deleted (the rest hidden), and the
+transactional records (orders, reviews) are kept — so the counterparty's data
+and the reviews survive (the deleted user shows as "Utilisateur supprimé").
 """
 
 import pytest
 from django.urls import reverse
 
+from apps.listings.models import Listing
 from apps.listings.tests.factories import ListingFactory
 from apps.orders.models import Order
 from apps.orders.tests.factories import OrderFactory
@@ -41,12 +42,10 @@ def test_doctor_delete_preserves_writers_order_and_review(api_client, user, writ
     assert Order.objects.filter(pk=order.pk).exists()
     assert Review.objects.filter(pk=review.pk).exists()
     writer_user.refresh_from_db()
-    assert writer_user.is_active is True
-    assert writer_user.deleted_at is None
+    assert writer_user.is_active is True and writer_user.deleted_at is None
 
 
-def test_writer_with_sold_listing_can_now_delete(api_client, writer_user, user):
-    # Previously this raised ProtectedError -> 409 and the writer was stuck.
+def test_writer_with_sold_listing_can_delete(api_client, writer_user, user):
     listing = ListingFactory(writer=writer_user)
     OrderFactory(
         listing=listing,
@@ -61,12 +60,19 @@ def test_writer_with_sold_listing_can_now_delete(api_client, writer_user, user):
 
     writer_user.refresh_from_db()
     assert writer_user.deleted_at is not None
-    # Their listings are pulled from the marketplace.
+    # A listing backing an order is hidden (kept, since the order references it).
     listing.refresh_from_db()
-    assert listing.is_published is False
+    assert listing.removed_at is not None
 
 
-def test_delete_deferred_while_order_in_flight(api_client, user, writer_user):
+def test_listing_without_orders_is_deleted(api_client, writer_user):
+    listing = ListingFactory(writer=writer_user)  # no orders
+    api_client.force_authenticate(user=writer_user)
+    assert _delete(api_client).status_code == 204
+    assert not Listing.objects.filter(pk=listing.pk).exists()
+
+
+def test_delete_blocked_while_order_in_flight(api_client, user, writer_user):
     listing = ListingFactory(writer=writer_user)
     OrderFactory(
         listing=listing,
@@ -75,53 +81,47 @@ def test_delete_deferred_while_order_in_flight(api_client, user, writer_user):
         status=Order.Status.IN_PROGRESS,
         payment_status=Order.PaymentStatus.HELD,
     )
-
     api_client.force_authenticate(user=user)
-    assert _delete(api_client).status_code == 202  # accepted but deferred
+    resp = _delete(api_client)
+    assert resp.status_code == 409
+    assert "commande en cours" in resp.json()["detail"]
     user.refresh_from_db()
-    assert user.is_active is False  # deactivated immediately
-    assert user.deletion_requested_at is not None
-    assert user.deleted_at is None  # not scrubbed yet
-    assert user.email == "doctor@example.com"  # PII kept while the contract is live
+    assert user.deleted_at is None  # not deleted
 
 
-def test_pending_deletion_finalized_when_order_settles(api_client, user, writer_user):
-    from apps.users.services import request_account_deletion
-
-    listing = ListingFactory(writer=writer_user)
-    order = OrderFactory(
-        listing=listing, doctor=user, writer=writer_user, status=Order.Status.PENDING
+def test_delete_blocked_while_funds_unsettled(api_client, user, writer_user):
+    # A completed order whose payout hasn't gone through yet (funds still held).
+    OrderFactory(
+        doctor=user,
+        writer=writer_user,
+        status=Order.Status.COMPLETED,
+        payment_status=Order.PaymentStatus.HELD,
     )
-
-    # Writer asks to delete while the order is still active -> deferred.
-    assert request_account_deletion(writer_user) is False
+    api_client.force_authenticate(user=writer_user)
+    resp = _delete(api_client)
+    assert resp.status_code == 409
+    assert "fonds" in resp.json()["detail"].lower()
     writer_user.refresh_from_db()
     assert writer_user.deleted_at is None
-    assert writer_user.email == "writer@example.com"
 
-    # Doctor cancels the (unpaid) pending order -> it settles with no money to
-    # move, and the writer's deferred erasure is finalised automatically.
+
+def test_delete_anonymizes_pii(api_client, user):
     api_client.force_authenticate(user=user)
-    resp = api_client.patch(
-        reverse("order-detail", args=[order.id]),
-        {"status": Order.Status.CANCELLED},
-        format="json",
-    )
-    assert resp.status_code == 200
-    writer_user.refresh_from_db()
-    assert writer_user.deleted_at is not None
-    assert writer_user.email == f"deleted-{writer_user.pk}@kessia.invalid"
+    assert _delete(api_client).status_code == 204
+    user.refresh_from_db()
+    assert user.email == f"deleted-{user.pk}@kessia.invalid"
+    assert user.first_name == "" and user.last_name == ""
+    assert user.is_active is False and user.deleted_at is not None
+    assert not user.has_usable_password()
 
 
-def test_anonymized_user_session_is_locked_out(api_client, user):
-    # Mint a real access token *before* deletion, then prove it stops working.
+def test_deleted_user_session_is_locked_out(api_client, user):
     from rest_framework_simplejwt.tokens import AccessToken
 
     token = str(AccessToken.for_user(user))
     api_client.force_authenticate(user=user)
     assert _delete(api_client).status_code == 204
 
-    # Real JWT path now (not force_authenticate): is_active=False -> 401.
     api_client.force_authenticate(user=None)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
     assert api_client.get(reverse("users-me")).status_code == 401

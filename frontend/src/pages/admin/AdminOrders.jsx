@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { adminApi } from "@/api/admin";
+import ConfirmButton from "@/components/ConfirmButton";
 import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/Modal";
@@ -138,27 +139,28 @@ export default function AdminOrders() {
                     </Button>
                     {o.payment_status === "held" && (
                       <>
-                        <Button
+                        <ConfirmButton
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            if (window.confirm("Verser les fonds au rédacteur ?"))
-                              action.mutate({ fn: adminApi.releaseOrder, id: o.id });
-                          }}
+                          title="Verser les fonds au rédacteur ?"
+                          description="Le montant (commission déduite) sera transféré au rédacteur. Action irréversible."
+                          confirmLabel="Verser"
+                          onConfirm={() => action.mutate({ fn: adminApi.releaseOrder, id: o.id })}
                         >
                           Verser
-                        </Button>
-                        <Button
+                        </ConfirmButton>
+                        <ConfirmButton
                           size="sm"
                           variant="ghost"
                           className="text-destructive"
-                          onClick={() => {
-                            if (window.confirm("Rembourser le médecin ?"))
-                              action.mutate({ fn: adminApi.refundOrder, id: o.id });
-                          }}
+                          destructive
+                          title="Rembourser le médecin ?"
+                          description="Le paiement sera remboursé au médecin. Action irréversible."
+                          confirmLabel="Rembourser"
+                          onConfirm={() => action.mutate({ fn: adminApi.refundOrder, id: o.id })}
                         >
                           Rembourser
-                        </Button>
+                        </ConfirmButton>
                       </>
                     )}
                   </TableCell>

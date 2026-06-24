@@ -45,7 +45,7 @@ from .serializers import (
     WriterPortfolioSerializer,
     WriterPublicationSerializer,
 )
-from .services import request_account_deletion
+from .services import anonymize_account, deletion_block_reason
 from .tokens import email_verification_token
 
 
@@ -278,28 +278,17 @@ class MeView(APIView):
         return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def delete(self, request):
-        """Honour an account-deletion request (RGPD erasure), password-confirmed.
-
-        Personal data is anonymised in place while transactional records are
-        retained. If an order is still in flight, erasure is deferred: the
-        account is deactivated now (202) and the scrub completes once that order
-        settles. With nothing in flight it completes immediately (204). Either
-        way the session is ended.
+        """Delete the account (RGPD erasure: personal data is anonymised in place,
+        transactional records are kept). Password-confirmed. Refused while an
+        order is in flight or funds are unsettled — finish/settle those first.
         """
         serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        completed = request_account_deletion(request.user)
-        if completed:
-            response = Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            response = Response(
-                {
-                    "detail": "Votre demande de suppression a été enregistrée. Votre compte "
-                    "est désactivé et sera anonymisé définitivement une fois vos commandes "
-                    "en cours terminées."
-                },
-                status=status.HTTP_202_ACCEPTED,
-            )
+        reason = deletion_block_reason(request.user)
+        if reason:
+            return Response({"detail": reason}, status=status.HTTP_409_CONFLICT)
+        anonymize_account(request.user)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)
         return response
 

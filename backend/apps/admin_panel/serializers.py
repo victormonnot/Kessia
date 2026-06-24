@@ -11,7 +11,6 @@ from .models import AuditLog, Report
 
 class AdminUserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
-    is_suspended = serializers.SerializerMethodField()
     is_deleted = serializers.SerializerMethodField()
 
     class Meta:
@@ -19,14 +18,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
         fields = (
             "id", "email", "first_name", "last_name", "full_name",
             "is_writer", "is_verified", "is_staff", "is_active",
-            "is_suspended", "is_deleted", "suspended_at", "deleted_at", "date_joined",
+            "is_deleted", "deleted_at", "date_joined",
         )
 
     def get_full_name(self, obj) -> str:
         return obj.get_full_name()
-
-    def get_is_suspended(self, obj) -> bool:
-        return obj.suspended_at is not None
 
     def get_is_deleted(self, obj) -> bool:
         return obj.deleted_at is not None

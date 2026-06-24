@@ -66,10 +66,15 @@ class UserSerializer(serializers.ModelSerializer):
 class UserPublicSerializer(serializers.ModelSerializer):
     """Slim representation used when nesting a user inside another resource."""
 
+    is_deleted = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer")
+        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer", "is_deleted")
         read_only_fields = fields
+
+    def get_is_deleted(self, obj) -> bool:
+        return obj.deleted_at is not None
 
 
 class RegisterSerializer(serializers.ModelSerializer):

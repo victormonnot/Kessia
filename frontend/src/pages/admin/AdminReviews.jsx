@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { adminApi } from "@/api/admin";
-import { Button } from "@/components/ui/button";
+import ConfirmButton from "@/components/ConfirmButton";
 import Badge from "@/components/ui/badge";
 import {
   Table,
@@ -58,21 +58,29 @@ export default function AdminReviews() {
                   <TableCell className="text-xs text-muted-foreground">{r.writer_email}</TableCell>
                   <TableCell className="text-right">
                     {r.is_removed ? (
-                      <Button size="sm" variant="outline" onClick={() => action.mutate({ fn: adminApi.restoreReview, id: r.id })}>
+                      <ConfirmButton
+                        size="sm"
+                        variant="outline"
+                        title="Restaurer cet avis ?"
+                        description="L'avis redeviendra visible et comptera de nouveau dans la note."
+                        confirmLabel="Restaurer"
+                        onConfirm={() => action.mutate({ fn: adminApi.restoreReview, id: r.id })}
+                      >
                         Restaurer
-                      </Button>
+                      </ConfirmButton>
                     ) : (
-                      <Button
+                      <ConfirmButton
                         size="sm"
                         variant="ghost"
                         className="text-destructive"
-                        onClick={() => {
-                          if (window.confirm("Retirer cet avis ?"))
-                            action.mutate({ fn: adminApi.removeReview, id: r.id });
-                        }}
+                        destructive
+                        title="Retirer cet avis ?"
+                        description="L'avis sera masqué et exclu de la note du rédacteur."
+                        confirmLabel="Retirer"
+                        onConfirm={() => action.mutate({ fn: adminApi.removeReview, id: r.id })}
                       >
                         Retirer
-                      </Button>
+                      </ConfirmButton>
                     )}
                   </TableCell>
                 </TableRow>

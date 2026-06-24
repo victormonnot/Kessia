@@ -49,20 +49,6 @@ def test_admin_stats_ok(admin_client):
 
 
 # --- User moderation -----------------------------------------------------
-def test_suspend_and_unsuspend(admin_client, writer_user):
-    assert admin_client.post(reverse("admin-user-suspend", args=[writer_user.id])).status_code == 200
-    writer_user.refresh_from_db()
-    assert writer_user.is_active is False and writer_user.suspended_at is not None
-
-    assert admin_client.post(reverse("admin-user-unsuspend", args=[writer_user.id])).status_code == 200
-    writer_user.refresh_from_db()
-    assert writer_user.is_active is True and writer_user.suspended_at is None
-
-
-def test_cannot_suspend_self(admin_client, admin_user):
-    assert admin_client.post(reverse("admin-user-suspend", args=[admin_user.id])).status_code == 400
-
-
 def test_verify_unverify(admin_client, writer_user):
     admin_client.post(reverse("admin-user-verify", args=[writer_user.id]))
     writer_user.refresh_from_db()
@@ -72,16 +58,33 @@ def test_verify_unverify(admin_client, writer_user):
     assert writer_user.is_verified is False
 
 
-def test_admin_anonymize_user(admin_client, writer_user):
-    assert admin_client.post(reverse("admin-user-anonymize", args=[writer_user.id])).status_code == 200
+def test_admin_delete_user(admin_client, writer_user):
+    assert admin_client.post(reverse("admin-user-delete", args=[writer_user.id])).status_code == 200
     writer_user.refresh_from_db()
     assert writer_user.deleted_at is not None
     assert writer_user.email == f"deleted-{writer_user.pk}@kessia.invalid"
 
 
+def test_admin_delete_blocked_while_active_order(admin_client, user, writer_user):
+    OrderFactory(
+        doctor=user, writer=writer_user, status=Order.Status.IN_PROGRESS,
+        payment_status=Order.PaymentStatus.HELD,
+    )
+    resp = admin_client.post(reverse("admin-user-delete", args=[writer_user.id]))
+    assert resp.status_code == 409
+    writer_user.refresh_from_db()
+    assert writer_user.deleted_at is None
+
+
+def test_deleted_user_hidden_from_admin_list(admin_client, writer_user):
+    admin_client.post(reverse("admin-user-delete", args=[writer_user.id]))
+    listed = admin_client.get(reverse("admin-users"))
+    assert writer_user.id not in [u["id"] for u in listed.json()["results"]]
+
+
 def test_moderation_action_is_audit_logged(admin_client, writer_user):
-    admin_client.post(reverse("admin-user-suspend", args=[writer_user.id]))
-    assert AuditLog.objects.filter(action="user.suspend", target_id=str(writer_user.id)).exists()
+    admin_client.post(reverse("admin-user-verify", args=[writer_user.id]))
+    assert AuditLog.objects.filter(action="user.verify", target_id=str(writer_user.id)).exists()
 
 
 # --- Content moderation --------------------------------------------------

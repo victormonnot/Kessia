@@ -49,16 +49,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
     # Account deletion = RGPD erasure by anonymisation (never a hard delete that
-    # would destroy the counterparty's orders/reviews). `deletion_requested_at`
-    # is set when the user asks; if an order is still in flight the scrub is
-    # deferred (the account is deactivated meanwhile) and completed when that
-    # order settles. `deleted_at` marks the moment the personal data was wiped.
-    deletion_requested_at = models.DateTimeField(null=True, blank=True)
+    # would destroy the counterparty's orders/reviews). Non-null = the account
+    # has been deleted: personal data is wiped but transactional records are kept.
     deleted_at = models.DateTimeField(null=True, blank=True)
-
-    # Set when an admin suspends the account (login blocked, hidden) — distinct
-    # from deletion. Cleared on un-suspend.
-    suspended_at = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 

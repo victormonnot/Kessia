@@ -2,6 +2,8 @@
 
 export function fullName(user, fallback = "Utilisateur") {
   if (!user) return fallback;
+  // A deleted (anonymised) account has its name wiped — show a clear placeholder.
+  if (user.is_deleted) return "Utilisateur supprimé";
   const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
   return name || user.email || fallback;
 }
