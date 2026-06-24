@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { adminApi } from "@/api/admin";
-import { Button } from "@/components/ui/button";
+import ConfirmButton from "@/components/ConfirmButton";
 import Badge from "@/components/ui/badge";
 import {
   Table,
@@ -75,21 +75,29 @@ export default function AdminListings() {
                   </TableCell>
                   <TableCell className="text-right">
                     {l.is_removed ? (
-                      <Button size="sm" variant="outline" onClick={() => action.mutate({ fn: adminApi.restoreListing, id: l.id })}>
+                      <ConfirmButton
+                        size="sm"
+                        variant="outline"
+                        title="Restaurer cette annonce ?"
+                        description={`« ${l.title} » sera de nouveau visible sur le site.`}
+                        confirmLabel="Restaurer"
+                        onConfirm={() => action.mutate({ fn: adminApi.restoreListing, id: l.id })}
+                      >
                         Restaurer
-                      </Button>
+                      </ConfirmButton>
                     ) : (
-                      <Button
+                      <ConfirmButton
                         size="sm"
                         variant="ghost"
                         className="text-destructive"
-                        onClick={() => {
-                          if (window.confirm("Retirer cette annonce du site ?"))
-                            action.mutate({ fn: adminApi.removeListing, id: l.id });
-                        }}
+                        destructive
+                        title="Retirer cette annonce ?"
+                        description={`« ${l.title} » sera retirée du site.`}
+                        confirmLabel="Retirer"
+                        onConfirm={() => action.mutate({ fn: adminApi.removeListing, id: l.id })}
                       >
                         Retirer
-                      </Button>
+                      </ConfirmButton>
                     )}
                   </TableCell>
                 </TableRow>

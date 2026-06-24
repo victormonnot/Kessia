@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { adminApi } from "@/api/admin";
+import ConfirmButton from "@/components/ConfirmButton";
 import { Button } from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import {
@@ -80,12 +81,24 @@ export default function AdminReports() {
                   <TableCell className="space-x-1 text-right">
                     {r.status === "open" && (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => action.mutate({ fn: adminApi.resolveReport, id: r.id })}>
+                        <ConfirmButton
+                          size="sm"
+                          variant="outline"
+                          title="Marquer ce signalement comme résolu ?"
+                          confirmLabel="Résoudre"
+                          onConfirm={() => action.mutate({ fn: adminApi.resolveReport, id: r.id })}
+                        >
                           Résoudre
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => action.mutate({ fn: adminApi.dismissReport, id: r.id })}>
+                        </ConfirmButton>
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          title="Rejeter ce signalement ?"
+                          confirmLabel="Rejeter"
+                          onConfirm={() => action.mutate({ fn: adminApi.dismissReport, id: r.id })}
+                        >
                           Rejeter
-                        </Button>
+                        </ConfirmButton>
                       </>
                     )}
                   </TableCell>

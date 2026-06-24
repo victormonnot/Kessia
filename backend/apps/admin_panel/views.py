@@ -11,7 +11,7 @@ from apps.orders.models import Order
 from apps.requests_board.models import Request
 from apps.reviews.models import Review
 from apps.users.models import User
-from apps.users.services import anonymize_account
+from apps.users.services import anonymize_account, deletion_block_reason
 from apps.verification.models import VerificationRequest
 
 from . import serializers as s
@@ -31,7 +31,6 @@ def stats(request):
         "users_total": users.count(),
         "writers_total": users.filter(is_writer=True).count(),
         "verified_writers": users.filter(is_writer=True, is_verified=True).count(),
-        "suspended_users": User.objects.filter(suspended_at__isnull=False).count(),
         "listings_total": Listing.objects.filter(removed_at__isnull=True).count(),
         "requests_open": Request.objects.filter(
             status=Request.Status.OPEN, removed_at__isnull=True
@@ -64,7 +63,8 @@ class AdminUserList(generics.ListAPIView):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        qs = User.objects.all().order_by("-date_joined")
+        # Deleted (anonymised) accounts are gone from the list.
+        qs = User.objects.filter(deleted_at__isnull=True).order_by("-date_joined")
         q = self.request.query_params.get("search")
         if q:
             qs = qs.filter(
@@ -75,13 +75,6 @@ class AdminUserList(generics.ListAPIView):
             qs = qs.filter(is_writer=True)
         elif role == "doctor":
             qs = qs.filter(is_writer=False)
-        st = self.request.query_params.get("status")
-        if st == "suspended":
-            qs = qs.filter(suspended_at__isnull=False)
-        elif st == "deleted":
-            qs = qs.filter(deleted_at__isnull=False)
-        elif st == "active":
-            qs = qs.filter(is_active=True, deleted_at__isnull=True)
         return qs
 
 
@@ -89,34 +82,6 @@ class AdminUserDetail(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = s.AdminUserDetailSerializer
     permission_classes = [IsAdminUser]
-
-
-@api_view(["POST"])
-@permission_classes([IsAdminUser])
-def user_suspend(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if user.id == request.user.id:
-        return Response({"detail": "Vous ne pouvez pas vous suspendre vous-même."}, status=400)
-    if user.deleted_at is not None:
-        return Response({"detail": "Compte déjà supprimé."}, status=400)
-    user.is_active = False
-    user.suspended_at = timezone.now()
-    user.save(update_fields=["is_active", "suspended_at"])
-    log_action(request.user, "user.suspend", "user", user.id, reason=request.data.get("reason", ""))
-    return Response(s.AdminUserSerializer(user).data)
-
-
-@api_view(["POST"])
-@permission_classes([IsAdminUser])
-def user_unsuspend(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if user.deleted_at is not None:
-        return Response({"detail": "Compte supprimé."}, status=400)
-    user.is_active = True
-    user.suspended_at = None
-    user.save(update_fields=["is_active", "suspended_at"])
-    log_action(request.user, "user.unsuspend", "user", user.id)
-    return Response(s.AdminUserSerializer(user).data)
 
 
 @api_view(["POST"])
@@ -141,13 +106,20 @@ def user_unverify(request, pk):
 
 @api_view(["POST"])
 @permission_classes([IsAdminUser])
-def user_anonymize(request, pk):
-    """Erase a user's personal data on their behalf (RGPD request to the owner)."""
+def user_delete(request, pk):
+    """Delete a user's account (RGPD erasure: personal data anonymised in place,
+    transactional records kept). Refused — same as a self-deletion — while the
+    user has an order in flight or unsettled funds."""
     user = get_object_or_404(User, pk=pk)
     if user.id == request.user.id:
         return Response({"detail": "Utilisez la suppression de votre propre compte."}, status=400)
+    if user.deleted_at is not None:
+        return Response({"detail": "Compte déjà supprimé."}, status=400)
+    reason = deletion_block_reason(user)
+    if reason:
+        return Response({"detail": reason}, status=409)
     anonymize_account(user)
-    log_action(request.user, "user.anonymize", "user", user.id)
+    log_action(request.user, "user.delete", "user", user.id)
     return Response(s.AdminUserSerializer(user).data)
 
 
