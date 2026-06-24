@@ -15,6 +15,10 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
+# Never boot production with a public/placeholder SECRET_KEY — a known key lets
+# anyone forge sessions and JWTs. Fail fast instead of running insecurely.
+ensure_strong_secret_key(SECRET_KEY)  # noqa: F405
+
 # --- Host / proxy ----------------------------------------------------------
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # One proxy (Render) sits in front: make DRF throttling read the real client IP
