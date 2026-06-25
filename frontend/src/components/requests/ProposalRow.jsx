@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { avatarFor } from "@/lib/demo-assets";
 import { formatPrice, fullName, initials } from "@/lib/format";
 
 export default function ProposalRow({ proposal, canDecide, onDecide, deciding }) {
@@ -22,7 +21,7 @@ export default function ProposalRow({ proposal, canDecide, onDecide, deciding })
     <div className="flex flex-col gap-3 border-b py-4 last:border-0 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex gap-3">
         <Avatar className="size-9">
-          <AvatarImage src={proposal.writer?.avatar || avatarFor(fullName(proposal.writer))} alt="" />
+          <AvatarImage src={proposal.writer?.avatar || undefined} alt="" />
           <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
             {initials(proposal.writer)}
           </AvatarFallback>

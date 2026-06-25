@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/feedback/EmptyState";
 import ErrorState from "@/components/feedback/ErrorState";
 import { cn } from "@/lib/utils";
-import { avatarFor } from "@/lib/demo-assets";
 import { formatRelative, fullName, initials } from "@/lib/format";
 import { useConversations } from "@/hooks/useMessaging";
 
@@ -72,7 +71,7 @@ export default function Inbox() {
                 >
                   <Avatar className="size-11">
                     <AvatarImage
-                      src={c.other_user?.avatar || avatarFor(fullName(c.other_user))}
+                      src={c.other_user?.avatar || undefined}
                       alt=""
                     />
                     <AvatarFallback className="bg-secondary text-sm font-semibold text-foreground">

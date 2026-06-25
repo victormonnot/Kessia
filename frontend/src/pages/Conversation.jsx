@@ -12,7 +12,6 @@ import MessageAttachment from "@/components/messaging/MessageAttachment";
 import { useConversation, useMessages, useSendMessage } from "@/hooks/useMessaging";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
-import { avatarFor } from "@/lib/demo-assets";
 import { errorMessage, formatBytes, formatDateTime, fullName, initials } from "@/lib/format";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -92,7 +91,7 @@ export default function Conversation() {
             </Link>
           </Button>
           <Avatar className="size-10">
-            <AvatarImage src={other?.avatar || avatarFor(fullName(other))} alt="" />
+            <AvatarImage src={other?.avatar || undefined} alt="" />
             <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
               {initials(other)}
             </AvatarFallback>

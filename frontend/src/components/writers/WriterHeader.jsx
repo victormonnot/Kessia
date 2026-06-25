@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import Stars from "@/components/ui/Stars";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { cn } from "@/lib/utils";
-import { avatarFor } from "@/lib/demo-assets";
 import { sectionVisible } from "@/lib/profile";
 import { fullName, initials } from "@/lib/format";
 
@@ -32,7 +31,7 @@ export default function WriterHeader({
           large ? "size-28 sm:size-32" : "size-24",
         )}
       >
-        <AvatarImage src={writer.avatar || avatarFor(name)} alt="" />
+        <AvatarImage src={writer.avatar || undefined} alt="" />
         <AvatarFallback className="bg-secondary text-2xl font-semibold text-foreground">
           {initials(writer)}
         </AvatarFallback>
