@@ -282,6 +282,7 @@ class PublicWriterSerializer(serializers.ModelSerializer):
             "response_time",
             "date_joined",
             "is_verified",
+            "is_writer",
             "specialties",
             "listings",
             "experiences",

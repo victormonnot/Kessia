@@ -26,7 +26,17 @@ def test_public_writer_profile_lists_published_listings_and_specialties(
     assert body["reviews_count"] == 0  # placeholder until reviews land
 
 
-def test_public_profile_404_for_non_writer(api_client, user):
+def test_public_profile_available_for_any_user(api_client, user):
+    # Every user (here a doctor) has a public profile, with the writer flag off.
+    response = api_client.get(reverse("public-writer", args=[user.id]))
+    assert response.status_code == 200
+    assert response.json()["is_writer"] is False
+
+
+def test_public_profile_404_for_deleted_user(api_client, user):
+    from apps.users.services import anonymize_account
+
+    anonymize_account(user)
     response = api_client.get(reverse("public-writer", args=[user.id]))
     assert response.status_code == 404
 

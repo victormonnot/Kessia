@@ -10,6 +10,7 @@ vi.mock("@/hooks/useWriters", () => ({
       id: 3,
       first_name: "Marie",
       last_name: "Durand",
+      is_writer: true,
       is_verified: true,
       avg_rating: 4.5,
       reviews_count: 1,

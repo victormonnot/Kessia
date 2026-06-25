@@ -60,16 +60,12 @@ export default function AdminUsers() {
               {users.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
-                    {u.is_writer ? (
-                      <Link
-                        to={`/redacteurs/${u.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {u.full_name || u.email}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{u.full_name || "—"}</span>
-                    )}
+                    <Link
+                      to={`/redacteurs/${u.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {u.full_name || u.email}
+                    </Link>
                     <div className="text-xs text-muted-foreground">{u.email}</div>
                   </TableCell>
                   <TableCell className="space-x-1">
