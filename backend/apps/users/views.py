@@ -323,9 +323,11 @@ def activate_writer(request):
 
 
 class PublicWriterView(generics.RetrieveAPIView):
-    """Public, shareable writer profile. Only writers have one (404 otherwise)."""
+    """Public, shareable profile for any (non-deleted) user — writers get the
+    full profile, everyone else the common fields (writer sections come back
+    empty)."""
 
-    queryset = User.objects.filter(is_writer=True)
+    queryset = User.objects.filter(deleted_at__isnull=True)
     serializer_class = PublicWriterSerializer
     permission_classes = (AllowAny,)
 

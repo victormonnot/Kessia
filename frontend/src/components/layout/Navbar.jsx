@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Settings,
   Shield,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -99,6 +100,11 @@ export default function Navbar() {
                 ))}
                 {user && (
                   <>
+                    <SheetClose asChild>
+                      <NavLink to={`/redacteurs/${user.id}`} className={linkClass}>
+                        Mon profil
+                      </NavLink>
+                    </SheetClose>
                     <SheetClose asChild>
                       <NavLink to={dashboardPath} className={linkClass}>
                         Tableau de bord
@@ -219,6 +225,9 @@ export default function Navbar() {
                     </span>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate(`/redacteurs/${user.id}`)}>
+                    <User className="size-4" /> Mon profil
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate(dashboardPath)}>
                     <LayoutDashboard className="size-4" /> Tableau de bord
                   </DropdownMenuItem>
