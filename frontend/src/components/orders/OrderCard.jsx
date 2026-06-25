@@ -1,7 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
 import OrderActions from "@/components/orders/OrderActions";
-import { avatarFor } from "@/lib/demo-assets";
 import { PAYMENT_STATUS_LABELS } from "@/lib/choices";
 import { formatPrice, fullName, initials } from "@/lib/format";
 
@@ -14,7 +13,7 @@ export default function OrderCard({ order, role }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <Avatar className="size-10">
-            <AvatarImage src={counterparty?.avatar || avatarFor(fullName(counterparty))} alt="" />
+            <AvatarImage src={counterparty?.avatar || undefined} alt="" />
             <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
               {initials(counterparty)}
             </AvatarFallback>

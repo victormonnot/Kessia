@@ -4,27 +4,30 @@ import { Clock } from "lucide-react";
 import Stars from "@/components/ui/Stars";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import FavoriteButton from "@/components/ui/FavoriteButton";
-import { avatarFor } from "@/lib/demo-assets";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, initialsFromName } from "@/lib/format";
 import { DELIVERABLE_OPTIONS, SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
 export default function ListingCard({ listing }) {
-  // Malt-style preview: the writer's own photo is the cover. Real avatar first,
-  // deterministic demo portrait as fallback (always resolves to a face).
-  const photo = listing.writer_avatar || avatarFor(listing.writer_name);
-
+  // Malt-style preview: the writer's own photo is the cover. With no photo we
+  // show their initials (never a stand-in face).
   return (
     <Link
       to={`/listings/${listing.id}`}
       className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-        <img
-          src={photo}
-          alt={listing.writer_name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-        />
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary">
+        {listing.writer_avatar ? (
+          <img
+            src={listing.writer_avatar}
+            alt={listing.writer_name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-muted-foreground">
+            {initialsFromName(listing.writer_name)}
+          </div>
+        )}
         {listing.writer_is_verified && (
           <VerifiedBadge solid label="Rédacteur vérifié" className="absolute left-2 top-2" />
         )}

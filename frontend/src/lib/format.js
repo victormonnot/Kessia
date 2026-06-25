@@ -16,6 +16,14 @@ export function initials(user) {
   return (combined || user.email?.[0] || "?").toUpperCase();
 }
 
+// Initials from a plain full-name string (e.g. "Alice Martin" -> "AM").
+export function initialsFromName(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const chars = (parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+  return (chars || "?").toUpperCase();
+}
+
 export function formatPrice(amount, currency = "EUR") {
   if (amount === null || amount === undefined || amount === "") return "—";
   const value = Number(amount);

@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { useListings } from "@/hooks/useListings";
 import { useConnectStatus } from "@/hooks/usePayments";
-import { useMyVerifications } from "@/hooks/useVerification";
 
 function Step({ done, icon: Icon, title, description, action }) {
   return (
@@ -32,14 +31,12 @@ export default function Onboarding() {
   const user = useAuthStore((s) => s.user);
   const { data: listings } = useListings({ mine: true });
   const { data: connect } = useConnectStatus();
-  const { data: verifs } = useMyVerifications();
 
   const hasBio = Boolean(user?.bio?.trim());
   const hasListing = (listings?.results?.length || 0) > 0;
   const stripeReady = Boolean(connect?.payouts_enabled);
-  const verifDone = user?.is_verified || verifs?.results?.[0]?.status === "pending";
 
-  const steps = [hasBio, hasListing, stripeReady, verifDone];
+  const steps = [hasBio, hasListing, stripeReady];
   const completed = steps.filter(Boolean).length;
 
   return (
@@ -91,17 +88,18 @@ export default function Onboarding() {
             </Button>
           }
         />
-        <Step
-          done={verifDone}
-          icon={ShieldCheck}
-          title="Demandez la vérification"
-          description="Obtenez le badge « Vérifié » en justifiant vos qualifications."
-          action={
-            <Button asChild size="sm">
-              <Link to="/dashboard/writer">Demander la vérification</Link>
-            </Button>
-          }
-        />
+      </div>
+
+      {/* Verification is optional and available anytime — not a required step. */}
+      <div className="mt-4 rounded-lg border bg-secondary/40 p-4">
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <ShieldCheck className="size-4 text-primary" /> Vérification — facultatif
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Le badge « Vérifié » est optionnel. Vous pouvez en faire la demande à tout moment
+          depuis votre tableau de bord ou vos paramètres — ce n'est pas une étape obligatoire
+          pour commencer.
+        </p>
       </div>
 
       <div className="mt-6 flex justify-end">
