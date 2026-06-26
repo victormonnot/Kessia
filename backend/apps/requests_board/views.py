@@ -1,5 +1,4 @@
 from django.db.models import Count, Exists, OuterRef, Q
-from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -142,7 +141,3 @@ class ProposalViewSet(
             serializer.save()
             instance.refresh_from_db()
         return Response(ProposalSerializer(instance).data)
-
-
-def get_proposal_or_404(pk):
-    return get_object_or_404(Proposal, pk=pk)
