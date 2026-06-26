@@ -104,8 +104,14 @@ export function useResendVerification() {
 }
 
 export function useChangePassword() {
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
   return useMutation({
     mutationFn: (payload) => authApi.changePassword(payload),
+    onSuccess: (data) => {
+      // Changing the password revokes other sessions and re-issues this one —
+      // move onto the fresh access token so we don't ride an old one.
+      if (data?.access) setAccessToken(data.access);
+    },
   });
 }
 
