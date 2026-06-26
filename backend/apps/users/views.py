@@ -7,6 +7,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -162,6 +163,7 @@ def google_login(request):
             credential, google_requests.Request(), settings.GOOGLE_OAUTH_CLIENT_ID
         )
     except ValueError:
+        LoginThrottle().record_failure(request)
         return Response(
             {"detail": "Jeton Google invalide."}, status=status.HTTP_401_UNAUTHORIZED
         )
@@ -207,7 +209,12 @@ class CookieTokenObtainPairView(TokenObtainPairView):
     throttle_classes = (LoginThrottle,)
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except (AuthenticationFailed, InvalidToken, TokenError):
+            # Only failed logins count toward the anti-bruteforce throttle.
+            LoginThrottle().record_failure(request)
+            raise
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop("refresh", None)
             if refresh:
