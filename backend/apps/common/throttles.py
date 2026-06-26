@@ -69,3 +69,10 @@ class EmailResendThrottle(UserRateThrottle):
 
 class EmailChangeThrottle(UserRateThrottle):
     scope = "email-change"
+
+
+class MessageThrottle(UserRateThrottle):
+    """Cap how fast a user can send chat messages, to curb spam/flooding and the
+    DB writes, attachment storage and notification emails each send can trigger."""
+
+    scope = "messaging"

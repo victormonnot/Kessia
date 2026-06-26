@@ -187,3 +187,24 @@ def test_post_message_broadcasts_to_conversation_group(user, writer_user):
         assert args[0] == f"conversation_{conv.id}"
         assert args[1]["type"] == "chat.message"
         assert args[1]["message"]["body"] == "Salut"
+
+
+def test_message_sending_is_throttled(user, writer_user):
+    # A scripted flood is capped while reading stays open. Patch in a tiny rate
+    # (the real one is 30/min) so the test only needs a couple of sends.
+    from unittest.mock import patch
+
+    from django.core.cache import cache
+
+    from apps.common.throttles import MessageThrottle
+
+    cache.clear()
+    conv = Conversation.objects.create(user_low=user, user_high=writer_user)
+    client = _client(user)
+    url = reverse("conversation-messages", args=[conv.id])
+    with patch.object(MessageThrottle, "THROTTLE_RATES", {"messaging": "1/min"}):
+        assert client.post(url, {"body": "un"}, format="multipart").status_code == 201
+        assert client.post(url, {"body": "deux"}, format="multipart").status_code == 429
+        # Reads are not throttled even after the send limit is reached.
+        assert client.get(url).status_code == 200
+    cache.clear()
