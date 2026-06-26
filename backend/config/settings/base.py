@@ -152,6 +152,12 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# The OpenAPI schema + Swagger UI publish a full map of every endpoint, which is
+# free reconnaissance for an attacker. Off by default (prod-safe); dev.py turns
+# it on for local convenience, and it can be flipped on in any environment via
+# the ENABLE_API_DOCS env var (e.g. to demo the docs). See config/urls.py.
+ENABLE_API_DOCS = config("ENABLE_API_DOCS", default=False, cast=bool)
+
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:5173",

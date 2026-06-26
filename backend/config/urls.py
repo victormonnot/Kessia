@@ -17,13 +17,20 @@ urlpatterns = [
     path("api/v1/", include("apps.verification.urls")),
     path("api/v1/", include("apps.favorites.urls")),
     path("api/v1/", include("apps.admin_panel.urls")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path(
-        "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
-        name="swagger-ui",
-    ),
 ]
+
+# The OpenAPI schema + Swagger UI map every endpoint, so they double as free
+# reconnaissance. Gate them behind ENABLE_API_DOCS (off in prod by default); set
+# ENABLE_API_DOCS=True to expose them, e.g. for a demo. See settings/base.py.
+if getattr(settings, "ENABLE_API_DOCS", False):
+    urlpatterns += [
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path(
+            "api/docs/",
+            SpectacularSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
+    ]
 
 # Dev only: serve uploaded media (avatars, etc.) through Django. In prod, media
 # is served by S3 (django-storages), so this no-ops when DEBUG is False.
