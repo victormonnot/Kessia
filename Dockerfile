@@ -25,7 +25,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 # Bring in the built SPA (prod settings serve it via WhiteNoise).
 COPY --from=frontend /app/frontend/dist ./frontend_dist
