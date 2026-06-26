@@ -134,6 +134,9 @@ REST_FRAMEWORK = {
         "password-reset": "5/hour",
         "email-resend": "3/hour",
         "email-change": "3/hour",
+        # Sending chat messages: generous for real conversations, but caps a
+        # scripted flood (spam, inbox-bombing, storage/DB abuse). Per user.
+        "messaging": "30/min",
     },
 }
 
