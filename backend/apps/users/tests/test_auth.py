@@ -293,6 +293,41 @@ def test_change_password_succeeds_with_correct_current(auth_client, user):
     assert user.check_password("BrandNewPass123!")
 
 
+def test_change_password_revokes_other_sessions(auth_client, user):
+    from rest_framework_simplejwt.exceptions import TokenError
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    other = RefreshToken.for_user(user)  # a session on another device / an intruder
+    response = auth_client.post(
+        reverse("users-change-password"),
+        {"current_password": "testpass123", "new_password": "BrandNewPass123!"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert "access" in response.json()  # the acting session is re-issued
+    with pytest.raises(TokenError):
+        other.check_blacklist()  # ...but the other session is now revoked
+
+
+def test_password_reset_confirm_revokes_sessions(api_client, user):
+    from rest_framework_simplejwt.exceptions import TokenError
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    other = RefreshToken.for_user(user)
+    response = api_client.post(
+        reverse("auth-password-reset-confirm"),
+        {
+            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+            "token": default_token_generator.make_token(user),
+            "password": "BrandNewPass123!",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+    with pytest.raises(TokenError):
+        other.check_blacklist()
+
+
 def test_change_password_rejects_wrong_current(auth_client, user):
     response = auth_client.post(
         reverse("users-change-password"),

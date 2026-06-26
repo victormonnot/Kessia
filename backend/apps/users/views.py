@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -48,6 +49,17 @@ from .serializers import (
 )
 from .services import anonymize_account, deletion_block_reason
 from .tokens import email_verification_token
+
+
+def _revoke_all_sessions(user) -> None:
+    """Blacklist every outstanding refresh token for the user — logs out all
+    sessions (other devices / a compromised one) after a credential change.
+
+    Access tokens are stateless and can't be revoked, but they expire in minutes;
+    blacklisting the refresh tokens stops any other session from refreshing.
+    """
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
 
 
 @api_view(["POST"])
@@ -107,7 +119,9 @@ def password_reset_confirm(request):
     """Validate the emailed uid/token and set the new password."""
     serializer = PasswordResetConfirmSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
+    user = serializer.save()
+    # A reset usually follows a compromise — log out every existing session.
+    _revoke_all_sessions(user)
     return Response({"detail": "Votre mot de passe a été réinitialisé."})
 
 
@@ -306,7 +320,14 @@ def change_password(request):
     serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response({"detail": "Mot de passe mis à jour."})
+    # Log out every other session, then re-issue this one so the user stays in.
+    _revoke_all_sessions(request.user)
+    refresh = RefreshToken.for_user(request.user)
+    response = Response(
+        {"detail": "Mot de passe mis à jour.", "access": str(refresh.access_token)}
+    )
+    set_auth_cookies(response, str(refresh))
+    return response
 
 
 @api_view(["POST"])
@@ -318,7 +339,11 @@ def change_email(request):
     user = serializer.save()
     # The new address is unverified — send a fresh confirmation link.
     _send_email_verification(user)
-    return Response(UserSerializer(user, context={"request": request}).data)
+    # Changing the account email also evicts other sessions; keep this one.
+    _revoke_all_sessions(user)
+    response = Response(UserSerializer(user, context={"request": request}).data)
+    set_auth_cookies(response, str(RefreshToken.for_user(user)))
+    return response
 
 
 @api_view(["POST"])
