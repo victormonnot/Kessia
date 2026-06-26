@@ -82,12 +82,22 @@ if SERVE_SPA:
     WHITENOISE_ROOT = _spa_dir
     WHITENOISE_INDEX_FILE = True
 
-# --- Channels: Redis if provided, else in-memory (single free instance) ----
+# --- Channels + cache: Redis if provided, else in-memory (single free instance)
 _redis_url = config("REDIS_URL", default="")
 if _redis_url:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {"hosts": [_redis_url]},
+        }
+    }
+    # Throttle counters must live in a shared, durable store. Per-process LocMem
+    # (the default) multiplies the limits across workers/instances and resets on
+    # every redeploy, so the anti-bruteforce/anti-spam limits would be far looser
+    # than configured. Redis gives one global counter (see apps/common/throttles).
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": _redis_url,
         }
     }

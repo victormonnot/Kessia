@@ -127,9 +127,11 @@ REST_FRAMEWORK = {
     # Email senders are tight (each hit sends a real email and the Brevo free
     # tier is 300/day); login is anti-bruteforce.
     "DEFAULT_THROTTLE_RATES": {
-        "auth-login": "10/min",
+        # Login counts only *failed* attempts (see LoginThrottle), so a busy
+        # shared IP of legit users isn't blocked; a brute-forcer still trips it.
+        "auth-login": "20/min",
         "auth-register": "10/hour",
-        "password-reset": "3/hour",
+        "password-reset": "5/hour",
         "email-resend": "3/hour",
         "email-change": "3/hour",
     },
