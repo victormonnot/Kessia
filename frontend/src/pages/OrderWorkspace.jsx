@@ -18,9 +18,18 @@ import { ordersApi } from "@/api/orders";
 import { useOrder, useOrderConversation, useUploadOrderAttachment } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import { PAYMENT_STATUS_LABELS } from "@/lib/choices";
-import { errorMessage, formatDateTime, formatPrice, fullName, initials } from "@/lib/format";
+import {
+  errorMessage,
+  formatDate,
+  formatDateTime,
+  formatPrice,
+  fullName,
+  initials,
+} from "@/lib/format";
 
 const CLOSED_STATUSES = ["completed", "cancelled", "declined"];
+// Statuses where a deadline can still be "overdue" (work isn't finished/closed).
+const ACTIVE_STATUSES = ["accepted", "in_progress"];
 
 function roleFor(order, me) {
   if (!order || !me) return null;
@@ -284,6 +293,14 @@ export default function OrderWorkspace() {
                     <Row label="Paiement">
                       {PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}
                     </Row>
+                    {order.due_at && (
+                      <Row label="Échéance">
+                        <DueDate dueAt={order.due_at} status={order.status} />
+                      </Row>
+                    )}
+                    {order.revision_count > 0 && (
+                      <Row label="Révisions">{order.revision_count}</Row>
+                    )}
                     <Row label="Créée le">{formatDateTime(order.created_at)}</Row>
                   </CardContent>
                 </Card>
@@ -326,5 +343,15 @@ function Row({ label, children }) {
       <span className="text-muted-foreground">{label}</span>
       <span className="text-right">{children}</span>
     </div>
+  );
+}
+
+function DueDate({ dueAt, status }) {
+  const overdue = ACTIVE_STATUSES.includes(status) && new Date(dueAt) < new Date();
+  return (
+    <span className={overdue ? "font-medium text-destructive" : undefined}>
+      {formatDate(dueAt)}
+      {overdue ? " · en retard" : ""}
+    </span>
   );
 }

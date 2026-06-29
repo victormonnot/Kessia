@@ -11,11 +11,13 @@ so replays (duplicate webhooks, retried requests) never move funds twice.
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 import stripe
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from apps.orders.models import Order, OrderEvent
 from apps.orders.services import record_event
@@ -151,7 +153,11 @@ def mark_payment_held(order: Order) -> bool:
     order.payment_status = Order.PaymentStatus.HELD
     if order.status == Order.Status.ACCEPTED:
         order.status = Order.Status.IN_PROGRESS
-    order.save(update_fields=["payment_status", "status", "updated_at"])
+        # Work starts now: set the delivery deadline from the listing turnaround
+        # (proposal-based orders have no agreed turnaround, so no deadline).
+        if order.listing_id:
+            order.due_at = timezone.now() + timedelta(days=order.listing.turnaround_days)
+    order.save(update_fields=["payment_status", "status", "due_at", "updated_at"])
     record_event(order, OrderEvent.Type.PAID, actor=order.doctor, amount=str(order.amount))
     return True
 

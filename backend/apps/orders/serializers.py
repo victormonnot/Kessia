@@ -90,6 +90,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "amount",
             "currency",
             "payment_status",
+            "due_at",
+            "revision_count",
             "deliverables",
             "attachments",
             "events",

@@ -1,9 +1,11 @@
 import os
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -243,6 +245,38 @@ class OrderViewSet(
         return Response(
             ConversationSerializer(conv, context={"request": request}).data
         )
+
+    @action(detail=True, methods=("post",), url_path="request-revision")
+    def request_revision(self, request, pk=None):
+        """The doctor sends a delivered order back for revision.
+
+        Returns it to ``in_progress``, bumps the revision counter, pushes the
+        deadline back by the listing turnaround, logs the event and notifies the
+        writer. A dedicated action (not the status PATCH) keeps the transition
+        machine simple.
+        """
+        order = self.get_object()
+        if order.doctor_id != request.user.id:
+            return Response(
+                {"detail": "Seul le médecin peut demander une révision."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if order.status != Order.Status.DELIVERED:
+            return Response(
+                {"detail": "Vous ne pouvez demander une révision que sur une commande livrée."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        note = (request.data.get("note") or "").strip()
+        order.status = Order.Status.IN_PROGRESS
+        order.revision_count += 1
+        if order.listing_id:
+            order.due_at = timezone.now() + timedelta(days=order.listing.turnaround_days)
+        order.save(update_fields=["status", "revision_count", "due_at", "updated_at"])
+        record_event(order, OrderEvent.Type.REVISION_REQUESTED, actor=request.user, note=note)
+        notify_order_event(order, "order_revision_requested")
+
+        return Response(OrderDetailSerializer(order).data)
 
     @action(detail=False, methods=("get",))
     def earnings(self, request):

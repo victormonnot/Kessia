@@ -1,14 +1,17 @@
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.listings.tests.factories import ListingFactory
 from apps.orders.models import Order, OrderEvent
 from apps.orders.services import record_event
+from apps.payments.services import mark_payment_held
 from apps.orders.tests.factories import (
     DeliverableFactory,
     OrderAttachmentFactory,
@@ -443,6 +446,59 @@ def test_attachment_upload_rejects_disallowed_type(auth_client, user, writer_use
     )
     assert response.status_code == 400
     assert order.attachments.count() == 0
+
+
+# --- Revisions & deadlines -------------------------------------------------
+
+
+def test_doctor_can_request_revision(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user, status=Order.Status.DELIVERED)
+
+    response = auth_client.post(
+        reverse("order-request-revision", args=[order.id]),
+        {"note": "Merci de revoir la conclusion."},
+        format="json",
+    )
+    assert response.status_code == 200
+    order.refresh_from_db()
+    assert order.status == Order.Status.IN_PROGRESS
+    assert order.revision_count == 1
+    assert order.events.filter(type=OrderEvent.Type.REVISION_REQUESTED).exists()
+    # The writer is notified.
+    assert any(writer_user.email in m.to for m in mail.outbox)
+
+
+def test_request_revision_requires_delivered_status(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user, status=Order.Status.IN_PROGRESS)
+    response = auth_client.post(
+        reverse("order-request-revision", args=[order.id]), {}, format="json"
+    )
+    assert response.status_code == 400
+    order.refresh_from_db()
+    assert order.revision_count == 0
+
+
+def test_only_doctor_can_request_revision(writer_auth_client, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, status=Order.Status.DELIVERED)
+    response = writer_auth_client.post(
+        reverse("order-request-revision", args=[order.id]), {}, format="json"
+    )
+    assert response.status_code == 403
+
+
+def test_due_at_set_when_payment_held(writer_user):
+    listing = ListingFactory(writer=writer_user, turnaround_days=7)
+    order = OrderFactory(listing=listing, status=Order.Status.ACCEPTED)
+    assert order.due_at is None
+
+    mark_payment_held(order)
+    order.refresh_from_db()
+    assert order.status == Order.Status.IN_PROGRESS
+    expected = (timezone.now() + timedelta(days=7)).date()
+    assert order.due_at is not None and order.due_at.date() == expected
 
 
 def test_order_participant_gets_conversation(auth_client, user, writer_user):

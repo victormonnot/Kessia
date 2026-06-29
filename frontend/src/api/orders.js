@@ -14,6 +14,10 @@ export const ordersApi = {
 
   updateStatus: (id, status) => api.patch(`/orders/${id}/`, { status }).then((r) => r.data),
 
+  // Doctor sends a delivered order back for revision (returns it to in_progress).
+  requestRevision: (id, note = "") =>
+    api.post(`/orders/${id}/request-revision/`, { note }).then((r) => r.data),
+
   // Writer uploads the finished work (sets the order to "delivered").
   // Content-Type is left undefined so the browser sets the multipart boundary.
   uploadDeliverable: (id, formData) =>

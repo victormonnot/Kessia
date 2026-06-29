@@ -7,6 +7,7 @@ import {
   Banknote,
   CheckCircle2,
   Paperclip,
+  RefreshCw,
   ShoppingBag,
   Undo2,
   Upload,
@@ -25,4 +26,5 @@ export const ORDER_EVENT_META = {
   refunded: { label: "Paiement remboursé", icon: Undo2 },
   released: { label: "Paiement versé au rédacteur", icon: Banknote },
   document_added: { label: "Document ajouté", icon: Paperclip },
+  revision_requested: { label: "Révision demandée", icon: RefreshCw },
 };

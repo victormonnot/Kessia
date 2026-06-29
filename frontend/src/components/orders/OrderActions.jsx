@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, MessageSquare, Star, Upload } from "lucide-react";
+import { Download, MessageSquare, RefreshCw, Star, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import Spinner from "@/components/feedback/Spinner";
 import ReviewModal from "@/components/reviews/ReviewModal";
 import PaymentModal from "@/components/payments/PaymentModal";
 import { ordersApi } from "@/api/orders";
-import { useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
+import { useRequestRevision, useUpdateOrderStatus, useUploadDeliverable } from "@/hooks/useOrders";
 import { useStartConversation } from "@/hooks/useMessaging";
 import { errorMessage, fullName } from "@/lib/format";
 
@@ -94,11 +94,14 @@ export default function OrderActions({ order, role, hideContact = false }) {
   const navigate = useNavigate();
   const update = useUpdateOrderStatus();
   const upload = useUploadDeliverable();
+  const revise = useRequestRevision(order.id);
   const startConversation = useStartConversation();
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviseOpen, setReviseOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [revisionNote, setRevisionNote] = useState("");
   const fileRef = useRef(null);
 
   const transitions = TRANSITIONS[role]?.[order.status] || [];
@@ -113,6 +116,7 @@ export default function OrderActions({ order, role, hideContact = false }) {
   const canDeliver = role === "writer" && order.status === "in_progress";
   const awaitingPayment = role === "writer" && order.status === "accepted";
   const canReview = role === "doctor" && order.status === "completed" && !order.has_review;
+  const canRequestRevision = role === "doctor" && order.status === "delivered";
   const canDownload =
     role === "doctor" &&
     ["delivered", "completed"].includes(order.status) &&
@@ -147,6 +151,17 @@ export default function OrderActions({ order, role, hideContact = false }) {
       if (fileRef.current) fileRef.current.value = "";
     } catch (e) {
       toast.error(errorMessage(e, "L'envoi du livrable a échoué."));
+    }
+  };
+
+  const submitRevision = async () => {
+    try {
+      await revise.mutateAsync(revisionNote);
+      toast.success("Révision demandée au rédacteur.");
+      setReviseOpen(false);
+      setRevisionNote("");
+    } catch (e) {
+      toast.error(errorMessage(e, "La demande de révision a échoué."));
     }
   };
 
@@ -227,6 +242,16 @@ export default function OrderActions({ order, role, hideContact = false }) {
             <Download className="size-4" /> Télécharger
           </Button>
         ))}
+      {canRequestRevision && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={revise.isPending}
+          onClick={() => setReviseOpen(true)}
+        >
+          <RefreshCw className="size-4" /> Demander une révision
+        </Button>
+      )}
       {canReview && (
         <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
           <Star className="size-4" /> Laisser un avis
@@ -284,6 +309,40 @@ export default function OrderActions({ order, role, hideContact = false }) {
               placeholder="Précisions sur le livrable…"
             />
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={reviseOpen}
+        onClose={() => setReviseOpen(false)}
+        title="Demander une révision"
+        description="Le travail repassera « en cours » et le rédacteur sera notifié."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setReviseOpen(false)} disabled={revise.isPending}>
+              Annuler
+            </Button>
+            <Button onClick={submitRevision} disabled={revise.isPending}>
+              {revise.isPending ? (
+                <>
+                  <Spinner /> Envoi…
+                </>
+              ) : (
+                "Demander la révision"
+              )}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="revision-note">Remarques (optionnel)</Label>
+          <Textarea
+            id="revision-note"
+            rows={4}
+            value={revisionNote}
+            onChange={(e) => setRevisionNote(e.target.value)}
+            placeholder="Précisez ce qui doit être corrigé…"
+          />
         </div>
       </Modal>
 

@@ -49,6 +49,8 @@ const order = {
       created_at: "2026-05-20T10:00:00Z",
     },
   ],
+  due_at: "2026-05-25T10:00:00Z",
+  revision_count: 1,
   has_review: false,
   created_at: "2026-05-18T09:00:00Z",
   updated_at: "2026-05-20T10:00:00Z",
@@ -61,6 +63,7 @@ vi.mock("@/hooks/useOrders", () => ({
   // Consumed by the embedded <OrderActions>.
   useUpdateOrderStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUploadDeliverable: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRequestRevision: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 function renderPage() {
@@ -103,11 +106,18 @@ describe("OrderWorkspace", () => {
     expect(screen.getByText("Commande passée")).toBeInTheDocument();
     expect(screen.getByText("Travail livré")).toBeInTheDocument();
 
-    // Contextual action for a delivered order, doctor side.
+    // Contextual actions for a delivered order, doctor side.
     expect(
       screen.getByRole("button", { name: /confirmer la réception/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /demander une révision/i }),
+    ).toBeInTheDocument();
     // The chat is on the page, so the standalone "Contacter" is hidden.
     expect(screen.queryByRole("button", { name: /contacter/i })).not.toBeInTheDocument();
+
+    // Deadline + revision count surfaced in the summary.
+    expect(screen.getByText("Échéance")).toBeInTheDocument();
+    expect(screen.getByText("Révisions")).toBeInTheDocument();
   });
 });

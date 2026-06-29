@@ -13,7 +13,12 @@ export default function OrderTimeline({ events = [] }) {
       {events.map((event) => {
         const meta = ORDER_EVENT_META[event.type] || { label: event.type, icon: Clock };
         const Icon = meta.icon;
-        const detail = event.type === "document_added" ? event.metadata?.filename : null;
+        const detail =
+          event.type === "document_added"
+            ? event.metadata?.filename
+            : event.type === "revision_requested"
+              ? event.metadata?.note
+              : null;
         return (
           <li key={event.id} className="flex gap-3 text-sm">
             <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">

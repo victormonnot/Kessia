@@ -61,6 +61,7 @@ _RECIPIENT_FOR_EVENT = {
     "order_delivered": lambda o: o.doctor,
     "order_completed": lambda o: o.writer,
     "order_cancelled": lambda o: o.writer,
+    "order_revision_requested": lambda o: o.writer,
 }
 
 

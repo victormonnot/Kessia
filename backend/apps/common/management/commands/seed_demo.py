@@ -16,6 +16,7 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
@@ -440,6 +441,9 @@ class Command(BaseCommand):
             }
             if status == Order.Status.COMPLETED:
                 defaults["application_fee_amount"] = _fee(listing.price)
+            # Active orders carry a live delivery deadline (from the turnaround).
+            if status == Order.Status.IN_PROGRESS:
+                defaults["due_at"] = timezone.now() + timedelta(days=listing.turnaround_days)
 
             order, created = _first_or_create(
                 Order, listing=listing, doctor=doctor, defaults=defaults

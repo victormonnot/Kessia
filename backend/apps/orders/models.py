@@ -83,6 +83,13 @@ class Order(models.Model):
     # (charge.dispute.created webhook). Surfaced to admins for resolution.
     disputed_at = models.DateTimeField(null=True, blank=True)
 
+    # Delivery deadline, set when work starts (payment held) from the listing's
+    # turnaround_days and pushed back on each revision. Null for proposal-based
+    # orders with no agreed turnaround.
+    due_at = models.DateTimeField(null=True, blank=True)
+    # How many times the doctor has sent the work back for revision.
+    revision_count = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -168,6 +175,7 @@ class OrderEvent(models.Model):
         REFUNDED = "refunded", "Paiement remboursé"
         RELEASED = "released", "Paiement versé au rédacteur"
         DOCUMENT_ADDED = "document_added", "Document ajouté"
+        REVISION_REQUESTED = "revision_requested", "Révision demandée"
 
     order = models.ForeignKey(
         Order,

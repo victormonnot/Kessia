@@ -53,6 +53,17 @@ export function useUploadDeliverable() {
   });
 }
 
+export function useRequestRevision(orderId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (note) => ordersApi.requestRevision(orderId, note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order", orderId] });
+    },
+  });
+}
+
 export function useUploadOrderAttachment(orderId) {
   const qc = useQueryClient();
   return useMutation({
