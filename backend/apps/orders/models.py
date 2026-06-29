@@ -147,3 +147,46 @@ class OrderAttachment(models.Model):
 
     def __str__(self) -> str:
         return f"OrderAttachment #{self.pk} for order #{self.order_id}"
+
+
+class OrderEvent(models.Model):
+    """An entry in an order's activity log — the chronological workspace timeline.
+
+    Written at every meaningful moment (placement, acceptance, payment,
+    delivery, completion, refund, document added). ``actor`` is the user who
+    triggered it, or null for system/payment events. Human-readable labels and
+    icons live on the frontend (see lib/orderEvents.js)."""
+
+    class Type(models.TextChoices):
+        PLACED = "placed", "Commande passée"
+        ACCEPTED = "accepted", "Commande acceptée"
+        DECLINED = "declined", "Commande refusée"
+        PAID = "paid", "Paiement séquestré"
+        DELIVERED = "delivered", "Travail livré"
+        COMPLETED = "completed", "Commande finalisée"
+        CANCELLED = "cancelled", "Commande annulée"
+        REFUNDED = "refunded", "Paiement remboursé"
+        RELEASED = "released", "Paiement versé au rédacteur"
+        DOCUMENT_ADDED = "document_added", "Document ajouté"
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    type = models.CharField(max_length=32, choices=Type.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+    def __str__(self) -> str:
+        return f"OrderEvent {self.type} on order #{self.order_id}"

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Deliverable, Order, OrderAttachment
+from .models import Deliverable, Order, OrderAttachment, OrderEvent
 
 
 class DeliverableInline(admin.TabularInline):
@@ -52,3 +52,11 @@ class OrderAttachmentAdmin(admin.ModelAdmin):
     list_display = ("id", "order", "file", "uploaded_by", "uploaded_at")
     search_fields = ("order__id",)
     readonly_fields = ("uploaded_at",)
+
+
+@admin.register(OrderEvent)
+class OrderEventAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "type", "actor", "created_at")
+    list_filter = ("type",)
+    search_fields = ("order__id",)
+    readonly_fields = ("created_at",)

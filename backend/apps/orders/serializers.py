@@ -6,7 +6,7 @@ from apps.common.uploads import DELIVERABLE_RULES, SOURCE_DOC_RULES, upload_erro
 from apps.listings.serializers import ListingListSerializer
 from apps.users.serializers import UserPublicSerializer
 
-from .models import Deliverable, Order, OrderAttachment
+from .models import Deliverable, Order, OrderAttachment, OrderEvent
 from .services import can_transition, role_for
 
 
@@ -59,12 +59,22 @@ class OrderAttachmentUploadSerializer(serializers.ModelSerializer):
         return value
 
 
+class OrderEventSerializer(serializers.ModelSerializer):
+    actor = UserPublicSerializer(read_only=True)
+
+    class Meta:
+        model = OrderEvent
+        fields = ("id", "type", "actor", "metadata", "created_at")
+        read_only_fields = fields
+
+
 class OrderDetailSerializer(serializers.ModelSerializer):
     listing = ListingListSerializer(read_only=True)
     doctor = UserPublicSerializer(read_only=True)
     writer = UserPublicSerializer(read_only=True)
     deliverables = DeliverableSerializer(many=True, read_only=True)
     attachments = OrderAttachmentSerializer(many=True, read_only=True)
+    events = OrderEventSerializer(many=True, read_only=True)
     has_review = serializers.SerializerMethodField()
 
     class Meta:
@@ -82,6 +92,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "payment_status",
             "deliverables",
             "attachments",
+            "events",
             "has_review",
             "created_at",
             "updated_at",

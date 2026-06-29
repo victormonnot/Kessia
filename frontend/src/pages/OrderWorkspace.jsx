@@ -13,6 +13,7 @@ import { LoadingBlock } from "@/components/feedback/Spinner";
 import ChatPanel from "@/components/messaging/ChatPanel";
 import OrderActions from "@/components/orders/OrderActions";
 import OrderStepper from "@/components/orders/OrderStepper";
+import OrderTimeline from "@/components/orders/OrderTimeline";
 import { ordersApi } from "@/api/orders";
 import { useOrder, useOrderConversation, useUploadOrderAttachment } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
@@ -307,7 +308,7 @@ export default function OrderWorkspace() {
                     <CardTitle className="text-base">Activité</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <DerivedTimeline order={order} />
+                    <OrderTimeline events={order.events || []} />
                   </CardContent>
                 </Card>
               </div>
@@ -325,32 +326,5 @@ function Row({ label, children }) {
       <span className="text-muted-foreground">{label}</span>
       <span className="text-right">{children}</span>
     </div>
-  );
-}
-
-// Step A: an honest timeline built from the timestamps we actually have (the
-// full per-transition event log lands in Step C with the OrderEvent model).
-function DerivedTimeline({ order }) {
-  const items = [{ label: "Commande passée", at: order.created_at }];
-  (order.deliverables || []).forEach((d) =>
-    items.push({ label: "Travail livré", at: d.uploaded_at }),
-  );
-  if (order.status === "completed") items.push({ label: "Commande finalisée", at: order.updated_at });
-  if (order.status === "cancelled") items.push({ label: "Commande annulée", at: order.updated_at });
-  if (order.status === "declined") items.push({ label: "Commande refusée", at: order.updated_at });
-  items.sort((a, b) => new Date(a.at) - new Date(b.at));
-
-  return (
-    <ol className="space-y-3">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-3 text-sm">
-          <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-          <div>
-            <p className="font-medium leading-tight">{item.label}</p>
-            <p className="text-xs text-muted-foreground">{formatDateTime(item.at)}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
   );
 }

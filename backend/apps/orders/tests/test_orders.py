@@ -7,7 +7,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.listings.tests.factories import ListingFactory
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderEvent
+from apps.orders.services import record_event
 from apps.orders.tests.factories import (
     DeliverableFactory,
     OrderAttachmentFactory,
@@ -290,6 +291,74 @@ def test_orders_role_filter_scopes_results(user, writer_user):
     assert as_doctor.json()["count"] == 1
     as_writer = doctor_client.get(reverse("order-list"), {"role": "writer"})
     assert as_writer.json()["count"] == 0
+
+
+# --- Activity log (OrderEvent timeline) -----------------------------------
+
+
+def test_placing_an_order_records_a_placed_event(auth_client, user):
+    listing = ListingFactory()
+    response = auth_client.post(
+        reverse("order-list"),
+        {"listing": listing.id, "message": "Need it"},
+        format="json",
+    )
+    order = Order.objects.get(pk=response.json()["id"])
+    assert list(order.events.values_list("type", flat=True)) == [OrderEvent.Type.PLACED]
+    assert order.events.first().actor_id == user.id
+
+
+def test_accept_and_deliver_record_events(writer_auth_client, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, status=Order.Status.PENDING)
+
+    writer_auth_client.patch(
+        reverse("order-detail", args=[order.id]),
+        {"status": Order.Status.ACCEPTED},
+        format="json",
+    )
+    # Payment normally moves accepted -> in_progress; shortcut it here.
+    order.refresh_from_db()
+    order.status = Order.Status.IN_PROGRESS
+    order.save(update_fields=["status"])
+
+    upload = SimpleUploadedFile("paper.pdf", b"%PDF-1.4 data", content_type="application/pdf")
+    writer_auth_client.post(
+        reverse("order-deliverables", args=[order.id]),
+        {"file": upload},
+        format="multipart",
+    )
+
+    types = list(order.events.values_list("type", flat=True))
+    assert OrderEvent.Type.ACCEPTED in types
+    assert OrderEvent.Type.DELIVERED in types
+
+
+def test_adding_document_records_event(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    upload = SimpleUploadedFile("brief.pdf", b"%PDF-1.4 data", content_type="application/pdf")
+
+    auth_client.post(
+        reverse("order-attachments", args=[order.id]),
+        {"file": upload},
+        format="multipart",
+    )
+    event = order.events.get(type=OrderEvent.Type.DOCUMENT_ADDED)
+    assert event.actor_id == user.id
+    assert "brief" in event.metadata.get("filename", "")
+
+
+def test_order_detail_exposes_events_in_order(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    record_event(order, OrderEvent.Type.PLACED, actor=user)
+    record_event(order, OrderEvent.Type.PAID, actor=user, amount="250.00")
+
+    response = auth_client.get(reverse("order-detail", args=[order.id]))
+    assert response.status_code == 200
+    types = [e["type"] for e in response.json()["events"]]
+    assert types == ["placed", "paid"]
 
 
 # --- Order attachments (brief / source documents) -------------------------

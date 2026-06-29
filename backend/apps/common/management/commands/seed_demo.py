@@ -20,7 +20,8 @@ from django.db import transaction
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
 from apps.messaging.models import Conversation, Message
-from apps.orders.models import Order, OrderAttachment
+from apps.orders.models import Order, OrderAttachment, OrderEvent
+from apps.orders.services import record_event
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
 from apps.users.models import (
@@ -459,6 +460,11 @@ class Command(BaseCommand):
                 )
                 self.created += 1
 
+            # Activity-log timeline matching the order's lifecycle stage, so the
+            # workspace's "Activité" panel isn't empty in the demo.
+            if not order.events.exists():
+                self._seed_order_events(order, doctor, status)
+
             if status == Order.Status.COMPLETED:
                 _, r_created = Review.objects.get_or_create(
                     order=order,
@@ -471,6 +477,34 @@ class Command(BaseCommand):
                 )
                 self._track(r_created)
                 review_i += 1
+
+    def _seed_order_events(self, order, doctor, status):
+        S = Order.Status
+        record_event(order, OrderEvent.Type.PLACED, actor=doctor)
+        if status in (S.ACCEPTED, S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.ACCEPTED, actor=order.writer)
+        if status in (S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.PAID, actor=doctor, amount=str(order.amount))
+            record_event(
+                order,
+                OrderEvent.Type.DOCUMENT_ADDED,
+                actor=doctor,
+                filename="cahier-des-charges.pdf",
+            )
+        if status in (S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.DELIVERED, actor=order.writer)
+        if status == S.COMPLETED:
+            record_event(order, OrderEvent.Type.COMPLETED, actor=doctor)
+            record_event(
+                order,
+                OrderEvent.Type.RELEASED,
+                amount=str(order.amount - _fee(order.amount)),
+            )
+        if status == S.DECLINED:
+            record_event(order, OrderEvent.Type.DECLINED, actor=order.writer)
+        if status == S.CANCELLED:
+            record_event(order, OrderEvent.Type.CANCELLED, actor=doctor)
+        self.created += order.events.count()
 
     # -- requests + proposals ----------------------------------------------
     def _seed_requests_and_proposals(self, doctors, writers):

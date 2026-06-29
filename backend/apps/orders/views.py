@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from apps.common.permissions import IsEmailVerified
 
-from .models import Order
+from .models import Order, OrderEvent
 from .permissions import IsOrderParticipant
 from .serializers import (
     DeliverableSerializer,
@@ -23,7 +23,16 @@ from .serializers import (
     OrderDetailSerializer,
     OrderUpdateSerializer,
 )
-from .services import notify_order_event, notify_status_change
+from .services import notify_order_event, notify_status_change, record_event
+
+# Status reached via a plain PATCH -> the activity-log event it should record.
+# (Delivery and payment aren't PATCHes; they log their events at their own sites.)
+_EVENT_FOR_PATCH_STATUS = {
+    Order.Status.ACCEPTED: OrderEvent.Type.ACCEPTED,
+    Order.Status.DECLINED: OrderEvent.Type.DECLINED,
+    Order.Status.CANCELLED: OrderEvent.Type.CANCELLED,
+    Order.Status.COMPLETED: OrderEvent.Type.COMPLETED,
+}
 
 
 class OrderViewSet(
@@ -42,7 +51,9 @@ class OrderViewSet(
         user = self.request.user
         qs = Order.objects.select_related(
             "listing", "listing__writer", "doctor", "writer", "proposal", "review"
-        ).prefetch_related("deliverables", "attachments__uploaded_by")
+        ).prefetch_related(
+            "deliverables", "attachments__uploaded_by", "events__actor"
+        )
         # `?role=writer` (orders received) / `?role=doctor` (orders placed); both
         # otherwise. Used by the dashboards instead of client-side filtering.
         role = self.request.query_params.get("role")
@@ -71,6 +82,7 @@ class OrderViewSet(
         create_serializer = self.get_serializer(data=request.data)
         create_serializer.is_valid(raise_exception=True)
         order = create_serializer.save()
+        record_event(order, OrderEvent.Type.PLACED, actor=order.doctor)
         notify_order_event(order, "order_placed")
         return Response(OrderDetailSerializer(order).data, status=status.HTTP_201_CREATED)
 
@@ -82,6 +94,9 @@ class OrderViewSet(
         update_serializer.save()
         instance.refresh_from_db()
         notify_status_change(instance)
+        event_type = _EVENT_FOR_PATCH_STATUS.get(instance.status)
+        if event_type:
+            record_event(instance, event_type, actor=request.user)
         # Move money on terminal transitions (release on completed, refund on
         # declined/cancelled-after-payment). Guarded by payment_status, so it's
         # a no-op for unpaid orders. Lazy import avoids an app load-order cycle.
@@ -122,6 +137,7 @@ class OrderViewSet(
 
         order.status = Order.Status.DELIVERED
         order.save(update_fields=["status", "updated_at"])
+        record_event(order, OrderEvent.Type.DELIVERED, actor=request.user)
         notify_status_change(order)
 
         return Response(
@@ -185,6 +201,12 @@ class OrderViewSet(
         upload = OrderAttachmentUploadSerializer(data=request.data)
         upload.is_valid(raise_exception=True)
         attachment = upload.save(order=order, uploaded_by=request.user)
+        record_event(
+            order,
+            OrderEvent.Type.DOCUMENT_ADDED,
+            actor=request.user,
+            filename=os.path.basename(attachment.file.name),
+        )
 
         return Response(
             OrderAttachmentSerializer(attachment).data,

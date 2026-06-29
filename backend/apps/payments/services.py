@@ -17,7 +17,8 @@ import stripe
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderEvent
+from apps.orders.services import record_event
 
 logger = logging.getLogger(__name__)
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -151,6 +152,7 @@ def mark_payment_held(order: Order) -> bool:
     if order.status == Order.Status.ACCEPTED:
         order.status = Order.Status.IN_PROGRESS
     order.save(update_fields=["payment_status", "status", "updated_at"])
+    record_event(order, OrderEvent.Type.PAID, actor=order.doctor, amount=str(order.amount))
     return True
 
 
@@ -266,6 +268,7 @@ def release_payment(order: Order) -> bool:
             "updated_at",
         ]
     )
+    record_event(order, OrderEvent.Type.RELEASED, amount=str(order.amount - fee))
     return True
 
 
@@ -296,6 +299,7 @@ def refund_payment(order: Order) -> bool:
     )
     order.payment_status = Order.PaymentStatus.REFUNDED
     order.save(update_fields=["payment_status", "updated_at"])
+    record_event(order, OrderEvent.Type.REFUNDED, amount=str(order.amount))
     return True
 
 
