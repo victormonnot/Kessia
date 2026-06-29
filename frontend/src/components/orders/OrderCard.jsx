@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
 import OrderActions from "@/components/orders/OrderActions";
@@ -19,7 +21,9 @@ export default function OrderCard({ order, role }) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{order.listing?.title || "Commande personnalisée"}</p>
+            <Link to={`/commandes/${order.id}`} className="font-medium hover:text-primary hover:underline">
+              {order.listing?.title || "Commande personnalisée"}
+            </Link>
             <p className="text-sm text-muted-foreground">
               {role === "writer" ? "Médecin" : "Rédacteur"} : {fullName(counterparty)} ·{" "}
               <span className="font-medium text-foreground">

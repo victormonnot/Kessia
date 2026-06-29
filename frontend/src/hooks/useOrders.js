@@ -21,6 +21,14 @@ export function useEarnings() {
   return useQuery({ queryKey: ["earnings"], queryFn: ordersApi.earnings });
 }
 
+export function useOrderConversation(id) {
+  return useQuery({
+    queryKey: ["order-conversation", id],
+    queryFn: () => ordersApi.getConversation(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({

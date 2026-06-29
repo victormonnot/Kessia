@@ -288,6 +288,31 @@ def test_orders_role_filter_scopes_results(user, writer_user):
     assert as_writer.json()["count"] == 0
 
 
+def test_order_participant_gets_conversation(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    url = reverse("order-conversation", args=[order.id])
+
+    first = auth_client.get(url)
+    assert first.status_code == 200
+    assert first.json()["order"] == order.id
+
+    # Idempotent: a second access returns the same (deduped) conversation.
+    second = auth_client.get(url)
+    assert second.json()["id"] == first.json()["id"]
+
+
+def test_non_participant_cannot_get_order_conversation(
+    other_writer_auth_client, user, writer_user
+):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    response = other_writer_auth_client.get(
+        reverse("order-conversation", args=[order.id])
+    )
+    assert response.status_code == 404
+
+
 def test_earnings_summary_for_writer(writer_auth_client, writer_user):
     listing = ListingFactory(writer=writer_user)
     OrderFactory(

@@ -90,7 +90,7 @@ const TRANSITIONS = {
   },
 };
 
-export default function OrderActions({ order, role }) {
+export default function OrderActions({ order, role, hideContact = false }) {
   const navigate = useNavigate();
   const update = useUpdateOrderStatus();
   const upload = useUploadDeliverable();
@@ -232,9 +232,11 @@ export default function OrderActions({ order, role }) {
           <Star className="size-4" /> Laisser un avis
         </Button>
       )}
-      <Button size="sm" variant="ghost" onClick={contact} disabled={startConversation.isPending}>
-        <MessageSquare className="size-4" /> Contacter
-      </Button>
+      {!hideContact && (
+        <Button size="sm" variant="ghost" onClick={contact} disabled={startConversation.isPending}>
+          <MessageSquare className="size-4" /> Contacter
+        </Button>
+      )}
 
       <Modal
         open={deliverOpen}

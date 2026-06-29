@@ -151,6 +151,23 @@ class OrderViewSet(
             filename=os.path.basename(deliverable.file.name),
         )
 
+    @action(detail=True, methods=("get",), url_path="conversation")
+    def conversation(self, request, pk=None):
+        """The (deduped) conversation scoped to this order, created on first access.
+
+        Lets the order workspace embed the chat without POSTing a "create" just to
+        read it. Non-participants are filtered out by get_queryset (404 here).
+        Lazy import avoids an app load-order cycle (messaging imports orders).
+        """
+        order = self.get_object()
+        from apps.messaging.serializers import ConversationSerializer
+        from apps.messaging.services import get_or_create_conversation
+
+        conv = get_or_create_conversation(order.doctor, order.writer, order=order)
+        return Response(
+            ConversationSerializer(conv, context={"request": request}).data
+        )
+
     @action(detail=False, methods=("get",))
     def earnings(self, request):
         """Writer earnings summary: funds in escrow and net amount earned."""

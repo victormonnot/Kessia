@@ -17,10 +17,10 @@ export default function PlaceOrderModal({ listing, open, onClose }) {
 
   const submit = async () => {
     try {
-      await create.mutateAsync({ listing: listing.id, message });
+      const order = await create.mutateAsync({ listing: listing.id, message });
       toast.success("Commande envoyée au rédacteur.");
       onClose?.();
-      navigate("/dashboard/doctor");
+      navigate(`/commandes/${order.id}`);
     } catch (err) {
       toast.error(errorMessage(err, "La commande n'a pas pu être passée."));
     }

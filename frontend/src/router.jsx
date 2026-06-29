@@ -24,6 +24,7 @@ const RequestDetail = lazy(() => import("@/pages/RequestDetail"));
 const RequestFormPage = lazy(() => import("@/pages/RequestFormPage"));
 const DashboardWriter = lazy(() => import("@/pages/DashboardWriter"));
 const DashboardDoctor = lazy(() => import("@/pages/DashboardDoctor"));
+const OrderWorkspace = lazy(() => import("@/pages/OrderWorkspace"));
 const WriterProfile = lazy(() => import("@/pages/WriterProfile"));
 const Inbox = lazy(() => import("@/pages/Inbox"));
 const Conversation = lazy(() => import("@/pages/Conversation"));
@@ -137,6 +138,15 @@ export default function Router() {
           element={
             <ProtectedRoute>
               <DashboardDoctor />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/commandes/:id"
+          element={
+            <ProtectedRoute>
+              <OrderWorkspace />
             </ProtectedRoute>
           }
         />
