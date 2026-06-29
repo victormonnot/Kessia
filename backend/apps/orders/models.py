@@ -114,3 +114,36 @@ class Deliverable(models.Model):
 
     def __str__(self) -> str:
         return f"Deliverable #{self.pk} for order #{self.order_id}"
+
+
+def attachment_upload_path(instance: "OrderAttachment", filename: str) -> str:
+    return f"order_attachments/order_{instance.order_id}/{filename}"
+
+
+class OrderAttachment(models.Model):
+    """A brief/source document attached to an order by either party.
+
+    Distinct from ``Deliverable`` (the finished work, writer-only, gated on
+    delivery) and from chat attachments (informal): this is the shared brief
+    material — references, source data, guidelines — both parties can consult.
+    """
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(upload_to=attachment_upload_path)
+    note = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("uploaded_at",)
+
+    def __str__(self) -> str:
+        return f"OrderAttachment #{self.pk} for order #{self.order_id}"

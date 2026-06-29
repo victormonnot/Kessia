@@ -52,3 +52,12 @@ export function useUploadDeliverable() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
   });
 }
+
+export function useUploadOrderAttachment(orderId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (formData) => ordersApi.uploadAttachment(orderId, formData),
+    // The order detail embeds its attachments, so refresh the open workspace.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["order", orderId] }),
+  });
+}

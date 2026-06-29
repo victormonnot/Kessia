@@ -17,6 +17,8 @@ from .permissions import IsOrderParticipant
 from .serializers import (
     DeliverableSerializer,
     DeliverableUploadSerializer,
+    OrderAttachmentSerializer,
+    OrderAttachmentUploadSerializer,
     OrderCreateSerializer,
     OrderDetailSerializer,
     OrderUpdateSerializer,
@@ -40,7 +42,7 @@ class OrderViewSet(
         user = self.request.user
         qs = Order.objects.select_related(
             "listing", "listing__writer", "doctor", "writer", "proposal", "review"
-        ).prefetch_related("deliverables")
+        ).prefetch_related("deliverables", "attachments__uploaded_by")
         # `?role=writer` (orders received) / `?role=doctor` (orders placed); both
         # otherwise. Used by the dashboards instead of client-side filtering.
         role = self.request.query_params.get("role")
@@ -149,6 +151,58 @@ class OrderViewSet(
             deliverable.file.open("rb"),
             as_attachment=True,
             filename=os.path.basename(deliverable.file.name),
+        )
+
+    @action(
+        detail=True,
+        methods=("get", "post"),
+        url_path="attachments",
+        parser_classes=(MultiPartParser, FormParser),
+    )
+    def attachments(self, request, pk=None):
+        """Brief/source documents shared on the order.
+
+        GET lists them; POST lets either party add one while the order is live
+        (closed orders are read-only). get_object() already restricts to the two
+        parties, so non-participants 404 before reaching here.
+        """
+        order = self.get_object()
+
+        if request.method == "GET":
+            qs = order.attachments.all()
+            return Response(OrderAttachmentSerializer(qs, many=True).data)
+
+        if order.status in {
+            Order.Status.COMPLETED,
+            Order.Status.CANCELLED,
+            Order.Status.DECLINED,
+        }:
+            return Response(
+                {"detail": "Cette commande est clôturée."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        upload = OrderAttachmentUploadSerializer(data=request.data)
+        upload.is_valid(raise_exception=True)
+        attachment = upload.save(order=order, uploaded_by=request.user)
+
+        return Response(
+            OrderAttachmentSerializer(attachment).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=("get",),
+        url_path=r"attachments/(?P<attachment_id>[^/.]+)/download",
+    )
+    def download_attachment(self, request, pk=None, attachment_id=None):
+        order = self.get_object()
+        attachment = get_object_or_404(order.attachments, pk=attachment_id)
+        return FileResponse(
+            attachment.file.open("rb"),
+            as_attachment=True,
+            filename=os.path.basename(attachment.file.name),
         )
 
     @action(detail=True, methods=("get",), url_path="conversation")

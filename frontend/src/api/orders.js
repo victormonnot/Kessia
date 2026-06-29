@@ -30,4 +30,21 @@ export const ordersApi = {
         responseType: "blob",
       })
       .then((r) => r.data),
+
+  // Brief/source documents shared on the order (either party, while it's live).
+  listAttachments: (id) => api.get(`/orders/${id}/attachments/`).then((r) => r.data),
+
+  uploadAttachment: (id, formData) =>
+    api
+      .post(`/orders/${id}/attachments/`, formData, {
+        headers: { "Content-Type": undefined },
+      })
+      .then((r) => r.data),
+
+  downloadAttachment: (orderId, attachmentId) =>
+    api
+      .get(`/orders/${orderId}/attachments/${attachmentId}/download/`, {
+        responseType: "blob",
+      })
+      .then((r) => r.data),
 };

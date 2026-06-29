@@ -21,6 +21,8 @@ ARCHIVE_EXTS = {".zip"}
 CHAT_ATTACHMENT_RULES = (10, DOCUMENT_EXTS | IMAGE_EXTS | SPREADSHEET_EXTS | ARCHIVE_EXTS)
 # The finished work itself — generous cap (figure-heavy Word/PDF files).
 DELIVERABLE_RULES = (25, DOCUMENT_EXTS | IMAGE_EXTS | SPREADSHEET_EXTS | ARCHIVE_EXTS)
+# Brief/source material a party attaches to an order (same profile as chat).
+SOURCE_DOC_RULES = (10, DOCUMENT_EXTS | IMAGE_EXTS | SPREADSHEET_EXTS | ARCHIVE_EXTS)
 # A scanned credential (diploma, certificate).
 VERIFICATION_DOC_RULES = (10, DOCUMENT_EXTS | IMAGE_EXTS)
 

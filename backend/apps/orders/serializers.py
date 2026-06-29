@@ -2,11 +2,11 @@ import os
 
 from rest_framework import serializers
 
-from apps.common.uploads import DELIVERABLE_RULES, upload_error
+from apps.common.uploads import DELIVERABLE_RULES, SOURCE_DOC_RULES, upload_error
 from apps.listings.serializers import ListingListSerializer
 from apps.users.serializers import UserPublicSerializer
 
-from .models import Deliverable, Order
+from .models import Deliverable, Order, OrderAttachment
 from .services import can_transition, role_for
 
 
@@ -34,11 +34,37 @@ class DeliverableUploadSerializer(serializers.ModelSerializer):
         return value
 
 
+class OrderAttachmentSerializer(serializers.ModelSerializer):
+    filename = serializers.SerializerMethodField()
+    uploaded_by = UserPublicSerializer(read_only=True)
+
+    class Meta:
+        model = OrderAttachment
+        fields = ("id", "filename", "note", "uploaded_by", "uploaded_at")
+        read_only_fields = fields
+
+    def get_filename(self, obj: OrderAttachment) -> str:
+        return os.path.basename(obj.file.name)
+
+
+class OrderAttachmentUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderAttachment
+        fields = ("file", "note")
+
+    def validate_file(self, value):
+        error = upload_error(value, SOURCE_DOC_RULES)
+        if error:
+            raise serializers.ValidationError(error)
+        return value
+
+
 class OrderDetailSerializer(serializers.ModelSerializer):
     listing = ListingListSerializer(read_only=True)
     doctor = UserPublicSerializer(read_only=True)
     writer = UserPublicSerializer(read_only=True)
     deliverables = DeliverableSerializer(many=True, read_only=True)
+    attachments = OrderAttachmentSerializer(many=True, read_only=True)
     has_review = serializers.SerializerMethodField()
 
     class Meta:
@@ -55,6 +81,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             "currency",
             "payment_status",
             "deliverables",
+            "attachments",
             "has_review",
             "created_at",
             "updated_at",

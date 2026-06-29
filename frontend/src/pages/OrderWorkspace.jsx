@@ -1,5 +1,6 @@
+import { useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Download, FileText, Package } from "lucide-react";
+import { ArrowLeft, Download, FileText, Package, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,12 @@ import ChatPanel from "@/components/messaging/ChatPanel";
 import OrderActions from "@/components/orders/OrderActions";
 import OrderStepper from "@/components/orders/OrderStepper";
 import { ordersApi } from "@/api/orders";
-import { useOrder, useOrderConversation } from "@/hooks/useOrders";
+import { useOrder, useOrderConversation, useUploadOrderAttachment } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import { PAYMENT_STATUS_LABELS } from "@/lib/choices";
 import { errorMessage, formatDateTime, formatPrice, fullName, initials } from "@/lib/format";
+
+const CLOSED_STATUSES = ["completed", "cancelled", "declined"];
 
 function roleFor(order, me) {
   if (!order || !me) return null;
@@ -25,27 +28,63 @@ function roleFor(order, me) {
   return null;
 }
 
+function uploaderLabel(attachment, order) {
+  const uid = attachment.uploaded_by?.id;
+  if (uid === order.doctor?.id) return "Médecin";
+  if (uid === order.writer?.id) return "Rédacteur";
+  return fullName(attachment.uploaded_by);
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename || "fichier";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function OrderWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.user);
   const orderQuery = useOrder(id);
   const { data: conversation } = useOrderConversation(id);
+  const uploadAttachment = useUploadOrderAttachment(id);
+  const attachInputRef = useRef(null);
   const order = orderQuery.data;
 
   const downloadDeliverable = async (deliverable) => {
     try {
       const blob = await ordersApi.downloadDeliverable(order.id, deliverable.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = deliverable.filename || "livrable";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, deliverable.filename || "livrable");
     } catch (e) {
       toast.error(errorMessage(e, "Le téléchargement a échoué."));
+    }
+  };
+
+  const downloadAttachment = async (attachment) => {
+    try {
+      const blob = await ordersApi.downloadAttachment(order.id, attachment.id);
+      triggerDownload(blob, attachment.filename || "document");
+    } catch (e) {
+      toast.error(errorMessage(e, "Le téléchargement a échoué."));
+    }
+  };
+
+  const onPickAttachment = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await uploadAttachment.mutateAsync(formData);
+      toast.success("Document ajouté.");
+    } catch (err) {
+      toast.error(errorMessage(err, "L'envoi du document a échoué."));
     }
   };
 
@@ -66,6 +105,8 @@ export default function OrderWorkspace() {
           const title = order.listing?.title || "Commande personnalisée";
           const canDownload =
             role === "writer" || ["delivered", "completed"].includes(order.status);
+          const canAttach = Boolean(role) && !CLOSED_STATUSES.includes(order.status);
+          const attachments = order.attachments || [];
 
           return (
             <div className="grid gap-6 lg:grid-cols-3">
@@ -84,18 +125,60 @@ export default function OrderWorkspace() {
                   </CardHeader>
                 </Card>
 
-                {/* Brief */}
+                {/* Brief & source documents */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Brief de la commande</CardTitle>
+                  <CardHeader className="flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-base">Brief &amp; documents de la demande</CardTitle>
+                    {canAttach && (
+                      <>
+                        <input
+                          ref={attachInputRef}
+                          type="file"
+                          className="hidden"
+                          onChange={onPickAttachment}
+                          aria-hidden="true"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={uploadAttachment.isPending}
+                          onClick={() => attachInputRef.current?.click()}
+                        >
+                          <Paperclip className="size-4" /> Ajouter un document
+                        </Button>
+                      </>
+                    )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     {order.message ? (
                       <p className="whitespace-pre-line text-sm text-foreground">{order.message}</p>
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Aucune consigne n'a été fournie à la commande.
                       </p>
+                    )}
+
+                    {attachments.length > 0 && (
+                      <ul className="space-y-2">
+                        {attachments.map((a) => (
+                          <li
+                            key={a.id}
+                            className="flex items-center gap-3 rounded-lg border p-3 text-sm"
+                          >
+                            <FileText className="size-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">{a.filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {uploaderLabel(a, order)} · {formatDateTime(a.uploaded_at)}
+                                {a.note ? ` · ${a.note}` : ""}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline" onClick={() => downloadAttachment(a)}>
+                              <Download className="size-4" /> Télécharger
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </CardContent>
                 </Card>

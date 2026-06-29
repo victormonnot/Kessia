@@ -24,6 +24,15 @@ const order = {
   deliverables: [
     { id: 1, filename: "article.pdf", note: "", uploaded_at: "2026-05-20T10:00:00Z" },
   ],
+  attachments: [
+    {
+      id: 1,
+      filename: "brief.pdf",
+      note: "",
+      uploaded_by: { id: 2, first_name: "Paul", last_name: "Martin" },
+      uploaded_at: "2026-05-18T09:30:00Z",
+    },
+  ],
   has_review: false,
   created_at: "2026-05-18T09:00:00Z",
   updated_at: "2026-05-20T10:00:00Z",
@@ -32,6 +41,7 @@ const order = {
 vi.mock("@/hooks/useOrders", () => ({
   useOrder: () => ({ data: order, isLoading: false, isError: false, refetch: vi.fn() }),
   useOrderConversation: () => ({ data: { id: 99, order: 7 } }),
+  useUploadOrderAttachment: () => ({ mutateAsync: vi.fn(), isPending: false }),
   // Consumed by the embedded <OrderActions>.
   useUpdateOrderStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUploadDeliverable: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -68,6 +78,10 @@ describe("OrderWorkspace", () => {
     // Embedded chat + deliverable.
     expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
     expect(screen.getByText("article.pdf")).toBeInTheDocument();
+
+    // Brief documents section: the source doc and the add control (order live).
+    expect(screen.getByText("brief.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ajouter un document/i })).toBeInTheDocument();
 
     // Contextual action for a delivered order, doctor side.
     expect(

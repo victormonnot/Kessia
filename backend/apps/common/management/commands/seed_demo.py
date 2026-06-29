@@ -13,13 +13,14 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
 from apps.messaging.models import Conversation, Message
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderAttachment
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
 from apps.users.models import (
@@ -35,6 +36,10 @@ CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes
 RESPONSE_TIMES = ["few_hours", "one_day", "few_days"]
 
 DEMO_PASSWORD = "demo1234"
+
+# Minimal valid PDF used as a seeded "source document" attached to a few orders,
+# so the order workspace's brief section isn't empty in the demo.
+_DEMO_BRIEF_PDF = b"%PDF-1.4\n%Cahier des charges (document de demonstration)\n"
 
 # Demo portraits bundled with the backend (gender-matched to each seeded user).
 # Source: randomuser.me — demo use only, replaced by real uploads in prod.
@@ -439,6 +444,20 @@ class Command(BaseCommand):
                 Order, listing=listing, doctor=doctor, defaults=defaults
             )
             self._track(created)
+
+            # Once an order is underway, the doctor has shared a brief document.
+            if status in (
+                Order.Status.IN_PROGRESS,
+                Order.Status.DELIVERED,
+                Order.Status.COMPLETED,
+            ) and not order.attachments.exists():
+                OrderAttachment.objects.create(
+                    order=order,
+                    uploaded_by=doctor,
+                    note="Cahier des charges et références.",
+                    file=ContentFile(_DEMO_BRIEF_PDF, name="cahier-des-charges.pdf"),
+                )
+                self.created += 1
 
             if status == Order.Status.COMPLETED:
                 _, r_created = Review.objects.get_or_create(

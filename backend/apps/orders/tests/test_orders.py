@@ -8,7 +8,11 @@ from rest_framework.test import APIClient
 
 from apps.listings.tests.factories import ListingFactory
 from apps.orders.models import Order
-from apps.orders.tests.factories import DeliverableFactory, OrderFactory
+from apps.orders.tests.factories import (
+    DeliverableFactory,
+    OrderAttachmentFactory,
+    OrderFactory,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -286,6 +290,90 @@ def test_orders_role_filter_scopes_results(user, writer_user):
     assert as_doctor.json()["count"] == 1
     as_writer = doctor_client.get(reverse("order-list"), {"role": "writer"})
     assert as_writer.json()["count"] == 0
+
+
+# --- Order attachments (brief / source documents) -------------------------
+
+
+def test_doctor_can_upload_source_document(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    upload = SimpleUploadedFile("brief.pdf", b"%PDF-1.4 data", content_type="application/pdf")
+
+    response = auth_client.post(
+        reverse("order-attachments", args=[order.id]),
+        {"file": upload, "note": "Mes consignes"},
+        format="multipart",
+    )
+    assert response.status_code == 201
+    assert order.attachments.count() == 1
+    assert order.attachments.first().uploaded_by_id == user.id
+
+    # It shows up in the list and the order detail.
+    listed = auth_client.get(reverse("order-attachments", args=[order.id]))
+    assert len(listed.json()) == 1
+    detail = auth_client.get(reverse("order-detail", args=[order.id]))
+    assert len(detail.json()["attachments"]) == 1
+
+
+def test_writer_can_download_source_document(writer_auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    attachment = OrderAttachmentFactory(order=order, uploaded_by=user)
+
+    response = writer_auth_client.get(
+        reverse("order-download-attachment", args=[order.id, attachment.id])
+    )
+    assert response.status_code == 200
+
+
+def test_non_participant_cannot_access_attachments(
+    other_writer_auth_client, user, writer_user
+):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    attachment = OrderAttachmentFactory(order=order, uploaded_by=user)
+
+    assert (
+        other_writer_auth_client.get(
+            reverse("order-attachments", args=[order.id])
+        ).status_code
+        == 404
+    )
+    assert (
+        other_writer_auth_client.get(
+            reverse("order-download-attachment", args=[order.id, attachment.id])
+        ).status_code
+        == 404
+    )
+
+
+def test_cannot_attach_to_closed_order(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user, status=Order.Status.COMPLETED)
+    upload = SimpleUploadedFile("late.pdf", b"%PDF-1.4 data", content_type="application/pdf")
+
+    response = auth_client.post(
+        reverse("order-attachments", args=[order.id]),
+        {"file": upload},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert order.attachments.count() == 0
+
+
+def test_attachment_upload_rejects_disallowed_type(auth_client, user, writer_user):
+    listing = ListingFactory(writer=writer_user)
+    order = OrderFactory(listing=listing, doctor=user)
+    upload = SimpleUploadedFile("malware.exe", b"MZ", content_type="application/octet-stream")
+
+    response = auth_client.post(
+        reverse("order-attachments", args=[order.id]),
+        {"file": upload},
+        format="multipart",
+    )
+    assert response.status_code == 400
+    assert order.attachments.count() == 0
 
 
 def test_order_participant_gets_conversation(auth_client, user, writer_user):
