@@ -16,6 +16,10 @@ import ListingCard from "@/components/listings/ListingCard";
 import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import HeroFlow from "@/components/landing/HeroFlow";
+import DeliverableTypes from "@/components/landing/DeliverableTypes";
+import AudienceSplit from "@/components/landing/AudienceSplit";
+import Testimonials from "@/components/landing/Testimonials";
+import FaqSection from "@/components/landing/FaqSection";
 import { useListings } from "@/hooks/useListings";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
@@ -256,6 +260,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Catalogue par type de prestation (complète les tuiles « spécialité »). */}
+      <DeliverableTypes />
+
       {/* Comment ça marche + réassurance — bande grise compacte. */}
       <section className="border-y bg-secondary/60">
         <div className="container py-10 sm:py-14">
@@ -286,6 +293,15 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Deux faces du marché : médecins ↔ rédacteurs, chacun son CTA. */}
+      <AudienceSplit />
+
+      {/* Preuve sociale — avis illustratifs (démo) sur bande grise. */}
+      <Testimonials />
+
+      {/* Questions fréquentes — lève les objections avant la conversion. */}
+      <FaqSection />
 
       {/* CTA final — bande bleu nuit, l'orange ne sert qu'au bouton. */}
       <section className="bg-foreground">
