@@ -1,9 +1,6 @@
 # Kessia — MVP Development & Sprint Documentation
 
 Development-phase documentation for the Kessia MVP (state of `dev`, 02 Jul 2026).
-Previous stages: [Team Formation & MVP (Stage 1)](<Team%20Formation,%20Brainstorming%20and%20MVP%20(Stage%201).md>) ·
-[High-Level Plan](High-LevelPlan.md) · [Technical Documentation (Stage 3)](<Technical_Documentation_(Stage_3).md>) ·
-meeting notes in [`Meetings/`](Meetings).
 
 ## Project Overview
 
@@ -13,7 +10,7 @@ account is a doctor (buyer) by default and can activate a writer profile.
 
 - Backend: Django 5 (LTS) + Django REST Framework, Django Channels (WebSockets), PostgreSQL.
 - Frontend: React 18 + Vite + Tailwind CSS (single-page app, French-only UI).
-- Payments: Stripe Connect (test mode) with writer payouts.
+- Payments: Stripe Connect with writer payouts.
 - External services: Brevo (transactional email), Google Identity (OAuth sign-in).
 - Deployment: Docker Compose locally; a single Render web service + Neon PostgreSQL for staging.
 
@@ -63,10 +60,12 @@ admin back office into scope, with the Product Owner informed at each review.
 
 ### Sprint structure
 
-- Duration: about two weeks per sprint, paced to the Product Owner review meetings.
+- Duration: two weeks per sprint, paced to the Product Owner meetings held every
+  two weeks on Tuesday.
 - Tools: GitHub (branches, pull requests, issues), shared Google Drive, in-person meetings.
-- Ceremonies: Monday planning sync, short daily stand-ups, a Thursday unblock
-  point, then review with the PO and a team retrospective at the end of each sprint.
+- Ceremonies: planning sync at the start of each sprint, short daily stand-ups,
+  a Thursday unblock point, then the Tuesday review with the PO and a team
+  retrospective at the end of each sprint.
 
 ### Schedule
 
@@ -161,9 +160,9 @@ Zustand store; Axios refreshes the session silently on 401.
 
 ## Monitoring Progress
 
-Daily in-person stand-ups (done since last, plan for today, blockers), a weekly
-Monday sync with the Product Owner, and a Thursday mid-week unblock point.
-GitHub pull requests serve as the objective log of delivered work.
+Daily in-person stand-ups (done since last, plan for today, blockers), a
+Product Owner meeting every two weeks on Tuesday, and a Thursday mid-week
+unblock point. GitHub pull requests serve as the objective log of delivered work.
 
 | Sprint | Delivered | Planned vs. completed |
 |--------|-----------|------------------------|
@@ -198,8 +197,8 @@ Adjustments along the way:
   taxonomies, hardened account lifecycle, Brevo delivery, Google sign-in, and
   the staging deployment handed to the PO for third-party feedback. Next
   meeting set for 30 Jun.
-- **Sprint 3** (30 Jun): full payment lifecycle on Stripe test mode, admin back
-  office, RGPD deletion and the security pass. Meeting notes to be added.
+- **Sprint 3** (30 Jun): full payment lifecycle on Stripe, admin back office,
+  RGPD deletion and the security pass. Meeting notes to be added.
 
 ### Retrospective
 
@@ -274,7 +273,7 @@ Brevo API key; localise the throttling error message.
 | Listings catalogue, search and filters | Delivered |
 | Requests board with proposals and atomic acceptance | Delivered |
 | Orders, status machine, secure deliverables | Delivered |
-| Payments — Stripe Connect, held funds, payouts, refunds (test mode) | Delivered |
+| Payments — Stripe Connect, held funds, payouts, refunds | Delivered |
 | Real-time messaging with attachments | Delivered |
 | Reviews and verified-writer badge | Delivered |
 | Public profiles and favorites | Delivered |
@@ -293,7 +292,7 @@ Brevo API key; localise the throttling error message.
 
 Requirements: Docker + Docker Compose. Configuration comes from a single `.env`
 file (see `.env.example`): PostgreSQL credentials, `DJANGO_SECRET_KEY`, CORS and
-cookie settings, `REDIS_URL`, Stripe test keys (`STRIPE_SECRET_KEY`,
+cookie settings, `REDIS_URL`, Stripe keys (`STRIPE_SECRET_KEY`,
 `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`), the Google OAuth client ID
 and, in production, `BREVO_API_KEY`.
 
