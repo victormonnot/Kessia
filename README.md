@@ -240,10 +240,12 @@ et déterministes.
 
 ## Documentation
 
-La documentation complète du projet — planification de sprints, revues,
-rétrospectives, suivi qualité et préparation de la revue technique — est regroupée
-dans le dossier [`docs/`](docs/) et indexée par
-[`docs/Deliverables.md`](docs/Deliverables.md).
+La documentation complète de la phase de développement — planification de
+sprints, revues, rétrospectives, suivi qualité, tests et préparation de la revue
+technique — est regroupée dans un document unique :
+[`docs/MVP_Development_and_Execution_(Stage_4).md`](<docs/MVP_Development_and_Execution_(Stage_4).md>).
+Les documents des étapes précédentes (Stage 1 à 3) restent dans le dossier
+[`docs/`](docs/).
 
 ---
 
