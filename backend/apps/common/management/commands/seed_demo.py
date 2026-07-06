@@ -108,48 +108,18 @@ DOCTORS = [
     ("camille.roux@kessia.demo", "Camille", "Roux"),
 ]
 
-# Two listing ideas per specialty: (title, deliverable_type).
+# One listing idea per specialty: (title, deliverable_type).
 SPECIALTY_LISTINGS = {
-    Specialty.CARDIOLOGIE: [
-        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
-        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.ONCOLOGIE: [
-        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Résumé pour congrès international d'oncologie", DeliverableType.RESUME_RECHERCHE),
-    ],
-    Specialty.NEUROLOGIE: [
-        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
-        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.PROTOCOLE_RECHERCHE),
-    ],
-    Specialty.PEDIATRIE: [
-        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
-        ("Résumé pour journées de pédiatrie", DeliverableType.RESUME_RECHERCHE),
-    ],
-    Specialty.DERMATOLOGIE: [
-        ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
-        ("Revue sur les biothérapies du psoriasis", DeliverableType.VULGARISATION),
-    ],
-    Specialty.RADIOLOGIE: [
-        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
-        ("Article original — IA et imagerie diagnostique", DeliverableType.PROTOCOLE_RECHERCHE),
-    ],
-    Specialty.PSYCHIATRIE: [
-        ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
-        ("Étude de cas en psychiatrie de liaison", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.NEUROCHIRURGIE: [
-        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Étude de cas chirurgical rare", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.ENDOCRINOLOGIE: [
-        ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Revue sur les analogues du GLP-1", DeliverableType.VULGARISATION),
-    ],
-    Specialty.GASTROENTEROLOGIE: [
-        ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
-        ("Étude de cas en hépatologie", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
+    Specialty.CARDIOLOGIE: ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
+    Specialty.ONCOLOGIE: ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.NEUROLOGIE: ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
+    Specialty.PEDIATRIE: ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
+    Specialty.DERMATOLOGIE: ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
+    Specialty.RADIOLOGIE: ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
+    Specialty.PSYCHIATRIE: ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
+    Specialty.NEUROCHIRURGIE: ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.ENDOCRINOLOGIE: ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.GASTROENTEROLOGIE: ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
 }
 
 # (price, turnaround_days) per deliverable type.
@@ -376,47 +346,47 @@ class Command(BaseCommand):
     def _seed_listings(self, writers):
         listings = []
         for writer in writers:
-            for title, deliverable in SPECIALTY_LISTINGS[writer._specialty]:
-                price, turnaround = PRICING[deliverable]
-                listing, created = _first_or_create(
-                    Listing,
-                    writer=writer,
-                    title=title,
-                    defaults={
-                        "description": (
-                            "Rédaction structurée respectant les standards de la "
-                            "discipline (PRISMA / CARE / ICMJE selon le format). "
-                            "Livraison avec relecture et mise au format de la revue cible."
-                        ),
-                        "specialty": writer._specialty,
-                        "deliverable_type": deliverable,
-                        "price": price,
-                        "turnaround_days": turnaround,
-                        "faq": [
-                            {
-                                "question": "Que comprend la prestation ?",
-                                "answer": (
-                                    "La rédaction complète du livrable, une relecture et la mise "
-                                    "au format de la revue ou du support cible."
-                                ),
-                            },
-                            {
-                                "question": "Combien de cycles de révision sont inclus ?",
-                                "answer": "Deux cycles de révisions sont inclus après la première livraison.",
-                            },
-                            {
-                                "question": "Travaillez-vous à partir de mes données ?",
-                                "answer": (
-                                    "Oui, je pars de vos données et références ; je peux aussi aider "
-                                    "à structurer la recherche bibliographique."
-                                ),
-                            },
-                        ],
-                        "is_published": True,
-                    },
-                )
-                self._track(created)
-                listings.append(listing)
+            title, deliverable = SPECIALTY_LISTINGS[writer._specialty]
+            price, turnaround = PRICING[deliverable]
+            listing, created = _first_or_create(
+                Listing,
+                writer=writer,
+                title=title,
+                defaults={
+                    "description": (
+                        "Rédaction structurée respectant les standards de la "
+                        "discipline (PRISMA / CARE / ICMJE selon le format). "
+                        "Livraison avec relecture et mise au format de la revue cible."
+                    ),
+                    "specialty": writer._specialty,
+                    "deliverable_type": deliverable,
+                    "price": price,
+                    "turnaround_days": turnaround,
+                    "faq": [
+                        {
+                            "question": "Que comprend la prestation ?",
+                            "answer": (
+                                "La rédaction complète du livrable, une relecture et la mise "
+                                "au format de la revue ou du support cible."
+                            ),
+                        },
+                        {
+                            "question": "Combien de cycles de révision sont inclus ?",
+                            "answer": "Deux cycles de révisions sont inclus après la première livraison.",
+                        },
+                        {
+                            "question": "Travaillez-vous à partir de mes données ?",
+                            "answer": (
+                                "Oui, je pars de vos données et références ; je peux aussi aider "
+                                "à structurer la recherche bibliographique."
+                            ),
+                        },
+                    ],
+                    "is_published": True,
+                },
+            )
+            self._track(created)
+            listings.append(listing)
         return listings
 
     # -- orders + reviews ---------------------------------------------------
