@@ -13,13 +13,16 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
 from apps.messaging.models import Conversation, Message
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderAttachment, OrderEvent
+from apps.orders.services import record_event
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
 from apps.users.models import (
@@ -35,6 +38,10 @@ CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes
 RESPONSE_TIMES = ["few_hours", "one_day", "few_days"]
 
 DEMO_PASSWORD = "demo1234"
+
+# Minimal valid PDF used as a seeded "source document" attached to a few orders,
+# so the order workspace's brief section isn't empty in the demo.
+_DEMO_BRIEF_PDF = b"%PDF-1.4\n%Cahier des charges (document de demonstration)\n"
 
 # Demo portraits bundled with the backend (gender-matched to each seeded user).
 # Source: randomuser.me — demo use only, replaced by real uploads in prod.
@@ -434,11 +441,33 @@ class Command(BaseCommand):
             }
             if status == Order.Status.COMPLETED:
                 defaults["application_fee_amount"] = _fee(listing.price)
+            # Active orders carry a live delivery deadline (from the turnaround).
+            if status == Order.Status.IN_PROGRESS:
+                defaults["due_at"] = timezone.now() + timedelta(days=listing.turnaround_days)
 
             order, created = _first_or_create(
                 Order, listing=listing, doctor=doctor, defaults=defaults
             )
             self._track(created)
+
+            # Once an order is underway, the doctor has shared a brief document.
+            if status in (
+                Order.Status.IN_PROGRESS,
+                Order.Status.DELIVERED,
+                Order.Status.COMPLETED,
+            ) and not order.attachments.exists():
+                OrderAttachment.objects.create(
+                    order=order,
+                    uploaded_by=doctor,
+                    note="Cahier des charges et références.",
+                    file=ContentFile(_DEMO_BRIEF_PDF, name="cahier-des-charges.pdf"),
+                )
+                self.created += 1
+
+            # Activity-log timeline matching the order's lifecycle stage, so the
+            # workspace's "Activité" panel isn't empty in the demo.
+            if not order.events.exists():
+                self._seed_order_events(order, doctor, status)
 
             if status == Order.Status.COMPLETED:
                 _, r_created = Review.objects.get_or_create(
@@ -452,6 +481,34 @@ class Command(BaseCommand):
                 )
                 self._track(r_created)
                 review_i += 1
+
+    def _seed_order_events(self, order, doctor, status):
+        S = Order.Status
+        record_event(order, OrderEvent.Type.PLACED, actor=doctor)
+        if status in (S.ACCEPTED, S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.ACCEPTED, actor=order.writer)
+        if status in (S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.PAID, actor=doctor, amount=str(order.amount))
+            record_event(
+                order,
+                OrderEvent.Type.DOCUMENT_ADDED,
+                actor=doctor,
+                filename="cahier-des-charges.pdf",
+            )
+        if status in (S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.DELIVERED, actor=order.writer)
+        if status == S.COMPLETED:
+            record_event(order, OrderEvent.Type.COMPLETED, actor=doctor)
+            record_event(
+                order,
+                OrderEvent.Type.RELEASED,
+                amount=str(order.amount - _fee(order.amount)),
+            )
+        if status == S.DECLINED:
+            record_event(order, OrderEvent.Type.DECLINED, actor=order.writer)
+        if status == S.CANCELLED:
+            record_event(order, OrderEvent.Type.CANCELLED, actor=doctor)
+        self.created += order.events.count()
 
     # -- requests + proposals ----------------------------------------------
     def _seed_requests_and_proposals(self, doctors, writers):

@@ -83,6 +83,13 @@ class Order(models.Model):
     # (charge.dispute.created webhook). Surfaced to admins for resolution.
     disputed_at = models.DateTimeField(null=True, blank=True)
 
+    # Delivery deadline, set when work starts (payment held) from the listing's
+    # turnaround_days and pushed back on each revision. Null for proposal-based
+    # orders with no agreed turnaround.
+    due_at = models.DateTimeField(null=True, blank=True)
+    # How many times the doctor has sent the work back for revision.
+    revision_count = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -114,3 +121,80 @@ class Deliverable(models.Model):
 
     def __str__(self) -> str:
         return f"Deliverable #{self.pk} for order #{self.order_id}"
+
+
+def attachment_upload_path(instance: "OrderAttachment", filename: str) -> str:
+    return f"order_attachments/order_{instance.order_id}/{filename}"
+
+
+class OrderAttachment(models.Model):
+    """A brief/source document attached to an order by either party.
+
+    Distinct from ``Deliverable`` (the finished work, writer-only, gated on
+    delivery) and from chat attachments (informal): this is the shared brief
+    material — references, source data, guidelines — both parties can consult.
+    """
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(upload_to=attachment_upload_path)
+    note = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("uploaded_at",)
+
+    def __str__(self) -> str:
+        return f"OrderAttachment #{self.pk} for order #{self.order_id}"
+
+
+class OrderEvent(models.Model):
+    """An entry in an order's activity log — the chronological workspace timeline.
+
+    Written at every meaningful moment (placement, acceptance, payment,
+    delivery, completion, refund, document added). ``actor`` is the user who
+    triggered it, or null for system/payment events. Human-readable labels and
+    icons live on the frontend (see lib/orderEvents.js)."""
+
+    class Type(models.TextChoices):
+        PLACED = "placed", "Commande passée"
+        ACCEPTED = "accepted", "Commande acceptée"
+        DECLINED = "declined", "Commande refusée"
+        PAID = "paid", "Paiement séquestré"
+        DELIVERED = "delivered", "Travail livré"
+        COMPLETED = "completed", "Commande finalisée"
+        CANCELLED = "cancelled", "Commande annulée"
+        REFUNDED = "refunded", "Paiement remboursé"
+        RELEASED = "released", "Paiement versé au rédacteur"
+        DOCUMENT_ADDED = "document_added", "Document ajouté"
+        REVISION_REQUESTED = "revision_requested", "Révision demandée"
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    type = models.CharField(max_length=32, choices=Type.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+    def __str__(self) -> str:
+        return f"OrderEvent {self.type} on order #{self.order_id}"

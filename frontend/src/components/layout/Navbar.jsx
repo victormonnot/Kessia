@@ -40,6 +40,7 @@ import { useConversations } from "@/hooks/useMessaging";
 const NAV_LINKS = [
   { to: "/listings", label: "Annonces" },
   { to: "/requests", label: "Demandes" },
+  { to: "/kessia-score", label: "Kessia Score" },
 ];
 
 const linkClass = ({ isActive }) =>

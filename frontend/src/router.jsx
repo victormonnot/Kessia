@@ -11,6 +11,7 @@ import { LoadingBlock } from "@/components/feedback/Spinner";
 // Route-based code splitting: each page is its own chunk so the initial bundle
 // stays small (Stripe, Framer Motion, etc. load only on the routes that use them).
 const Landing = lazy(() => import("@/pages/Landing"));
+const KessiaScore = lazy(() => import("@/pages/KessiaScore"));
 const Register = lazy(() => import("@/pages/Register"));
 const Login = lazy(() => import("@/pages/Login"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -24,6 +25,7 @@ const RequestDetail = lazy(() => import("@/pages/RequestDetail"));
 const RequestFormPage = lazy(() => import("@/pages/RequestFormPage"));
 const DashboardWriter = lazy(() => import("@/pages/DashboardWriter"));
 const DashboardDoctor = lazy(() => import("@/pages/DashboardDoctor"));
+const OrderWorkspace = lazy(() => import("@/pages/OrderWorkspace"));
 const WriterProfile = lazy(() => import("@/pages/WriterProfile"));
 const Inbox = lazy(() => import("@/pages/Inbox"));
 const Conversation = lazy(() => import("@/pages/Conversation"));
@@ -55,6 +57,8 @@ export default function Router() {
     >
       <Routes>
         <Route path="/" element={<Landing />} />
+        {/* Vitrine de l'outil IA « Kessia Score » (publique, tool à venir). */}
+        <Route path="/kessia-score" element={<KessiaScore />} />
         <Route
           path="/register"
           element={
@@ -137,6 +141,15 @@ export default function Router() {
           element={
             <ProtectedRoute>
               <DashboardDoctor />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/commandes/:id"
+          element={
+            <ProtectedRoute>
+              <OrderWorkspace />
             </ProtectedRoute>
           }
         />

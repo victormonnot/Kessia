@@ -7,6 +7,7 @@ const PLATFORM_COLUMN = {
   links: [
     { to: "/listings", label: "Annonces" },
     { to: "/requests", label: "Demandes" },
+    { to: "/kessia-score", label: "Kessia Score" },
   ],
 };
 

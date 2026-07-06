@@ -1,0 +1,8 @@
+Bonjour {{ order.writer.get_full_name|default:order.writer.email }},
+
+{{ order.doctor.get_full_name|default:order.doctor.email }} a demandé une révision de la commande{% if order.listing %} « {{ order.listing.title }} »{% endif %}.
+
+Consultez ses remarques et renvoyez le travail corrigé depuis l'espace de la commande :
+{{ frontend_url }}/commandes/{{ order.id }}
+
+— L'équipe Kessia
