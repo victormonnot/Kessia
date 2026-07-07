@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // colour and the blue status colour). `title` carries the explanation; on pages
 // that aren't wrapped in a Link we can layer a richer tooltip on top.
 export const VERIFIED_NOTE =
-  "Rédacteur vérifié : qualifications contrôlées manuellement par le comité Kessia.";
+  "Rédacteur vérifié : qualifications contrôlées manuellement par l'équipe Kessia.";
 
 export default function VerifiedBadge({ solid = false, label = "Vérifié", className }) {
   return (
