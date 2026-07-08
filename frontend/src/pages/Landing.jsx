@@ -5,6 +5,8 @@ import { BadgeCheck, FileText, Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useListings } from "@/hooks/useListings";
+import { initialsFromName } from "@/lib/format";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import HeroFlow from "@/components/landing/HeroFlow";
 import PopularListings from "@/components/landing/PopularListings";
@@ -15,6 +17,40 @@ import Engagements from "@/components/landing/Engagements";
 import AudienceSplit from "@/components/landing/AudienceSplit";
 import KessiaScoreTeaser from "@/components/landing/KessiaScoreTeaser";
 import FaqSection from "@/components/landing/FaqSection";
+
+// Visages réels dans le héro : les rédacteurs des annonces en ligne (mêmes
+// données que « Annonces populaires » — le cache React Query partage la
+// requête, zéro appel en plus). Masqué si l'API ne répond pas ou si moins de
+// deux profils ont une photo : jamais de faux visages à la place.
+function LiveWriters() {
+  const { data } = useListings({ ordering: "-writer_rating" });
+  const seenWriters = new Set();
+  const writers = (data?.results ?? [])
+    .filter((listing) => {
+      if (!listing.writer_avatar || seenWriters.has(listing.writer)) return false;
+      seenWriters.add(listing.writer);
+      return true;
+    })
+    .slice(0, 4);
+
+  if (writers.length < 2) return null;
+
+  return (
+    <div className="mt-6 flex items-center gap-3">
+      <div className="flex -space-x-2">
+        {writers.map((listing) => (
+          <Avatar key={listing.writer} className="size-8 ring-2 ring-background">
+            <AvatarImage src={listing.writer_avatar} alt="" />
+            <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
+              {initialsFromName(listing.writer_name)}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">Ces rédacteurs sont déjà sur Kessia.</p>
+    </div>
+  );
+}
 
 // Floating card spotlighting the flagship feature: writers vetted by a committee.
 // It lives INSIDE the hero's right grid column, so it scales with the layout and
@@ -98,7 +134,12 @@ export default function Landing() {
           <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             {/* Colonne gauche : texte + recherche */}
             <div>
-              <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+              {/* Pastille eyebrow — version « marque » : bleu nuit + point
+                  orange, comme le wordmark « Kessia. » et le favicon. */}
+              <span className="inline-flex w-fit items-center rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
+                Marketplace de rédaction médicale<span className="text-primary">.</span>
+              </span>
+              <h1 className="mt-4 text-balance text-3xl sm:text-4xl lg:text-5xl">
                 Trouvez le bon rédacteur médical pour vos publications
               </h1>
               <p className="mt-12 max-w-xl text-base text-muted-foreground sm:text-lg">
@@ -129,7 +170,7 @@ export default function Landing() {
 
               <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <ShieldCheck className="size-4" /> Paiement sous séquestre
+                  <ShieldCheck className="size-4" /> Paiement sécurisé
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <BadgeCheck className="size-4" /> Rédacteurs vérifiés
@@ -138,6 +179,8 @@ export default function Landing() {
                   <FileText className="size-4" /> 36 spécialités
                 </span>
               </p>
+
+              <LiveWriters />
             </div>
 
             {/* Colonne droite : deux cartes le long de la ligne orange (process),
