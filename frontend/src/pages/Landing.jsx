@@ -130,6 +130,47 @@ export default function Landing() {
         />
         {/* Déco « flow » (ligne orange = process) qui relie les deux cartes. */}
         <HeroFlow />
+        {/* Déco mobile/tablette : HeroFlow n'existe qu'en lg+ — ici une courte
+            arche orange effleure le coin haut-droit et les points signent la
+            marque, sans ajouter de hauteur ni gêner le texte. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 select-none lg:hidden"
+        >
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+            fill="none"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="hero-flow-sm" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#F2620F" />
+                <stop offset="1" stopColor="#F7943F" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M 70 -10 C 85 20, 95 25, 108 28"
+              stroke="url(#hero-flow-sm)"
+              strokeWidth="22"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.35"
+            />
+          </svg>
+          <svg
+            className="absolute right-3 top-16 h-16 w-28 text-neutral-300"
+            fill="currentColor"
+            aria-hidden
+          >
+            <defs>
+              <pattern id="hero-dots-sm" width="22" height="22" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="2" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#hero-dots-sm)" />
+          </svg>
+        </div>
         <div className="container relative pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pb-20 lg:pt-12">
           <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             {/* Colonne gauche : texte + recherche */}
@@ -142,7 +183,9 @@ export default function Landing() {
               <h1 className="mt-4 text-balance text-3xl sm:text-4xl lg:text-5xl">
                 Trouvez le bon rédacteur médical pour vos publications
               </h1>
-              <p className="mt-12 max-w-xl text-base text-muted-foreground sm:text-lg">
+              {/* Espacements serrés sous lg (colonne seule à l'écran), larges en
+                  lg+ (la colonne fait face aux cartes, elle doit respirer). */}
+              <p className="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg lg:mt-12">
                 Articles de recherche, études de cas, résumés, rédigés par des rédacteurs
                 scientifiques qualifiés et vérifiés.
               </p>
@@ -151,7 +194,7 @@ export default function Landing() {
                   droite (sur le fond gris) sans jamais atteindre la carte. */}
               <form
                 onSubmit={submitSearch}
-                className="mt-12 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:max-w-none lg:w-[116%]"
+                className="mt-6 flex w-full max-w-xl gap-2 rounded-xl border bg-card p-2 shadow-lg focus-within:ring-2 focus-within:ring-ring/30 lg:mt-12 lg:max-w-none lg:w-[116%]"
               >
                 <div className="relative flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -163,12 +206,19 @@ export default function Landing() {
                     className="h-11 border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0"
                   />
                 </div>
-                <Button type="submit" size="lg" className="h-11">
-                  Rechercher
+                {/* Mobile : loupe seule pour laisser le placeholder respirer. */}
+                <Button
+                  type="submit"
+                  size="lg"
+                  aria-label="Rechercher"
+                  className="h-11 px-4 sm:px-8"
+                >
+                  <Search className="size-4 sm:hidden" />
+                  <span className="hidden sm:inline">Rechercher</span>
                 </Button>
               </form>
 
-              <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+              <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground lg:mt-10">
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheck className="size-4" /> Paiement sécurisé
                 </span>
