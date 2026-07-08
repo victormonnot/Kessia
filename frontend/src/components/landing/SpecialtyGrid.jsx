@@ -61,12 +61,15 @@ export default function SpecialtyGrid() {
         </Reveal>
 
         <Reveal delay={0.08}>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {/* Mobile : carrousel horizontal sur 2 rangées (noms complets, section
+              compacte) qui saigne jusqu'au bord de l'écran (-mx-6 = padding du
+              container). Dès sm, grille classique. */}
+          <div className="-mx-6 mt-6 grid snap-x grid-flow-col grid-rows-2 gap-3 overflow-x-auto px-6 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid-flow-row sm:grid-cols-3 sm:grid-rows-none sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
             {TILES.map((tile) => (
               <Link
                 key={tile.value}
                 to={`/listings?specialty=${tile.value}`}
-                className="group flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
+                className="group flex snap-start items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
               >
                 {/* Chip monogramme : s'inverse au survol, le point reste orange. */}
                 <span
@@ -79,7 +82,7 @@ export default function SpecialtyGrid() {
                     <span className="text-primary">.</span>
                   </span>
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium transition-colors group-hover:text-primary">
+                <span className="min-w-0 flex-1 whitespace-nowrap text-sm font-medium transition-colors group-hover:text-primary sm:truncate">
                   {labelFor(tile.value, SPECIALTY_OPTIONS)}
                 </span>
                 <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -89,7 +92,7 @@ export default function SpecialtyGrid() {
             {/* 12e tuile : renvoi vers le catalogue complet. */}
             <Link
               to="/listings"
-              className="group flex items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
+              className="group flex snap-start items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md"
             >
               <span
                 aria-hidden="true"
@@ -97,7 +100,7 @@ export default function SpecialtyGrid() {
               >
                 36
               </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium transition-colors group-hover:text-primary">
+              <span className="min-w-0 flex-1 whitespace-nowrap text-sm font-medium transition-colors group-hover:text-primary sm:truncate">
                 Voir les 36 spécialités
               </span>
               <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
