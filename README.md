@@ -366,6 +366,112 @@ démo) ou par un **stockage S3** durable si `AWS_STORAGE_BUCKET_NAME` est défin
 
 ---
 
+## Gestion de projet & développement
+
+### Objectif du MVP
+
+Livrer une plateforme fonctionnelle où les rédacteurs publient des annonces, les
+médecins des demandes, et où les commandes suivent un cycle complet (acceptation,
+travail, livraison, finalisation) ; **faire circuler de l'argent réel** (paiement par
+carte à l'acceptation, fonds retenus par la plateforme, versement au rédacteur − 15 %
+de commission à la finalisation) ; **instaurer la confiance** (messagerie temps réel,
+avis sur commandes terminées, badge rédacteur vérifié, back office de modération) ;
+et **respecter le cadre légal** (consentement à l'inscription, bannière cookies,
+suppression de compte par anonymisation — RGPD).
+
+### Méthodologie & sprints
+
+Projet mené en **agile**, cadencé par des réunions avec la Product Owner toutes les
+deux semaines (mardi). Priorisation **MoSCoW** :
+
+| Priorité | Périmètre |
+|----------|-----------|
+| **Must Have** | Comptes bi-rôles, authentification JWT, catalogue d'annonces, commandes et leur machine à états, tableau des demandes avec acceptation atomique des propositions, tableaux de bord, UI française responsive |
+| **Should Have** | Messagerie temps réel, avis (commandes terminées), badge rédacteur vérifié, e-mails de cycle de vie, cycle de vie complet du compte (réinitialisation, vérification e-mail, changement / suppression), consentement RGPD, limitation de débit |
+| **Could Have** | Pièces jointes de chat, connexion Google, e-mails Brevo, profils rédacteurs enrichis, favoris |
+| **Won't Have (v1)** | i18n / multi-devises, SMS, vérification réelle de justificatifs par un tiers, assistant de rédaction IA |
+
+Le **paiement en ligne** était initialement hors périmètre MVP ; le cœur ayant été
+livré en avance, un troisième sprint a intégré **Stripe Connect** et le **back office**
+administrateur, la Product Owner étant informée à chaque revue.
+
+Les sprints durent **deux semaines**, outillés par GitHub (branches, pull requests,
+issues), un Drive partagé et des réunions en présentiel (planning en début de sprint,
+stand-ups quotidiens, point de déblocage le jeudi, revue avec la PO puis rétrospective
+en fin de sprint).
+
+| Sprint | Dates | Thème | Revue |
+|--------|-------|-------|-------|
+| **0** | 27 avr – 25 mai | Cadrage & documentation technique | Réunions 1 & 2 |
+| **1** | 26 mai – 1 juin | Cœur du MVP | Réunion 3 (02 juin) |
+| **2** | 2 – 16 juin | Durcissement, confiance & sécurité, déploiement staging | Réunion 4 (16 juin) |
+| **3** | 17 – 26 juin | Paiements, administration, durcissement production | Réunion du 30 juin |
+| **Clôture** | 6 – 17 juil | Démo, slides, répétitions, revue technique | Présentation finale (17 juil) |
+
+- **Sprint 0** — périmètre verrouillé et spécification prête au *build* (charte, user
+  stories MoSCoW, wireframes, architecture, schéma de BD, contrat d'API). Pivot de
+  FastAPI vers **Django** le 06 mai, avant toute ligne de code métier.
+- **Sprint 1** — marketplace de bout en bout : authentification (JWT + *refresh*
+  httpOnly), CRUD annonces et catalogue, machine à états des commandes avec dépôt /
+  téléchargement de livrables, tableau des demandes avec acceptation atomique,
+  messagerie temps réel, avis, badge, tableaux de bord, stack Docker en une commande
+  avec démo *seedée*.
+- **Sprint 2** — produit déployable : réinitialisation de mot de passe, vérification
+  e-mail, changement e-mail / mot de passe, suppression de compte, connexion Google,
+  consentement et bannière cookies, mode lecture seule, limitation de débit, limites
+  d'upload, pièces jointes de chat, e-mails Brevo, nouvelle identité visuelle
+  « La Revue », profils rédacteurs enrichis et favoris, premier déploiement Render.
+- **Sprint 3** — la marketplace devient réelle : paiements Stripe Connect (carte à
+  l'acceptation, fonds retenus, versement − 15 % à la finalisation, remboursement
+  automatique, webhooks idempotents), onboarding Stripe Express des rédacteurs, back
+  office complet (statistiques, modération avec restauration, remboursements,
+  signalements, journal d'audit), suppression de compte par anonymisation RGPD,
+  second passage sécurité (révocation de session au changement de mot de passe,
+  limitation du chat, docs API protégées, montée à Django 5.2 LTS).
+
+### Revues & rétrospectives
+
+- **Sprint 0** (réunions des 05 et 19 mai) — périmètre, user stories, maquettes et
+  modèle de double publication présentés ; pattern de couleurs et badge validés ;
+  spécification acceptée : feu vert pour le *build*.
+- **Sprint 1** (02 juin) — démo V1 complète, de l'inscription à l'avis, messagerie
+  temps réel et badge inclus. V1 acceptée ; retour : revoir l'identité visuelle,
+  personnaliser les cartes d'offre, retravailler le texte de la landing.
+- **Sprint 2** (16 juin) — démo V2 avec la nouvelle identité (validée), taxonomies
+  complètes, cycle de vie durci, Brevo, Google, et déploiement staging remis à la PO
+  pour retours tiers.
+- **Sprint 3** (30 juin) — cycle de paiement complet sur Stripe, back office,
+  anonymisation RGPD et passage sécurité.
+
+| Rétrospective | Points |
+|---------------|--------|
+| **Réussites** | Travail back / front en parallèle sur un contrat d'API convenu ; les conventions Django/DRF (permissions, sérialisation, pagination) quasi gratuites ; la suite de tests comme garde-fou de *merge*, permettant de livrer chaque durcissement derrière des builds verts. |
+| **Difficultés** | Des pannes visibles seulement en déploiement (SMTP bloqué, en-têtes cassant le popup Google, service des médias / statiques) ; les paiements multiplient les cas d'erreur (rejeux de webhooks, remboursements après versement, moyens de paiement réversibles) ; Channels / ASGI ajoute des pièces mobiles au-delà du REST. |
+| **Améliorations** | Chaque feature est désormais aussi testée sur l'environnement déployé ; l'idempotence devient une règle de conception pour tout ce qui déplace de l'argent ; les décisions de risque sont écrites au moment où elles sont prises ; le seed de démo reconstruit n'importe quel environnement en une commande. |
+
+### Récapitulatif du MVP
+
+| Fonctionnalité | Statut |
+|----------------|--------|
+| Authentification (JWT, Google, cycle de vie du compte) | ✅ Livré |
+| Catalogue d'annonces, recherche et filtres | ✅ Livré |
+| Tableau des demandes, propositions, acceptation atomique | ✅ Livré |
+| Commandes, machine à états, livrables sécurisés | ✅ Livré |
+| Paiements — Stripe Connect, séquestre, versements, remboursements | ✅ Livré |
+| Messagerie temps réel avec pièces jointes | ✅ Livré |
+| Avis et badge rédacteur vérifié | ✅ Livré |
+| Profils publics et favoris | ✅ Livré |
+| Back office (modération, signalements, remboursements, audit) | ✅ Livré |
+| RGPD : consentement, cookies, suppression par anonymisation | ✅ Livré |
+| Limitation de débit et durcissement sécurité | ✅ Livré |
+| Déploiement staging (Render + Neon) | ✅ Livré |
+
+> Le détail complet de la phase de développement — suivi d'avancement, journal des
+> bugs (KES-01 à KES-19), tests d'intégration et prochaines étapes — figure dans le
+> [document Stage 4](<docs/MVP_Development_and_Execution_(Stage_4).md>).
+
+---
+
 ## Documentation
 
 La documentation complète de la phase de développement — planification de
@@ -379,8 +485,12 @@ restent dans le dossier [`docs/`](docs/).
 
 ## Équipe
 
-| Membre | Rôle |
-|--------|------|
-| Soumia Taoui | Product Owner |
-| Yasi Philippe Hübner | Backend Lead · SCM · Déploiement |
-| Victor Monnot | Frontend Lead · QA |
+| Membre | Rôle | Responsabilités |
+|--------|------|-----------------|
+| Soumia Taoui | Product Owner & Sponsor | Priorités du backlog, recette, expertise métier |
+| Yasi Philippe Hübner | Backend Lead | Backend & base de données, SCM (branches, revues de PR, merges), déploiement, sécurité |
+| Victor Monnot | Frontend Lead | SPA frontend, UI/UX, coordination QA |
+
+Le QA et la correction de bugs sont **partagés** entre les deux développeurs. La
+planification et le suivi des délais sont arbitrés avec la Product Owner lors des
+réunions régulières en présentiel.
