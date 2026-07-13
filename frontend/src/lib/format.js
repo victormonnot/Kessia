@@ -2,6 +2,8 @@
 
 export function fullName(user, fallback = "Utilisateur") {
   if (!user) return fallback;
+  // A deleted (anonymised) account has its name wiped — show a clear placeholder.
+  if (user.is_deleted) return "Utilisateur supprimé";
   const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
   return name || user.email || fallback;
 }
@@ -12,6 +14,14 @@ export function initials(user) {
   const last = user.last_name?.[0] || "";
   const combined = `${first}${last}`.trim();
   return (combined || user.email?.[0] || "?").toUpperCase();
+}
+
+// Initials from a plain full-name string (e.g. "Alice Martin" -> "AM").
+export function initialsFromName(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const chars = (parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+  return (chars || "?").toUpperCase();
 }
 
 export function formatPrice(amount, currency = "EUR") {

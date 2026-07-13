@@ -23,6 +23,8 @@ import { useLogin } from "@/hooks/useAuth";
 const DEMO_ACCOUNTS = [
   { label: "Médecin", email: "doctor@kessia.demo" },
   { label: "Rédacteur", email: "writer@kessia.demo" },
+  // Temporary testing convenience — to be removed before launch.
+  { label: "Admin", email: "admin@kessia.demo" },
 ];
 
 export default function Login() {

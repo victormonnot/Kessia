@@ -48,6 +48,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     # When the user accepted the CGU / privacy policy at signup (RGPD consent trace).
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
+    # Account deletion = RGPD erasure by anonymisation (never a hard delete that
+    # would destroy the counterparty's orders/reviews). Non-null = the account
+    # has been deleted: personal data is wiped but transactional records are kept.
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = "email"

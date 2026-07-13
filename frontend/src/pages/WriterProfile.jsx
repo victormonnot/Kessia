@@ -51,7 +51,7 @@ export default function WriterProfile() {
       <div className="container py-10">
         <ErrorState
           title="Profil introuvable"
-          description="Ce rédacteur n'existe pas ou n'est plus disponible."
+          description="Ce profil n'existe pas ou n'est plus disponible."
           onRetry={refetch}
         />
       </div>
@@ -158,54 +158,58 @@ export default function WriterProfile() {
         </Card>
       )}
 
-      <section>
-        <h2 className="text-lg font-semibold">Annonces</h2>
-        {listings.length > 0 ? (
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((l) => (
-              <ListingCard key={l.id} listing={l} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Aucune annonce publiée pour le moment.
-          </p>
-        )}
-      </section>
+      {writer.is_writer && (
+        <>
+          <section>
+            <h2 className="text-lg font-semibold">Annonces</h2>
+            {listings.length > 0 ? (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {listings.map((l) => (
+                  <ListingCard key={l.id} listing={l} />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Aucune annonce publiée pour le moment.
+              </p>
+            )}
+          </section>
 
-      <section>
-        <h2 className="text-lg font-semibold">Avis</h2>
-        {hasReviews && (
-          <Card className="mt-3">
-            <CardContent className="pt-6">
-              <RatingBreakdown
-                breakdown={writer.rating_breakdown}
-                avg={writer.avg_rating}
-                total={writer.reviews_count}
+          <section>
+            <h2 className="text-lg font-semibold">Avis</h2>
+            {hasReviews && (
+              <Card className="mt-3">
+                <CardContent className="pt-6">
+                  <RatingBreakdown
+                    breakdown={writer.rating_breakdown}
+                    avg={writer.avg_rating}
+                    total={writer.reviews_count}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            {reviewsLoading ? (
+              <div className="mt-3 space-y-3">
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="h-20 w-full rounded-lg" />
+              </div>
+            ) : reviewItems.length > 0 ? (
+              <div className="mt-3 space-y-3">
+                {reviewItems.map((r) => (
+                  <ReviewCard key={r.id} review={r} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                className="mt-3"
+                icon={Star}
+                title="Aucun avis pour le moment"
+                description="Les avis laissés par les médecins après une commande finalisée apparaîtront ici."
               />
-            </CardContent>
-          </Card>
-        )}
-        {reviewsLoading ? (
-          <div className="mt-3 space-y-3">
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-          </div>
-        ) : reviewItems.length > 0 ? (
-          <div className="mt-3 space-y-3">
-            {reviewItems.map((r) => (
-              <ReviewCard key={r.id} review={r} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            className="mt-3"
-            icon={Star}
-            title="Aucun avis pour le moment"
-            description="Les avis laissés par les médecins après une commande finalisée apparaîtront ici."
-          />
-        )}
-      </section>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }

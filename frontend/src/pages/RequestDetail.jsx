@@ -19,7 +19,6 @@ import {
   useUpdateProposal,
 } from "@/hooks/useRequests";
 import { useAuthStore } from "@/store/authStore";
-import { avatarFor } from "@/lib/demo-assets";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 import { errorMessage, formatDate, formatPrice, fullName, initials } from "@/lib/format";
 
@@ -105,7 +104,7 @@ export default function RequestDetail() {
           </div>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar className="size-7">
-              <AvatarImage src={request.doctor?.avatar || avatarFor(fullName(request.doctor))} alt="" />
+              <AvatarImage src={request.doctor?.avatar || undefined} alt="" />
               <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
                 {initials(request.doctor)}
               </AvatarFallback>

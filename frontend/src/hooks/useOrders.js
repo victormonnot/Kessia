@@ -21,6 +21,14 @@ export function useEarnings() {
   return useQuery({ queryKey: ["earnings"], queryFn: ordersApi.earnings });
 }
 
+export function useOrderConversation(id) {
+  return useQuery({
+    queryKey: ["order-conversation", id],
+    queryFn: () => ordersApi.getConversation(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
@@ -42,5 +50,25 @@ export function useUploadDeliverable() {
   return useMutation({
     mutationFn: ({ id, formData }) => ordersApi.uploadDeliverable(id, formData),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+export function useRequestRevision(orderId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (note) => ordersApi.requestRevision(orderId, note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order", orderId] });
+    },
+  });
+}
+
+export function useUploadOrderAttachment(orderId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (formData) => ordersApi.uploadAttachment(orderId, formData),
+    // The order detail embeds its attachments, so refresh the open workspace.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["order", orderId] }),
   });
 }

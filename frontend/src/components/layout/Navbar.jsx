@@ -8,6 +8,8 @@ import {
   Menu,
   MessageSquare,
   Settings,
+  Shield,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +40,7 @@ import { useConversations } from "@/hooks/useMessaging";
 const NAV_LINKS = [
   { to: "/listings", label: "Annonces" },
   { to: "/requests", label: "Demandes" },
+  { to: "/kessia-score", label: "Kessia Score" },
 ];
 
 const linkClass = ({ isActive }) =>
@@ -99,6 +102,11 @@ export default function Navbar() {
                 {user && (
                   <>
                     <SheetClose asChild>
+                      <NavLink to={`/redacteurs/${user.id}`} className={linkClass}>
+                        Mon profil
+                      </NavLink>
+                    </SheetClose>
+                    <SheetClose asChild>
                       <NavLink to={dashboardPath} className={linkClass}>
                         Tableau de bord
                       </NavLink>
@@ -118,6 +126,13 @@ export default function Navbar() {
                         Paramètres
                       </NavLink>
                     </SheetClose>
+                    {user.is_staff && (
+                      <SheetClose asChild>
+                        <NavLink to="/admin" className={linkClass}>
+                          Administration
+                        </NavLink>
+                      </SheetClose>
+                    )}
                   </>
                 )}
               </nav>
@@ -211,6 +226,9 @@ export default function Navbar() {
                     </span>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate(`/redacteurs/${user.id}`)}>
+                    <User className="size-4" /> Mon profil
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate(dashboardPath)}>
                     <LayoutDashboard className="size-4" /> Tableau de bord
                   </DropdownMenuItem>
@@ -223,6 +241,11 @@ export default function Navbar() {
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="size-4" /> Paramètres
                   </DropdownMenuItem>
+                  {user.is_staff && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="size-4" /> Administration
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="size-4" /> Déconnexion

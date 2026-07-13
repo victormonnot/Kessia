@@ -1,61 +1,56 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ArrowRight,
-  BadgeCheck,
-  FileText,
-  MessagesSquare,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
+import { BadgeCheck, FileText, Search, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ListingCard from "@/components/listings/ListingCard";
-import ListingCardSkeleton from "@/components/listings/ListingCardSkeleton";
+import { useListings } from "@/hooks/useListings";
+import { initialsFromName } from "@/lib/format";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import HeroFlow from "@/components/landing/HeroFlow";
-import { useListings } from "@/hooks/useListings";
-import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
+import PopularListings from "@/components/landing/PopularListings";
+import SpecialtyGrid from "@/components/landing/SpecialtyGrid";
+import DeliverableTypes from "@/components/landing/DeliverableTypes";
+import HowItWorks from "@/components/landing/HowItWorks";
+import Engagements from "@/components/landing/Engagements";
+import AudienceSplit from "@/components/landing/AudienceSplit";
+import KessiaScoreTeaser from "@/components/landing/KessiaScoreTeaser";
+import FaqSection from "@/components/landing/FaqSection";
 
-// "Parcourir par spécialité" — modern cards (no photos), one per domain.
-const SPECIALTY_TILES = [
-  "cardiologie",
-  "oncologie",
-  "neurologie",
-  "pediatrie",
-  "psychiatrie",
-  "radiologie",
-  "dermatologie",
-  "pneumologie",
-  "gastroenterologie",
-  "endocrinologie",
-  "rhumatologie",
-  "gynecologie",
-];
+// Visages réels dans le héro : les rédacteurs des annonces en ligne (mêmes
+// données que « Annonces populaires » — le cache React Query partage la
+// requête, zéro appel en plus). Masqué si l'API ne répond pas ou si moins de
+// deux profils ont une photo : jamais de faux visages à la place.
+function LiveWriters() {
+  const { data } = useListings({ ordering: "-writer_rating" });
+  const seenWriters = new Set();
+  const writers = (data?.results ?? [])
+    .filter((listing) => {
+      if (!listing.writer_avatar || seenWriters.has(listing.writer)) return false;
+      seenWriters.add(listing.writer);
+      return true;
+    })
+    .slice(0, 4);
 
-const STEPS = [
-  {
-    title: "Trouvez ou publiez",
-    text: "Parcourez les annonces de rédacteurs ou publiez une demande sur mesure.",
-  },
-  {
-    title: "Payez en sécurité",
-    text: "Le paiement est placé sous séquestre et n'est versé qu'à la livraison validée.",
-  },
-  {
-    title: "Recevez votre livrable",
-    text: "Échangez via la messagerie, téléchargez le travail et laissez un avis.",
-  },
-];
+  if (writers.length < 2) return null;
 
-const FEATURES = [
-  { icon: ShieldCheck, title: "Paiement sécurisé", text: "Fonds sous séquestre via Stripe." },
-  { icon: BadgeCheck, title: "Rédacteurs vérifiés", text: "Qualifications contrôlées, badge dédié." },
-  { icon: MessagesSquare, title: "Messagerie intégrée", text: "Du devis à la livraison, au même endroit." },
-  { icon: FileText, title: "Spécialisé médical", text: "36 spécialités, 5 types de livrables." },
-];
+  return (
+    <div className="mt-6 flex items-center gap-3">
+      <div className="flex -space-x-2">
+        {writers.map((listing) => (
+          <Avatar key={listing.writer} className="size-8 ring-2 ring-background">
+            <AvatarImage src={listing.writer_avatar} alt="" />
+            <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
+              {initialsFromName(listing.writer_name)}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">Ces rédacteurs sont déjà sur Kessia.</p>
+    </div>
+  );
+}
 
 // Floating card spotlighting the flagship feature: writers vetted by a committee.
 // It lives INSIDE the hero's right grid column, so it scales with the layout and
@@ -113,41 +108,6 @@ function DeliveredCard() {
   );
 }
 
-// Real listings on the home page (hidden if the API is down or returns nothing).
-function PopularListings() {
-  const { data, isLoading, isError } = useListings({ ordering: "-writer_rating" });
-  // Une seule annonce par rédacteur (évite deux cartes avec la même photo).
-  const seenWriters = new Set();
-  const listings = (data?.results ?? [])
-    .filter((listing) => {
-      if (seenWriters.has(listing.writer)) return false;
-      seenWriters.add(listing.writer);
-      return true;
-    })
-    .slice(0, 5);
-
-  if (isError || (!isLoading && listings.length === 0)) return null;
-
-  return (
-    <section className="container py-10 sm:py-14">
-      <div className="flex items-end justify-between gap-4">
-        <h2 className="text-2xl sm:text-3xl">Annonces populaires</h2>
-        <Link
-          to="/listings"
-          className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          Voir tout <ArrowRight className="size-4" />
-        </Link>
-      </div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {isLoading
-          ? Array.from({ length: 5 }).map((_, i) => <ListingCardSkeleton key={i} />)
-          : listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
-      </div>
-    </section>
-  );
-}
-
 export default function Landing() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -174,7 +134,12 @@ export default function Landing() {
           <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             {/* Colonne gauche : texte + recherche */}
             <div>
-              <h1 className="text-balance text-3xl sm:text-4xl lg:text-5xl">
+              {/* Pastille eyebrow — version « marque » : bleu nuit + point
+                  orange, comme le wordmark « Kessia. » et le favicon. */}
+              <span className="inline-flex w-fit items-center rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
+                Marketplace de rédaction médicale<span className="text-primary">.</span>
+              </span>
+              <h1 className="mt-4 text-balance text-3xl sm:text-4xl lg:text-5xl">
                 Trouvez le bon rédacteur médical pour vos publications
               </h1>
               <p className="mt-12 max-w-xl text-base text-muted-foreground sm:text-lg">
@@ -205,7 +170,7 @@ export default function Landing() {
 
               <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <ShieldCheck className="size-4" /> Paiement sous séquestre
+                  <ShieldCheck className="size-4" /> Paiement sécurisé
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <BadgeCheck className="size-4" /> Rédacteurs vérifiés
@@ -214,6 +179,8 @@ export default function Landing() {
                   <FileText className="size-4" /> 36 spécialités
                 </span>
               </p>
+
+              <LiveWriters />
             </div>
 
             {/* Colonne droite : deux cartes le long de la ligne orange (process),
@@ -229,71 +196,69 @@ export default function Landing() {
       {/* Vraies annonces dès l'accueil (masquée si l'API ne répond pas). */}
       <PopularListings />
 
-      {/* Catégories — cartes spécialités modernes (sans photo). */}
-      <section className="container py-10 sm:py-14">
-        <div className="flex items-end justify-between gap-4">
-          <h2 className="text-2xl sm:text-3xl">Parcourir par spécialité</h2>
-          <Link
-            to="/listings"
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline"
+      {/* Catégories — tuiles spécialités à monogramme (écho du favicon). */}
+      <SpecialtyGrid />
+
+      {/* Catalogue par type de prestation, en mini-documents illustrés. */}
+      <DeliverableTypes />
+
+      {/* Le parcours de commande le long de la ligne orange du héro. */}
+      <HowItWorks />
+
+      {/* Garanties vérifiables — remplace les témoignages de démo. */}
+      <Engagements />
+
+      {/* Deux faces du marché : médecins ↔ rédacteurs, chacun son CTA. */}
+      <AudienceSplit />
+
+      {/* Teaser honnête de l'outil à venir (page /kessia-score). */}
+      <KessiaScoreTeaser />
+
+      {/* Questions fréquentes — lève les objections avant la conversion. */}
+      <FaqSection />
+
+      {/* CTA final — bande bleu nuit, l'orange ne sert qu'au bouton. La ligne
+          orange du héro « sort » de la page ici, très atténuée. */}
+      <section className="relative overflow-hidden bg-foreground">
+        <div aria-hidden className="pointer-events-none absolute inset-0 select-none">
+          <svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+            fill="none"
+            preserveAspectRatio="none"
           >
-            Toutes les spécialités <ArrowRight className="size-4" />
-          </Link>
+            <defs>
+              <linearGradient id="cta-flow" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#F2620F" />
+                <stop offset="1" stopColor="#F7943F" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M -2 90 C 30 75, 60 85, 102 10"
+              stroke="url(#cta-flow)"
+              strokeWidth="26"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.12"
+            />
+          </svg>
+          <svg
+            className="absolute right-6 top-6 h-20 w-36 text-background/15"
+            fill="currentColor"
+          >
+            <defs>
+              <pattern id="cta-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="2" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#cta-dots)" />
+          </svg>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {SPECIALTY_TILES.map((s) => (
-            <Link
-              key={s}
-              to={`/listings?specialty=${s}`}
-              className="group flex items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3.5 transition-colors hover:border-foreground"
-            >
-              <span className="truncate text-sm font-medium">
-                {labelFor(s, SPECIALTY_OPTIONS)}
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Comment ça marche + réassurance — bande grise compacte. */}
-      <section className="border-y bg-secondary/60">
-        <div className="container py-10 sm:py-14">
-          <h2 className="text-2xl sm:text-3xl">Comment ça marche</h2>
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <div key={s.title} className="flex gap-4">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-semibold text-background">
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="font-semibold">{s.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 grid gap-6 border-t pt-8 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="flex gap-3">
-                <f.icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <div>
-                  <h3 className="text-sm font-semibold">{f.title}</h3>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{f.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA final — bande bleu nuit, l'orange ne sert qu'au bouton. */}
-      <section className="bg-foreground">
-        <div className="container flex flex-col items-start gap-6 py-12 text-background sm:flex-row sm:items-center sm:justify-between sm:py-14">
+        <div className="container relative flex flex-col items-start gap-6 py-12 text-background sm:flex-row sm:items-center sm:justify-between sm:py-14">
           <div>
             <h2 className="text-2xl sm:text-3xl">Prêt à commencer ?</h2>
             <p className="mt-2 max-w-xl text-background/70">
-              Créez votre compte médecin ou rédacteur en quelques minutes.
+              Un seul compte pour commander ou rédiger — prêt en quelques minutes.
             </p>
           </div>
           <div className="flex shrink-0 flex-col gap-3 sm:flex-row">

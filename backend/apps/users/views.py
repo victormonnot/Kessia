@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -8,10 +7,12 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -46,7 +47,19 @@ from .serializers import (
     WriterPortfolioSerializer,
     WriterPublicationSerializer,
 )
+from .services import anonymize_account, deletion_block_reason
 from .tokens import email_verification_token
+
+
+def _revoke_all_sessions(user) -> None:
+    """Blacklist every outstanding refresh token for the user — logs out all
+    sessions (other devices / a compromised one) after a credential change.
+
+    Access tokens are stateless and can't be revoked, but they expire in minutes;
+    blacklisting the refresh tokens stops any other session from refreshing.
+    """
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
 
 
 @api_view(["POST"])
@@ -106,7 +119,9 @@ def password_reset_confirm(request):
     """Validate the emailed uid/token and set the new password."""
     serializer = PasswordResetConfirmSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
+    user = serializer.save()
+    # A reset usually follows a compromise — log out every existing session.
+    _revoke_all_sessions(user)
     return Response({"detail": "Votre mot de passe a été réinitialisé."})
 
 
@@ -162,6 +177,7 @@ def google_login(request):
             credential, google_requests.Request(), settings.GOOGLE_OAUTH_CLIENT_ID
         )
     except ValueError:
+        LoginThrottle().record_failure(request)
         return Response(
             {"detail": "Jeton Google invalide."}, status=status.HTTP_401_UNAUTHORIZED
         )
@@ -207,7 +223,12 @@ class CookieTokenObtainPairView(TokenObtainPairView):
     throttle_classes = (LoginThrottle,)
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except (AuthenticationFailed, InvalidToken, TokenError):
+            # Only failed logins count toward the anti-bruteforce throttle.
+            LoginThrottle().record_failure(request)
+            raise
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop("refresh", None)
             if refresh:
@@ -278,16 +299,16 @@ class MeView(APIView):
         return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def delete(self, request):
-        """Hard-delete the account (password-confirmed) and clear auth cookies."""
+        """Delete the account (RGPD erasure: personal data is anonymised in place,
+        transactional records are kept). Password-confirmed. Refused while an
+        order is in flight or funds are unsettled — finish/settle those first.
+        """
         serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        try:
-            request.user.delete()
-        except ProtectedError:
-            return Response(
-                {"detail": "Votre compte est lié à des éléments protégés et ne peut pas être supprimé."},
-                status=status.HTTP_409_CONFLICT,
-            )
+        reason = deletion_block_reason(request.user)
+        if reason:
+            return Response({"detail": reason}, status=status.HTTP_409_CONFLICT)
+        anonymize_account(request.user)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)
         return response
@@ -299,7 +320,14 @@ def change_password(request):
     serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response({"detail": "Mot de passe mis à jour."})
+    # Log out every other session, then re-issue this one so the user stays in.
+    _revoke_all_sessions(request.user)
+    refresh = RefreshToken.for_user(request.user)
+    response = Response(
+        {"detail": "Mot de passe mis à jour.", "access": str(refresh.access_token)}
+    )
+    set_auth_cookies(response, str(refresh))
+    return response
 
 
 @api_view(["POST"])
@@ -311,7 +339,11 @@ def change_email(request):
     user = serializer.save()
     # The new address is unverified — send a fresh confirmation link.
     _send_email_verification(user)
-    return Response(UserSerializer(user, context={"request": request}).data)
+    # Changing the account email also evicts other sessions; keep this one.
+    _revoke_all_sessions(user)
+    response = Response(UserSerializer(user, context={"request": request}).data)
+    set_auth_cookies(response, str(RefreshToken.for_user(user)))
+    return response
 
 
 @api_view(["POST"])
@@ -323,9 +355,11 @@ def activate_writer(request):
 
 
 class PublicWriterView(generics.RetrieveAPIView):
-    """Public, shareable writer profile. Only writers have one (404 otherwise)."""
+    """Public, shareable profile for any (non-deleted) user — writers get the
+    full profile, everyone else the common fields (writer sections come back
+    empty)."""
 
-    queryset = User.objects.filter(is_writer=True)
+    queryset = User.objects.filter(deleted_at__isnull=True)
     serializer_class = PublicWriterSerializer
     permission_classes = (AllowAny,)
 

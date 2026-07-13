@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "apps.messaging",
     "apps.verification",
     "apps.favorites",
+    "apps.admin_panel",
 ]
 
 MIDDLEWARE = [
@@ -125,11 +127,16 @@ REST_FRAMEWORK = {
     # Email senders are tight (each hit sends a real email and the Brevo free
     # tier is 300/day); login is anti-bruteforce.
     "DEFAULT_THROTTLE_RATES": {
-        "auth-login": "10/min",
+        # Login counts only *failed* attempts (see LoginThrottle), so a busy
+        # shared IP of legit users isn't blocked; a brute-forcer still trips it.
+        "auth-login": "20/min",
         "auth-register": "10/hour",
-        "password-reset": "3/hour",
+        "password-reset": "5/hour",
         "email-resend": "3/hour",
         "email-change": "3/hour",
+        # Sending chat messages: generous for real conversations, but caps a
+        # scripted flood (spam, inbox-bombing, storage/DB abuse). Per user.
+        "messaging": "30/min",
     },
 }
 
@@ -147,6 +154,12 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# The OpenAPI schema + Swagger UI publish a full map of every endpoint, which is
+# free reconnaissance for an attacker. Off by default (prod-safe); dev.py turns
+# it on for local convenience, and it can be flipped on in any environment via
+# the ENABLE_API_DOCS env var (e.g. to demo the docs). See config/urls.py.
+ENABLE_API_DOCS = config("ENABLE_API_DOCS", default=False, cast=bool)
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
@@ -218,3 +231,17 @@ ASGI_APPLICATION = "config.asgi.application"
 CHANNEL_LAYERS = {
     "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
 }
+
+
+# --- Helpers ---------------------------------------------------------------
+def ensure_strong_secret_key(key: str) -> None:
+    """Refuse a public/placeholder SECRET_KEY (enforced by prod settings).
+
+    A known key lets anyone forge sessions and JWTs, so production must fail
+    fast rather than silently boot with the dev default or an example value.
+    """
+    if key in ("", "insecure-dev-key-change-me", "change-me-in-production"):
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be set to a strong, secret value in production "
+            "(it is currently unset or a placeholder)."
+        )

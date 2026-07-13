@@ -1,7 +1,7 @@
 import factory
 
 from apps.listings.tests.factories import ListingFactory
-from apps.orders.models import Deliverable, Order
+from apps.orders.models import Deliverable, Order, OrderAttachment
 from apps.users.tests.factories import UserFactory
 
 
@@ -28,3 +28,14 @@ class DeliverableFactory(factory.django.DjangoModelFactory):
     order = factory.SubFactory(OrderFactory)
     file = factory.django.FileField(filename="deliverable.pdf", data=b"%PDF-1.4 test")
     note = ""
+
+
+class OrderAttachmentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = OrderAttachment
+
+    order = factory.SubFactory(OrderFactory)
+    file = factory.django.FileField(filename="source.pdf", data=b"%PDF-1.4 test")
+    note = ""
+    # By default the brief document comes from the ordering doctor.
+    uploaded_by = factory.LazyAttribute(lambda o: o.order.doctor)

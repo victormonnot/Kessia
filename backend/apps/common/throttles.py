@@ -19,7 +19,40 @@ class IPRateThrottle(SimpleRateThrottle):
 
 
 class LoginThrottle(IPRateThrottle):
+    """Anti-bruteforce login throttle that counts only *failed* attempts.
+
+    A successful login never counts, so many legitimate users behind one shared
+    IP (e.g. a hospital) are not blocked. ``allow_request`` only checks the limit;
+    the login views call ``record_failure`` when authentication fails.
+    """
+
     scope = "auth-login"
+
+    def allow_request(self, request, view):
+        if self.rate is None:
+            return True
+        self.key = self.get_cache_key(request, view)
+        if self.key is None:
+            return True
+        self.history = self.cache.get(self.key, [])
+        self.now = self.timer()
+        while self.history and self.history[-1] <= self.now - self.duration:
+            self.history.pop()
+        return len(self.history) < self.num_requests
+
+    def record_failure(self, request):
+        """Count one failed login against the client IP."""
+        if self.rate is None:
+            return
+        key = self.get_cache_key(request, None)
+        if key is None:
+            return
+        history = self.cache.get(key, [])
+        now = self.timer()
+        while history and history[-1] <= now - self.duration:
+            history.pop()
+        history.insert(0, now)
+        self.cache.set(key, history, self.duration)
 
 
 class RegisterThrottle(IPRateThrottle):
@@ -36,3 +69,10 @@ class EmailResendThrottle(UserRateThrottle):
 
 class EmailChangeThrottle(UserRateThrottle):
     scope = "email-change"
+
+
+class MessageThrottle(UserRateThrottle):
+    """Cap how fast a user can send chat messages, to curb spam/flooding and the
+    DB writes, attachment storage and notification emails each send can trigger."""
+
+    scope = "messaging"

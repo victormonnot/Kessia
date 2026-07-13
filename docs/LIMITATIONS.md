@@ -39,6 +39,15 @@ section documents trade-offs that are still deliberately out of scope.
 - **Cross-site cookies in prod** require `AUTH_COOKIE_SAMESITE=None` + HTTPS and
   the frontend origin in `CORS_ALLOWED_ORIGINS`/`CSRF_TRUSTED_ORIGINS` (see
   `DEPLOYMENT.md`).
+- **Card-only checkout (deliberate).** The PaymentIntent pins
+  `payment_method_types=["card"]`, so bank-debit methods such as SEPA — which the
+  payer can reverse for weeks, after the irreversible writer payout has already
+  gone out — are not accepted. The platform still pays writers **instantly** on
+  completion and accepts the residual **card chargeback** risk: smaller and
+  contestable, with fraud liability shifting to the issuer for 3-D Secure
+  authenticated cards. Stronger protection (delaying the writer payout / holding
+  a reserve, plus dispute-webhook handling) is a deliberate later decision, not
+  yet implemented.
 - **Out of scope by design:** i18n/multi-currency, SMS, real credential
   verification (the badge is an admin-gated flag).
 

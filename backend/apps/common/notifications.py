@@ -26,6 +26,7 @@ NOTIFICATION_SUBJECTS: dict[str, str] = {
     "order_delivered": "Votre commande a été livrée",
     "order_completed": "Votre commande a été finalisée",
     "order_cancelled": "Une commande a été annulée",
+    "order_revision_requested": "Une révision a été demandée",
     "new_proposal": "Nouvelle proposition reçue sur Kessia",
     "proposal_accepted": "Votre proposition a été acceptée",
     "new_message": "Nouveau message sur Kessia",

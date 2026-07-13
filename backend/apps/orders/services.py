@@ -11,10 +11,17 @@ completion and refund on cancel-after-payment are handled there too.
 
 from __future__ import annotations
 
-from .models import Order
+from .models import Order, OrderEvent
 
 WRITER = "writer"
 DOCTOR = "doctor"
+
+
+def record_event(order: Order, event_type: str, actor=None, **metadata) -> OrderEvent:
+    """Append an entry to the order's activity log (the workspace timeline)."""
+    return OrderEvent.objects.create(
+        order=order, type=event_type, actor=actor, metadata=metadata
+    )
 
 # from_status -> {to_status: actor allowed to perform the transition}
 # `accepted -> in_progress` is system-driven (it happens when the doctor's
@@ -54,6 +61,7 @@ _RECIPIENT_FOR_EVENT = {
     "order_delivered": lambda o: o.doctor,
     "order_completed": lambda o: o.writer,
     "order_cancelled": lambda o: o.writer,
+    "order_revision_requested": lambda o: o.writer,
 }
 
 

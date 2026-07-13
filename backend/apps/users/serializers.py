@@ -48,6 +48,7 @@ class UserSerializer(serializers.ModelSerializer):
             "response_time",
             "is_writer",
             "is_verified",
+            "is_staff",
             "date_joined",
         )
         read_only_fields = (
@@ -57,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar",
             "is_writer",
             "is_verified",
+            "is_staff",
             "date_joined",
         )
 
@@ -64,10 +66,15 @@ class UserSerializer(serializers.ModelSerializer):
 class UserPublicSerializer(serializers.ModelSerializer):
     """Slim representation used when nesting a user inside another resource."""
 
+    is_deleted = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer")
+        fields = ("id", "first_name", "last_name", "bio", "avatar", "is_writer", "is_deleted")
         read_only_fields = fields
+
+    def get_is_deleted(self, obj) -> bool:
+        return obj.deleted_at is not None
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -275,6 +282,7 @@ class PublicWriterSerializer(serializers.ModelSerializer):
             "response_time",
             "date_joined",
             "is_verified",
+            "is_writer",
             "specialties",
             "listings",
             "experiences",
@@ -288,7 +296,7 @@ class PublicWriterSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def _published(self, obj):
-        return obj.listings.filter(is_published=True)
+        return obj.listings.filter(is_published=True, removed_at__isnull=True)
 
     def get_specialties(self, obj):
         return sorted(set(self._published(obj).values_list("specialty", flat=True)))
@@ -303,7 +311,9 @@ class PublicWriterSerializer(serializers.ModelSerializer):
     def _rating(self, obj):
         from django.db.models import Avg, Count
 
-        return obj.reviews_received.aggregate(avg=Avg("rating"), count=Count("id"))
+        return obj.reviews_received.filter(removed_at__isnull=True).aggregate(
+            avg=Avg("rating"), count=Count("id")
+        )
 
     def get_avg_rating(self, obj):
         avg = self._rating(obj)["avg"]
@@ -315,7 +325,11 @@ class PublicWriterSerializer(serializers.ModelSerializer):
     def get_rating_breakdown(self, obj):
         from django.db.models import Count
 
-        rows = obj.reviews_received.values("rating").annotate(n=Count("id"))
+        rows = (
+            obj.reviews_received.filter(removed_at__isnull=True)
+            .values("rating")
+            .annotate(n=Count("id"))
+        )
         counts = {row["rating"]: row["n"] for row in rows}
         return {str(star): counts.get(star, 0) for star in (5, 4, 3, 2, 1)}
 

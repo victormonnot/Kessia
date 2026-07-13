@@ -69,6 +69,36 @@ def test_writer_can_delete_own_listing(writer_auth_client, writer_user):
     assert not Listing.objects.filter(id=listing.id).exists()
 
 
+def test_unpublished_listing_hidden_from_public_list(api_client):
+    ListingFactory(is_published=True)
+    ListingFactory(is_published=False)  # draft
+    response = api_client.get(reverse("listing-list"))
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
+def test_unpublished_listing_not_fetchable_by_anonymous(api_client):
+    draft = ListingFactory(is_published=False)
+    response = api_client.get(reverse("listing-detail", args=[draft.id]))
+    assert response.status_code == 404
+
+
+def test_unpublished_listing_hidden_from_other_writer(other_writer_auth_client, writer_user):
+    draft = ListingFactory(writer=writer_user, is_published=False)
+    listed = other_writer_auth_client.get(reverse("listing-list"))
+    assert draft.id not in [r["id"] for r in listed.json()["results"]]
+    detail = other_writer_auth_client.get(reverse("listing-detail", args=[draft.id]))
+    assert detail.status_code == 404
+
+
+def test_author_sees_own_unpublished_listing(writer_auth_client, writer_user):
+    draft = ListingFactory(writer=writer_user, is_published=False)
+    listed = writer_auth_client.get(reverse("listing-list"))
+    assert draft.id in [r["id"] for r in listed.json()["results"]]
+    detail = writer_auth_client.get(reverse("listing-detail", args=[draft.id]))
+    assert detail.status_code == 200
+
+
 def test_filter_by_specialty(api_client):
     ListingFactory(specialty=Specialty.CARDIOLOGIE)
     ListingFactory(specialty=Specialty.NEUROLOGIE)

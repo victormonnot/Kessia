@@ -15,6 +15,10 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
+# Never boot production with a public/placeholder SECRET_KEY — a known key lets
+# anyone forge sessions and JWTs. Fail fast instead of running insecurely.
+ensure_strong_secret_key(SECRET_KEY)  # noqa: F405
+
 # --- Host / proxy ----------------------------------------------------------
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # One proxy (Render) sits in front: make DRF throttling read the real client IP
@@ -70,6 +74,11 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
+# No S3 bucket → this single-origin service serves /media itself (the seeded demo
+# avatars, re-materialised on each deploy by seed_demo). Real user uploads stay
+# ephemeral without S3; set AWS_STORAGE_BUCKET_NAME for persistent storage.
+SERVE_MEDIA = not AWS_STORAGE_BUCKET_NAME
+
 # --- Serve the built SPA from this service (single origin) -----------------
 # The Docker image copies the Vite build to backend/frontend_dist.
 _spa_dir = BASE_DIR / "frontend_dist"  # noqa: F405
@@ -78,12 +87,22 @@ if SERVE_SPA:
     WHITENOISE_ROOT = _spa_dir
     WHITENOISE_INDEX_FILE = True
 
-# --- Channels: Redis if provided, else in-memory (single free instance) ----
+# --- Channels + cache: Redis if provided, else in-memory (single free instance)
 _redis_url = config("REDIS_URL", default="")
 if _redis_url:
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {"hosts": [_redis_url]},
+        }
+    }
+    # Throttle counters must live in a shared, durable store. Per-process LocMem
+    # (the default) multiplies the limits across workers/instances and resets on
+    # every redeploy, so the anti-bruteforce/anti-spam limits would be far looser
+    # than configured. Redis gives one global counter (see apps/common/throttles).
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": _redis_url,
         }
     }

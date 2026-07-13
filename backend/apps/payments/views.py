@@ -27,6 +27,21 @@ def connect_onboard(request):
     return Response({"url": url})
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsEmailVerified])
+def connect_session(request):
+    """Client secret for the embedded onboarding component (no redirect)."""
+    if not request.user.is_writer:
+        return Response({"detail": "Réservé aux rédacteurs."}, status=status.HTTP_403_FORBIDDEN)
+    client_secret = services.create_account_session(request.user)
+    return Response(
+        {
+            "client_secret": client_secret,
+            "publishable_key": settings.STRIPE_PUBLISHABLE_KEY,
+        }
+    )
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def connect_status(request):
@@ -86,6 +101,9 @@ def confirm_payment(request, order_id):
     intent = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
     if intent.status == "succeeded":
         services.mark_payment_held(order)
+    elif intent.status == "processing":
+        # Slow method (e.g. SEPA): payment submitted, awaiting clearing.
+        services.mark_payment_processing(order)
     order.refresh_from_db()
     return Response({"payment_status": order.payment_status, "status": order.status})
 

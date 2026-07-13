@@ -13,13 +13,16 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from django.core.files import File
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from apps.common.choices import DeliverableType, Specialty
 from apps.listings.models import Listing
 from apps.messaging.models import Conversation, Message
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderAttachment, OrderEvent
+from apps.orders.services import record_event
 from apps.requests_board.models import Proposal, Request
 from apps.reviews.models import Review
 from apps.users.models import (
@@ -35,6 +38,10 @@ CITIES = ["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Lille", "Nantes
 RESPONSE_TIMES = ["few_hours", "one_day", "few_days"]
 
 DEMO_PASSWORD = "demo1234"
+
+# Minimal valid PDF used as a seeded "source document" attached to a few orders,
+# so the order workspace's brief section isn't empty in the demo.
+_DEMO_BRIEF_PDF = b"%PDF-1.4\n%Cahier des charges (document de demonstration)\n"
 
 # Demo portraits bundled with the backend (gender-matched to each seeded user).
 # Source: randomuser.me — demo use only, replaced by real uploads in prod.
@@ -101,48 +108,18 @@ DOCTORS = [
     ("camille.roux@kessia.demo", "Camille", "Roux"),
 ]
 
-# Two listing ideas per specialty: (title, deliverable_type).
+# One listing idea per specialty: (title, deliverable_type).
 SPECIALTY_LISTINGS = {
-    Specialty.CARDIOLOGIE: [
-        ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
-        ("Étude de cas — insuffisance cardiaque à FE préservée", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.ONCOLOGIE: [
-        ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Résumé pour congrès international d'oncologie", DeliverableType.RESUME_RECHERCHE),
-    ],
-    Specialty.NEUROLOGIE: [
-        ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
-        ("Article original — biomarqueurs des maladies neurodégénératives", DeliverableType.PROTOCOLE_RECHERCHE),
-    ],
-    Specialty.PEDIATRIE: [
-        ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
-        ("Résumé pour journées de pédiatrie", DeliverableType.RESUME_RECHERCHE),
-    ],
-    Specialty.DERMATOLOGIE: [
-        ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
-        ("Revue sur les biothérapies du psoriasis", DeliverableType.VULGARISATION),
-    ],
-    Specialty.RADIOLOGIE: [
-        ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
-        ("Article original — IA et imagerie diagnostique", DeliverableType.PROTOCOLE_RECHERCHE),
-    ],
-    Specialty.PSYCHIATRIE: [
-        ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
-        ("Étude de cas en psychiatrie de liaison", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.NEUROCHIRURGIE: [
-        ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Étude de cas chirurgical rare", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
-    Specialty.ENDOCRINOLOGIE: [
-        ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
-        ("Revue sur les analogues du GLP-1", DeliverableType.VULGARISATION),
-    ],
-    Specialty.GASTROENTEROLOGIE: [
-        ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
-        ("Étude de cas en hépatologie", DeliverableType.SYNOPSIS_RECHERCHE),
-    ],
+    Specialty.CARDIOLOGIE: ("Revue systématique sur les outcomes cardiovasculaires", DeliverableType.VULGARISATION),
+    Specialty.ONCOLOGIE: ("Article original — immunothérapie en oncologie thoracique", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.NEUROLOGIE: ("Revue narrative sur la prise en charge post-AVC", DeliverableType.VULGARISATION),
+    Specialty.PEDIATRIE: ("Étude de cas pédiatrique selon les lignes CARE", DeliverableType.SYNOPSIS_RECHERCHE),
+    Specialty.DERMATOLOGIE: ("Série de cas en dermatologie inflammatoire", DeliverableType.SYNOPSIS_RECHERCHE),
+    Specialty.RADIOLOGIE: ("Relecture et reformulation d'un résumé radiologique", DeliverableType.RESUME_RECHERCHE),
+    Specialty.PSYCHIATRIE: ("Revue sur les troubles anxieux et la TCC", DeliverableType.VULGARISATION),
+    Specialty.NEUROCHIRURGIE: ("Protocole d'étude — chirurgie mini-invasive", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.ENDOCRINOLOGIE: ("Méta-analyse sur le diabète de type 2", DeliverableType.PROTOCOLE_RECHERCHE),
+    Specialty.GASTROENTEROLOGIE: ("Revue sur les MICI et les biothérapies", DeliverableType.VULGARISATION),
 }
 
 # (price, turnaround_days) per deliverable type.
@@ -186,6 +163,22 @@ def _fee(amount: Decimal) -> Decimal:
     return (amount * Decimal("0.15")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def _first_or_create(model, defaults=None, **lookup):
+    """Like ``get_or_create`` but tolerant of pre-existing duplicates.
+
+    Seeding runs against a long-lived demo database that may already hold rows
+    created through the app (e.g. two orders for the same listing+doctor, where
+    the lookup isn't unique). A plain ``get_or_create`` raises
+    ``MultipleObjectsReturned`` on those and, under ``start.sh``'s ``set -e``,
+    crash-loops the deploy. Returning the first match keeps re-seeding idempotent
+    and safe.
+    """
+    obj = model.objects.filter(**lookup).first()
+    if obj is not None:
+        return obj, False
+    return model.objects.create(**{**lookup, **(defaults or {})}), True
+
+
 class Command(BaseCommand):
     help = "Seed a rich, lifelike demo dataset. Safe to re-run (idempotent)."
 
@@ -196,6 +189,7 @@ class Command(BaseCommand):
 
         writers = [self._ensure_writer(*w) for w in WRITERS]
         doctors = [self._ensure_doctor(*d) for d in DOCTORS]
+        self._ensure_admin()
 
         listings = self._seed_listings(writers)
         self._seed_orders_and_reviews(listings, doctors)
@@ -289,6 +283,30 @@ class Command(BaseCommand):
                 summary="Rédaction au format CARE avec iconographie et discussion.",
             )
 
+    def _ensure_admin(self):
+        """A demo owner/admin account (Django staff) for testing the back office.
+
+        Temporary testing convenience — like the other demo accounts, it is meant
+        to be removed before a real launch.
+        """
+        user, created = User.objects.get_or_create(
+            email="admin@kessia.demo",
+            defaults={
+                "first_name": "Admin", "last_name": "Kessia",
+                "is_staff": True, "is_superuser": True, "is_email_verified": True,
+            },
+        )
+        self._track(created)
+        if created:
+            user.set_password(DEMO_PASSWORD)
+            user.save(update_fields=["password"])
+        elif not (user.is_staff and user.is_superuser):
+            # Keep admin powers on an idempotent re-run.
+            user.is_staff = True
+            user.is_superuser = True
+            user.save(update_fields=["is_staff", "is_superuser"])
+        return user
+
     def _ensure_doctor(self, email, first, last):
         user, created = User.objects.get_or_create(
             email=email,
@@ -305,11 +323,18 @@ class Command(BaseCommand):
         return user
 
     def _assign_avatar(self, user):
-        """Attach a bundled demo portrait once (skips if already set or missing)."""
-        if user.avatar:
-            return
+        """Attach a bundled demo portrait, (re)writing the file when it's missing.
+
+        On an ephemeral filesystem (e.g. Render's free tier) the media dir is
+        wiped on every deploy while the DB keeps the avatar path. Checking the
+        path alone would skip the lost file forever, so we re-materialise it
+        whenever it's gone — that keeps the seeded portraits displaying with no
+        S3. With S3 configured the file persists, so this re-write never fires.
+        """
         filename = AVATARS.get(user.email)
         if not filename:
+            return
+        if user.avatar and user.avatar.storage.exists(user.avatar.name):
             return
         path = SEED_AVATARS_DIR / filename
         if not path.exists():
@@ -321,46 +346,47 @@ class Command(BaseCommand):
     def _seed_listings(self, writers):
         listings = []
         for writer in writers:
-            for title, deliverable in SPECIALTY_LISTINGS[writer._specialty]:
-                price, turnaround = PRICING[deliverable]
-                listing, created = Listing.objects.get_or_create(
-                    writer=writer,
-                    title=title,
-                    defaults={
-                        "description": (
-                            "Rédaction structurée respectant les standards de la "
-                            "discipline (PRISMA / CARE / ICMJE selon le format). "
-                            "Livraison avec relecture et mise au format de la revue cible."
-                        ),
-                        "specialty": writer._specialty,
-                        "deliverable_type": deliverable,
-                        "price": price,
-                        "turnaround_days": turnaround,
-                        "faq": [
-                            {
-                                "question": "Que comprend la prestation ?",
-                                "answer": (
-                                    "La rédaction complète du livrable, une relecture et la mise "
-                                    "au format de la revue ou du support cible."
-                                ),
-                            },
-                            {
-                                "question": "Combien de cycles de révision sont inclus ?",
-                                "answer": "Deux cycles de révisions sont inclus après la première livraison.",
-                            },
-                            {
-                                "question": "Travaillez-vous à partir de mes données ?",
-                                "answer": (
-                                    "Oui, je pars de vos données et références ; je peux aussi aider "
-                                    "à structurer la recherche bibliographique."
-                                ),
-                            },
-                        ],
-                        "is_published": True,
-                    },
-                )
-                self._track(created)
-                listings.append(listing)
+            title, deliverable = SPECIALTY_LISTINGS[writer._specialty]
+            price, turnaround = PRICING[deliverable]
+            listing, created = _first_or_create(
+                Listing,
+                writer=writer,
+                title=title,
+                defaults={
+                    "description": (
+                        "Rédaction structurée respectant les standards de la "
+                        "discipline (PRISMA / CARE / ICMJE selon le format). "
+                        "Livraison avec relecture et mise au format de la revue cible."
+                    ),
+                    "specialty": writer._specialty,
+                    "deliverable_type": deliverable,
+                    "price": price,
+                    "turnaround_days": turnaround,
+                    "faq": [
+                        {
+                            "question": "Que comprend la prestation ?",
+                            "answer": (
+                                "La rédaction complète du livrable, une relecture et la mise "
+                                "au format de la revue ou du support cible."
+                            ),
+                        },
+                        {
+                            "question": "Combien de cycles de révision sont inclus ?",
+                            "answer": "Deux cycles de révisions sont inclus après la première livraison.",
+                        },
+                        {
+                            "question": "Travaillez-vous à partir de mes données ?",
+                            "answer": (
+                                "Oui, je pars de vos données et références ; je peux aussi aider "
+                                "à structurer la recherche bibliographique."
+                            ),
+                        },
+                    ],
+                    "is_published": True,
+                },
+            )
+            self._track(created)
+            listings.append(listing)
         return listings
 
     # -- orders + reviews ---------------------------------------------------
@@ -385,11 +411,33 @@ class Command(BaseCommand):
             }
             if status == Order.Status.COMPLETED:
                 defaults["application_fee_amount"] = _fee(listing.price)
+            # Active orders carry a live delivery deadline (from the turnaround).
+            if status == Order.Status.IN_PROGRESS:
+                defaults["due_at"] = timezone.now() + timedelta(days=listing.turnaround_days)
 
-            order, created = Order.objects.get_or_create(
-                listing=listing, doctor=doctor, defaults=defaults
+            order, created = _first_or_create(
+                Order, listing=listing, doctor=doctor, defaults=defaults
             )
             self._track(created)
+
+            # Once an order is underway, the doctor has shared a brief document.
+            if status in (
+                Order.Status.IN_PROGRESS,
+                Order.Status.DELIVERED,
+                Order.Status.COMPLETED,
+            ) and not order.attachments.exists():
+                OrderAttachment.objects.create(
+                    order=order,
+                    uploaded_by=doctor,
+                    note="Cahier des charges et références.",
+                    file=ContentFile(_DEMO_BRIEF_PDF, name="cahier-des-charges.pdf"),
+                )
+                self.created += 1
+
+            # Activity-log timeline matching the order's lifecycle stage, so the
+            # workspace's "Activité" panel isn't empty in the demo.
+            if not order.events.exists():
+                self._seed_order_events(order, doctor, status)
 
             if status == Order.Status.COMPLETED:
                 _, r_created = Review.objects.get_or_create(
@@ -404,12 +452,41 @@ class Command(BaseCommand):
                 self._track(r_created)
                 review_i += 1
 
+    def _seed_order_events(self, order, doctor, status):
+        S = Order.Status
+        record_event(order, OrderEvent.Type.PLACED, actor=doctor)
+        if status in (S.ACCEPTED, S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.ACCEPTED, actor=order.writer)
+        if status in (S.IN_PROGRESS, S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.PAID, actor=doctor, amount=str(order.amount))
+            record_event(
+                order,
+                OrderEvent.Type.DOCUMENT_ADDED,
+                actor=doctor,
+                filename="cahier-des-charges.pdf",
+            )
+        if status in (S.DELIVERED, S.COMPLETED):
+            record_event(order, OrderEvent.Type.DELIVERED, actor=order.writer)
+        if status == S.COMPLETED:
+            record_event(order, OrderEvent.Type.COMPLETED, actor=doctor)
+            record_event(
+                order,
+                OrderEvent.Type.RELEASED,
+                amount=str(order.amount - _fee(order.amount)),
+            )
+        if status == S.DECLINED:
+            record_event(order, OrderEvent.Type.DECLINED, actor=order.writer)
+        if status == S.CANCELLED:
+            record_event(order, OrderEvent.Type.CANCELLED, actor=doctor)
+        self.created += order.events.count()
+
     # -- requests + proposals ----------------------------------------------
     def _seed_requests_and_proposals(self, doctors, writers):
         today = date.today()
         for doctor_idx, title, specialty, budget, deadline_days in REQUESTS:
             doctor = doctors[doctor_idx]
-            req, created = Request.objects.get_or_create(
+            req, created = _first_or_create(
+                Request,
                 doctor=doctor,
                 title=title,
                 defaults={

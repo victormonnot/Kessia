@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.common.permissions import IsEmailVerified
+from apps.common.throttles import MessageThrottle
 from apps.common.uploads import CHAT_ATTACHMENT_RULES, upload_error
 from apps.orders.models import Order
 
@@ -39,6 +40,15 @@ class ConversationViewSet(
             .annotate(last_at=Max("messages__created_at"))
             .order_by(F("last_at").desc(nulls_last=True), "-created_at")
         )
+
+    def get_throttles(self):
+        # Only rate-limit the write paths (starting a conversation with an
+        # initial message, or sending one). Reads — listing, opening a thread,
+        # downloading an attachment — stay unthrottled so browsing is never blocked.
+        sending = self.action == "create" or (
+            self.action == "messages" and self.request.method == "POST"
+        )
+        return [MessageThrottle()] if sending else super().get_throttles()
 
     def create(self, request, *args, **kwargs):
         user = request.user

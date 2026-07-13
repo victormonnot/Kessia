@@ -24,6 +24,8 @@ class Request(models.Model):
         choices=Status.choices,
         default=Status.OPEN,
     )
+    # Set when an admin takes the request down (policy violation).
+    removed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

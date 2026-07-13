@@ -4,7 +4,6 @@ import { CalendarDays, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StatusBadge from "@/components/ui/StatusBadge";
 import FavoriteButton from "@/components/ui/FavoriteButton";
-import { avatarFor } from "@/lib/demo-assets";
 import { formatDate, formatPrice, fullName, initials } from "@/lib/format";
 import { SPECIALTY_OPTIONS, labelFor } from "@/lib/choices";
 
@@ -34,7 +33,7 @@ export default function RequestCard({ request }) {
 
       <div className="mt-3 flex items-center gap-2">
         <Avatar className="size-7">
-          <AvatarImage src={doctor?.avatar || avatarFor(fullName(doctor))} alt="" />
+          <AvatarImage src={doctor?.avatar || undefined} alt="" />
           <AvatarFallback className="bg-secondary text-xs font-semibold text-foreground">
             {initials(doctor)}
           </AvatarFallback>

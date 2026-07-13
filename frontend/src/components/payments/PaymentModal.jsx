@@ -28,32 +28,53 @@ function CheckoutForm({ order, onClose }) {
     setSubmitting(true);
     setError(null);
 
-    const { error: stripeError } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-      confirmParams: {
-        payment_method_data: {
-          billing_details: { name: name.trim(), email: email.trim() },
+    // Redirect-based methods leave the page and come back to return_url, where
+    // PaymentStatus reconciles the result. Non-redirect methods (card, SEPA,
+    // Link) resolve here and we branch on the intent status below.
+    let paymentIntent;
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/paiement/statut?order=${order.id}`,
+          // Every field hidden via fields.billingDetails="never" on the element
+          // MUST be supplied here. We collect name + email; phone is hidden and
+          // not collected, so it's passed empty to satisfy that requirement.
+          payment_method_data: {
+            billing_details: { name: name.trim(), email: email.trim(), phone: "" },
+          },
         },
-      },
-    });
-    if (stripeError) {
-      setError(stripeError.message || "Le paiement a échoué.");
+      });
+      if (result.error) {
+        setError(result.error.message || "Le paiement a échoué.");
+        setSubmitting(false);
+        return;
+      }
+      paymentIntent = result.paymentIntent;
+    } catch (err) {
+      // confirmPayment can *throw* (not just return {error}) on integration
+      // problems; without this the promise rejects and the button hangs forever.
+      setError(errorMessage(err, "Le paiement n'a pas pu être initialisé."));
       setSubmitting(false);
       return;
     }
 
-    // Webhooks are the source of truth, but we sync immediately so the UI
-    // reflects the payment without waiting (works without the Stripe CLI in dev).
+    // Sync so the UI reflects the new state without waiting on the webhook
+    // (also makes the flow work without the Stripe CLI in dev).
     try {
       await confirm.mutateAsync(order.id);
-      toast.success("Paiement effectué. Le rédacteur peut démarrer le travail.");
-      onClose?.();
     } catch {
-      setError("Paiement reçu, mais la synchronisation a échoué. Rafraîchissez la page.");
-    } finally {
-      setSubmitting(false);
+      // Non-fatal: the webhook reconciles the order regardless.
     }
+    if (paymentIntent?.status === "processing") {
+      // Slow methods (e.g. SEPA) confirm later; the order waits until then.
+      toast.info("Paiement en cours de traitement. Vous serez notifié une fois confirmé.");
+    } else {
+      toast.success("Paiement effectué. Le rédacteur peut démarrer le travail.");
+    }
+    onClose?.();
+    setSubmitting(false);
   };
 
   return (

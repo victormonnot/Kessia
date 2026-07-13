@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import Stars from "@/components/ui/Stars";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { cn } from "@/lib/utils";
-import { avatarFor } from "@/lib/demo-assets";
 import { sectionVisible } from "@/lib/profile";
 import { fullName, initials } from "@/lib/format";
 
@@ -21,7 +20,7 @@ export default function WriterHeader({
   as: Tag = "h1",
   large = false,
 }) {
-  const name = fullName(writer, "Rédacteur");
+  const name = fullName(writer, "Utilisateur");
   const expertise = sectionVisible(writer, "expertise") ? writer.expertise_areas || [] : [];
 
   return (
@@ -32,7 +31,7 @@ export default function WriterHeader({
           large ? "size-28 sm:size-32" : "size-24",
         )}
       >
-        <AvatarImage src={writer.avatar || avatarFor(name)} alt="" />
+        <AvatarImage src={writer.avatar || undefined} alt="" />
         <AvatarFallback className="bg-secondary text-2xl font-semibold text-foreground">
           {initials(writer)}
         </AvatarFallback>
@@ -53,11 +52,12 @@ export default function WriterHeader({
         {writer.headline && <p className="mt-1 text-muted-foreground">{writer.headline}</p>}
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
-          {writer.reviews_count > 0 ? (
-            <Stars rating={writer.avg_rating} count={writer.reviews_count} />
-          ) : (
-            <span>Pas encore d'avis</span>
-          )}
+          {writer.is_writer &&
+            (writer.reviews_count > 0 ? (
+              <Stars rating={writer.avg_rating} count={writer.reviews_count} />
+            ) : (
+              <span>Pas encore d'avis</span>
+            ))}
           {writer.city && (
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" /> {writer.city}
