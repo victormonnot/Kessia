@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { listingsApi } from "@/api/listings";
+import { DEMO_MODE, demoListingsResponse } from "@/lib/demoData";
 
 export function useListings(params = {}) {
   return useQuery({
     queryKey: ["listings", params],
-    queryFn: () => listingsApi.list(params),
+    // Mode démo : fixtures locales, aucun appel réseau (landing hébergée sans
+    // backend). Voir lib/demoData.js.
+    queryFn: DEMO_MODE
+      ? () => demoListingsResponse(params)
+      : () => listingsApi.list(params),
     keepPreviousData: true,
   });
 }
